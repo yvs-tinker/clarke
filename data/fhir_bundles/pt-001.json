@@ -1,0 +1,56 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "pt-001",
+        "identifier": [
+          {
+            "system": "https://fhir.nhs.uk/Id/nhs-number",
+            "value": "9434765829"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "prefix": ["Mrs"],
+            "given": ["Margaret"],
+            "family": "Thompson"
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1958-03-14"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hba1c-001",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "HbA1c"
+        },
+        "subject": {
+          "reference": "Patient/pt-001"
+        },
+        "effectiveDateTime": "2026-01-15",
+        "valueQuantity": {
+          "value": 55,
+          "unit": "mmol/mol"
+        }
+      }
+    }
+  ]
+}
