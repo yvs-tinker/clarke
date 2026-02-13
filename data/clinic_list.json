@@ -1,0 +1,50 @@
+{
+  "clinician": {
+    "name": "Dr. Sarah Chen",
+    "specialty": "Diabetes & Endocrinology",
+    "title": "Consultant Diabetologist"
+  },
+  "date": "13 February 2026",
+  "patients": [
+    {
+      "id": "pt-001",
+      "name": "Mrs. Margaret Thompson",
+      "age": 67,
+      "sex": "Female",
+      "time": "14:00",
+      "summary": "Follow-up \u2014 Type 2 Diabetes, rising HbA1c"
+    },
+    {
+      "id": "pt-002",
+      "name": "Mr. Emeka Okafor",
+      "age": 54,
+      "sex": "Male",
+      "time": "14:20",
+      "summary": "Follow-up \u2014 Chest pain, post-angiography"
+    },
+    {
+      "id": "pt-003",
+      "name": "Ms. Priya Patel",
+      "age": 28,
+      "sex": "Female",
+      "time": "14:40",
+      "summary": "Review \u2014 Asthma, poor symptom control"
+    },
+    {
+      "id": "pt-004",
+      "name": "Mr. David Williams",
+      "age": 72,
+      "sex": "Male",
+      "time": "15:00",
+      "summary": "Review \u2014 Heart failure, recent decompensation"
+    },
+    {
+      "id": "pt-005",
+      "name": "Mrs. Fatima Khan",
+      "age": 45,
+      "sex": "Female",
+      "time": "15:20",
+      "summary": "Follow-up \u2014 Depression, medication review"
+    }
+  ]
+}

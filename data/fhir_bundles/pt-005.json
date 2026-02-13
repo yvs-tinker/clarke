@@ -1,0 +1,360 @@
+{
+  "resourceType": "Bundle",
+  "id": "bundle-pt-005",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "pt-005",
+        "identifier": [
+          {
+            "system": "https://fhir.nhs.uk/Id/nhs-number",
+            "value": "2397158046"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "prefix": [
+              "Mrs"
+            ],
+            "given": [
+              "Fatima"
+            ],
+            "family": "Khan"
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1980-09-16",
+        "address": [
+          {
+            "line": [
+              "22 Cedar Avenue"
+            ],
+            "city": "London",
+            "postalCode": "SE1 4AB",
+            "country": "GB"
+          }
+        ],
+        "generalPractitioner": [
+          {
+            "display": "Dr. M. Ahmed, Eastside Family Practice"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-depr-005",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "35489007",
+              "display": "Depressive disorder"
+            }
+          ],
+          "text": "Depressive disorder"
+        },
+        "subject": {
+          "reference": "Patient/pt-005"
+        },
+        "onsetDateTime": "2025-06-10"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-insomnia-005",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "193462001",
+              "display": "Insomnia"
+            }
+          ],
+          "text": "Insomnia"
+        },
+        "subject": {
+          "reference": "Patient/pt-005"
+        },
+        "onsetDateTime": "2025-09-01"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-sertraline-005",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "text": "Sertraline"
+        },
+        "subject": {
+          "reference": "Patient/pt-005"
+        },
+        "dosageInstruction": [
+          {
+            "text": "100 mg once daily"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-vitd-005",
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "text": "Colecalciferol"
+        },
+        "subject": {
+          "reference": "Patient/pt-005"
+        },
+        "dosageInstruction": [
+          {
+            "text": "800 units once daily"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-phq9-005",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "44261-6",
+              "display": "Patient Health Questionnaire 9 item (PHQ-9) total score"
+            }
+          ],
+          "text": "PHQ-9 score"
+        },
+        "subject": {
+          "reference": "Patient/pt-005"
+        },
+        "effectiveDateTime": "2026-01-19",
+        "valueQuantity": {
+          "value": 12,
+          "unit": "score",
+          "system": "http://unitsofmeasure.org",
+          "code": "{score}"
+        },
+        "referenceRange": [
+          {
+            "low": {
+              "value": 0,
+              "unit": "score"
+            },
+            "high": {
+              "value": 27,
+              "unit": "score"
+            },
+            "text": "0-27 score"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-gad7-005",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "70274-6",
+              "display": "Generalized anxiety disorder 7 item total score"
+            }
+          ],
+          "text": "GAD-7 score"
+        },
+        "subject": {
+          "reference": "Patient/pt-005"
+        },
+        "effectiveDateTime": "2026-01-19",
+        "valueQuantity": {
+          "value": 9,
+          "unit": "score",
+          "system": "http://unitsofmeasure.org",
+          "code": "{score}"
+        },
+        "referenceRange": [
+          {
+            "low": {
+              "value": 0,
+              "unit": "score"
+            },
+            "high": {
+              "value": 21,
+              "unit": "score"
+            },
+            "text": "0-21 score"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-tsh-005",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3016-3",
+              "display": "Thyrotropin [Units/volume] in Serum or Plasma"
+            }
+          ],
+          "text": "TSH"
+        },
+        "subject": {
+          "reference": "Patient/pt-005"
+        },
+        "effectiveDateTime": "2026-01-19",
+        "valueQuantity": {
+          "value": 2.1,
+          "unit": "mIU/L",
+          "system": "http://unitsofmeasure.org",
+          "code": "m[IU]/L"
+        },
+        "referenceRange": [
+          {
+            "low": {
+              "value": 0.4,
+              "unit": "mIU/L"
+            },
+            "high": {
+              "value": 4.0,
+              "unit": "mIU/L"
+            },
+            "text": "0.4-4.0 mIU/L"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-005",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "type": "allergy",
+        "category": [
+          "medication"
+        ],
+        "criticality": "low",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "91934008",
+              "display": "Latex"
+            }
+          ],
+          "text": "Latex"
+        },
+        "patient": {
+          "reference": "Patient/pt-005"
+        },
+        "reaction": [
+          {
+            "manifestation": [
+              {
+                "coding": [
+                  {
+                    "display": "Contact dermatitis"
+                  }
+                ]
+              }
+            ],
+            "severity": "moderate"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "dr-psych-005",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "11488-4",
+              "display": "Consultation note"
+            }
+          ],
+          "text": "Consultation note"
+        },
+        "subject": {
+          "reference": "Patient/pt-005"
+        },
+        "effectiveDateTime": "2026-01-19",
+        "conclusion": "Mood improved slightly since last review; persistent anhedonia."
+      }
+    }
+  ]
+}
