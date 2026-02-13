@@ -1,1 +1,1 @@
-"""Backend package for Clarke application components."""
+"""Backend package for Clarke services."""
