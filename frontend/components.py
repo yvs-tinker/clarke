@@ -7,11 +7,11 @@ from html import escape
 import gradio as gr
 
 STATUS_CLASS_MAP: dict[str, str] = {
-    "idle": "status-neutral",
-    "loading": "status-blue",
-    "ready": "status-amber",
-    "signed": "status-green",
-    "error": "status-red",
+    "idle": "clarke-badge-processing",
+    "loading": "clarke-badge-processing",
+    "ready": "clarke-badge-review",
+    "signed": "clarke-badge-signed",
+    "error": "clarke-badge-review",
 }
 
 
@@ -33,11 +33,11 @@ def build_patient_card(patient: dict) -> gr.HTML:
     summary = escape(str(patient.get("summary", "No summary available.")))
 
     card_html = f"""
-    <div class=\"patient-card\" data-patient-id=\"{patient_id}\">
-      <p class=\"label\">{appointment_time}</p>
-      <h4>{name}</h4>
-      <p class=\"caption\">{age} • {sex}</p>
-      <p>{summary}</p>
+    <div class=\"clarke-patient-card\" data-patient-id=\"{patient_id}\" tabindex=\"0\">
+      <p class=\"patient-time\">{appointment_time}</p>
+      <h4 class=\"patient-name\">{name}</h4>
+      <p class=\"patient-meta\">{age} • {sex}</p>
+      <p class=\"patient-summary\">{summary}</p>
     </div>
     """
     return gr.HTML(card_html)
@@ -54,6 +54,7 @@ def build_status_badge(status: str) -> gr.HTML:
     """
 
     normalised_status = (status or "idle").strip().lower()
-    badge_class = STATUS_CLASS_MAP.get(normalised_status, "status-neutral")
+    badge_class = STATUS_CLASS_MAP.get(normalised_status, "clarke-badge-processing")
     label = escape(normalised_status.replace("_", " ").title())
-    return gr.HTML(f'<span class="status-badge {badge_class}">{label}</span>')
+    ready_dot = "<span class='clarke-status-ready'></span>" if normalised_status == "ready" else ""
+    return gr.HTML(f'<span class="clarke-badge {badge_class}">{ready_dot}{label}</span>')
