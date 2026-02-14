@@ -1,0 +1,11 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Clarke logo">
+  <defs>
+    <linearGradient id="shieldGradient" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2B5EA7"/>
+      <stop offset="1" stop-color="#1E3A5F"/>
+    </linearGradient>
+  </defs>
+  <path d="M64 8L108 26V58C108 88 88.8 112 64 120C39.2 112 20 88 20 58V26L64 8Z" fill="url(#shieldGradient)"/>
+  <path d="M87 40C80.5 31.5 70.6 26 60 26C41.2 26 26 41.2 26 60C26 78.8 41.2 94 60 94C70.6 94 80.5 88.5 87 80" stroke="#D4A035" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="93" cy="86" r="7" fill="#F0D078"/>
+</svg>
