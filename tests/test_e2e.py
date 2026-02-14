@@ -55,12 +55,11 @@ async def _async_raw_context(patient_id: str) -> dict:
     return grouped
 
 
-def test_mrs_thompson_fusion(monkeypatch, capsys) -> None:
+def test_mrs_thompson_fusion(monkeypatch) -> None:
     """Verify transcript and FHIR context fuse into a rendered document-generation prompt.
 
     Args:
         monkeypatch (pytest.MonkeyPatch): Fixture used to force deterministic mock model paths.
-        capsys (pytest.CaptureFixture[str]): Fixture used to capture prompt console output.
 
     Returns:
         None: Assertions validate transcript details and key FHIR values in rendered prompt.
@@ -91,9 +90,6 @@ def test_mrs_thompson_fusion(monkeypatch, capsys) -> None:
         context_json=context_json,
     )
 
-    print(rendered_prompt)
-    printed = capsys.readouterr().out
-
     assert "HbA1c" in rendered_prompt
     assert "fatigue" in rendered_prompt.lower()
     assert "gliclazide" in rendered_prompt.lower()
@@ -102,7 +98,7 @@ def test_mrs_thompson_fusion(monkeypatch, capsys) -> None:
     assert "eGFR" in rendered_prompt and "52" in rendered_prompt
     assert "Penicillin" in rendered_prompt
 
-    assert printed.strip().startswith("<|system|>")
+    assert rendered_prompt.strip().startswith("<|system|>")
 
 import math
 import struct
