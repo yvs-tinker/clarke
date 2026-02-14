@@ -47,6 +47,16 @@ class ModelExecutionError(ClarkeError):
     """
 
 
+class AudioError(ClarkeError):
+    """Raised when audio input fails conversion or validation checks.
+
+    Params:
+        message (str): Human-readable error message.
+    Returns:
+        None: Raises an exception instance.
+    """
+
+
 def configure_logging(log_level: str = "DEBUG") -> None:
     """Configure loguru sinks for console and rotating file logs.
 
