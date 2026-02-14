@@ -163,3 +163,22 @@ small {
     transform: translateX(100%);
   }
 }
+
+.patient-card {
+  padding: 12px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-neutral { background: #e9edf5; color: var(--clarke-text-secondary); }
+.status-blue { background: rgba(43, 94, 167, 0.15); color: var(--clarke-blue-light); }
+.status-amber { background: rgba(212, 160, 53, 0.18); color: #7b5a13; }
+.status-green { background: rgba(39, 174, 96, 0.18); color: #1e824c; }
+.status-red { background: rgba(192, 57, 43, 0.18); color: #8b2218; }
