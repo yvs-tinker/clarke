@@ -128,12 +128,18 @@ class DocumentGenerator:
         decoded_output = self._tokenizer.decode(output_tokens[0], skip_special_tokens=True)
         return self._strip_prompt_prefix(decoded_output, prompt)
 
-    def generate_document(self, transcript: str, context: PatientContext) -> ClinicalDocument:
+    def generate_document(
+        self,
+        transcript: str,
+        context: PatientContext,
+        max_new_tokens: int | None = None,
+    ) -> ClinicalDocument:
         """Render prompt, generate text with retry policy, and build ClinicalDocument.
 
         Args:
             transcript (str): Consultation transcript text.
             context (PatientContext): Structured patient context payload.
+            max_new_tokens (int | None): Optional generation token limit override.
 
         Returns:
             ClinicalDocument: Parsed clinical letter representation with section objects.
@@ -143,7 +149,9 @@ class DocumentGenerator:
         generation_start = time.perf_counter()
 
         last_error: Exception | None = None
-        for attempt, token_limit in enumerate((2048, 1024), start=1):
+        first_limit = max_new_tokens or 2048
+        retry_limit = max(256, first_limit // 2)
+        for attempt, token_limit in enumerate((first_limit, retry_limit), start=1):
             try:
                 generated_text = self.generate(prompt, max_new_tokens=token_limit)
                 sections = self._parse_sections(generated_text)

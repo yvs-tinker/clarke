@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import asyncio
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,10 +12,11 @@ from uuid import uuid4
 import torch
 
 from backend.errors import ModelExecutionError, get_component_logger
+from backend.audio import validate_audio
 from backend.models.doc_generator import DocumentGenerator
 from backend.models.ehr_agent import EHRAgent
 from backend.models.medasr import MedASRModel
-from backend.schemas import ClinicalDocument, Consultation, ConsultationStatus, Patient, PipelineProgress, PipelineStage
+from backend.schemas import ClinicalDocument, Consultation, ConsultationStatus, Patient, PatientContext, PipelineProgress, PipelineStage
 
 logger = get_component_logger("orchestrator")
 
@@ -130,9 +132,33 @@ class PipelineOrchestrator:
             Consultation: Updated consultation after pipeline completion.
         """
 
+        try:
+            return asyncio.run(
+                asyncio.wait_for(
+                    asyncio.to_thread(self._run_pipeline, consultation_id),
+                    timeout=float(self._doc_generator.settings.PIPELINE_TIMEOUT_S),
+                )
+            )
+        except TimeoutError:
+            raise
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError("Pipeline timed out") from exc
+
+    def _run_pipeline(self, consultation_id: str) -> Consultation:
+        """Execute all pipeline stages for an existing consultation.
+
+        Args:
+            consultation_id (str): Consultation identifier.
+
+        Returns:
+            Consultation: Updated consultation after pipeline completion.
+        """
+
         consultation = self.get_consultation(consultation_id)
         if not consultation.audio_file_path:
             raise ModelExecutionError("No uploaded audio available for this consultation")
+
+        validate_audio(consultation.audio_file_path)
 
         total_start = time.perf_counter()
         stage_start = time.perf_counter()
@@ -146,6 +172,8 @@ class PipelineOrchestrator:
             message="Finalising transcript...",
         )
         transcript = self._medasr_model.transcribe(consultation.audio_file_path)
+        if not transcript.text.strip():
+            raise ModelExecutionError("Audio could not be transcribed.")
         consultation.transcript = transcript.model_copy(update={"consultation_id": consultation_id})
         transcribe_s = round(time.perf_counter() - stage_start, 3)
         logger.info("Pipeline stage complete", consultation_id=consultation_id, stage="transcribe", duration_s=transcribe_s)
@@ -159,7 +187,12 @@ class PipelineOrchestrator:
             message="Synthesising patient context...",
         )
         if consultation.context is None:
-            consultation.context = self._ehr_agent.get_patient_context(consultation.patient.id)
+            try:
+                consultation.context = self._ehr_agent.get_patient_context(consultation.patient.id)
+            except Exception as exc:
+                warning = f"FHIR retrieval unavailable; continuing with transcript only: {exc}"
+                logger.warning("FHIR degradation activated", consultation_id=consultation_id, warning=warning)
+                consultation.context = self._build_transcript_only_context(consultation, warning)
         context_s = round(time.perf_counter() - stage_start, 3)
         logger.info("Pipeline stage complete", consultation_id=consultation_id, stage="retrieve_context", duration_s=context_s)
         self._clear_cuda_cache()
@@ -172,9 +205,11 @@ class PipelineOrchestrator:
             message="Combining transcript and context for document generation...",
         )
         if consultation.transcript and consultation.context:
-            consultation.document = self._doc_generator.generate_document(
+            consultation.context = self._truncate_context(consultation.context)
+            consultation.document = self._generate_document_with_oom_retry(
                 consultation.transcript.text,
                 consultation.context,
+                consultation_id,
             ).model_copy(update={"consultation_id": consultation_id})
         else:
             raise ModelExecutionError("Transcript and patient context are required before document generation")
@@ -200,6 +235,97 @@ class PipelineOrchestrator:
             generate_s=generate_s,
         )
         return consultation
+
+    def _generate_document_with_oom_retry(
+        self,
+        transcript_text: str,
+        context: PatientContext,
+        consultation_id: str,
+    ) -> ClinicalDocument:
+        """Generate a document with one OOM recovery retry.
+
+        Args:
+            transcript_text (str): Consultation transcript text.
+            context (PatientContext): Context payload for document generation.
+            consultation_id (str): Consultation identifier for logging.
+
+        Returns:
+            ClinicalDocument: Generated document payload.
+        """
+
+        max_tokens = int(self._doc_generator.settings.DOC_GEN_MAX_TOKENS)
+        try:
+            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=max_tokens)
+        except torch.cuda.OutOfMemoryError as exc:
+            self._clear_cuda_cache()
+            reduced_tokens = max(256, max_tokens // 2)
+            logger.warning(
+                "OOM during document generation; retrying with reduced token budget",
+                consultation_id=consultation_id,
+                previous_max_new_tokens=max_tokens,
+                retry_max_new_tokens=reduced_tokens,
+            )
+            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=reduced_tokens)
+
+    def _build_transcript_only_context(self, consultation: Consultation, warning: str) -> PatientContext:
+        """Build minimal patient context when EHR retrieval fails.
+
+        Args:
+            consultation (Consultation): Consultation containing patient demographics.
+            warning (str): Retrieval warning text to persist.
+
+        Returns:
+            PatientContext: Transcript-only fallback context.
+        """
+
+        return PatientContext(
+            patient_id=consultation.patient.id,
+            demographics={
+                "name": consultation.patient.name,
+                "dob": consultation.patient.date_of_birth,
+                "nhs_number": consultation.patient.nhs_number,
+                "age": consultation.patient.age,
+                "sex": consultation.patient.sex,
+            },
+            problem_list=[],
+            medications=[],
+            allergies=[],
+            recent_labs=[],
+            recent_imaging=[],
+            clinical_flags=[],
+            last_letter_excerpt=None,
+            retrieval_warnings=[warning],
+            retrieved_at=self._timestamp(),
+        )
+
+    def _truncate_context(self, context: PatientContext) -> PatientContext:
+        """Truncate oversized context payloads to fit the max-sequence envelope.
+
+        Args:
+            context (PatientContext): Structured patient context before generation.
+
+        Returns:
+            PatientContext: Potentially truncated context payload.
+        """
+
+        max_tokens = int(self._doc_generator.settings.MAX_SEQ_LENGTH)
+        context_payload = context.model_dump(mode="json")
+        estimated_tokens = len(json.dumps(context_payload, ensure_ascii=False).split())
+        if estimated_tokens <= max_tokens:
+            return context
+
+        for list_field in ("recent_labs", "medications", "problem_list", "allergies", "recent_imaging", "clinical_flags"):
+            values = context_payload.get(list_field, [])
+            if isinstance(values, list) and len(values) > 2:
+                context_payload[list_field] = values[: max(2, len(values) // 2)]
+            estimated_tokens = len(json.dumps(context_payload, ensure_ascii=False).split())
+            if estimated_tokens <= max_tokens:
+                break
+
+        warnings = list(context_payload.get("retrieval_warnings", []))
+        warnings.append("Context exceeded token budget and was truncated to fit generation limits.")
+        context_payload["retrieval_warnings"] = warnings
+        return PatientContext.model_validate(context_payload)
 
     def sign_off_document(self, consultation_id: str) -> ClinicalDocument:
         """Mark a generated consultation document as signed off.
