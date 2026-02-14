@@ -349,8 +349,14 @@ def end_consultation(consultation_id: str) -> dict[str, Any]:
         progress = orchestrator.get_progress(consultation_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TimeoutError as exc:
+        raise HTTPException(status_code=504, detail={"error": "timeout", "message": str(exc)}) from exc
+    except AudioError as exc:
+        raise HTTPException(status_code=400, detail={"error": "audio_error", "message": str(exc)}) from exc
     except ModelExecutionError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        error_type = "audio_error" if "transcribed" in str(exc).lower() else "model_error"
+        status_code = 400 if error_type == "audio_error" else 500
+        raise HTTPException(status_code=status_code, detail={"error": error_type, "message": str(exc)}) from exc
 
     return {
         "consultation_id": consultation.id,
