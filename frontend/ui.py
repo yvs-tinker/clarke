@@ -580,7 +580,7 @@ def build_ui() -> gr.Blocks:
             with gr.Column(elem_classes=["paper-container"]):
                 signed_status_badge = gr.Label(value="Signed Off ✓", label="Status")
                 signed_letter_markdown = gr.Markdown("### Signed letter will appear here.")
-                copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False, show_copy_button=True)
+                copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False)
                 download_text_file = gr.File(label="Download as Text")
                 next_patient_button = gr.Button("Next Patient", variant="primary", elem_classes=["clarke-btn-gold"])
 
