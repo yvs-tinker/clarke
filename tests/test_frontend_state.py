@@ -70,7 +70,7 @@ def test_component_builders_emit_html_values() -> None:
     badge = build_status_badge("ready")
 
     assert "Mrs. Margaret Thompson" in patient_card.value
-    assert "status-amber" in badge.value
+    assert "clarke-badge-review" in badge.value
 
 
 def test_patient_context_html_contains_required_sections() -> None:
@@ -102,7 +102,7 @@ def test_patient_context_html_contains_required_sections() -> None:
     assert "Recent Labs" in html
     assert "Recent Imaging" in html
     assert "Clinical Flags" in html
-    assert "⚠" in html
+    assert "clarke-clinical-flag" in html
 
 
 def test_trend_symbol_and_timer_helpers() -> None:
@@ -121,7 +121,11 @@ def test_trend_symbol_and_timer_helpers() -> None:
 
     started_at = (datetime.now(tz=timezone.utc) - timedelta(seconds=65)).isoformat()
     timer = _update_recording_timer({"recording_started_at": started_at})
-    assert timer in {"01:05", "01:04", "01:06"}
+    assert timer in {
+        "<div class='clarke-recording-timer'>01:05</div>",
+        "<div class='clarke-recording-timer'>01:04</div>",
+        "<div class='clarke-recording-timer'>01:06</div>",
+    }
 
 
 def test_processing_helpers_and_document_lifecycle(tmp_path, monkeypatch) -> None:
@@ -139,7 +143,7 @@ def test_processing_helpers_and_document_lifecycle(tmp_path, monkeypatch) -> Non
     (tmp_path / "data" / "demo").mkdir(parents=True)
 
     bar_html = _build_processing_bar_html(1)
-    assert "processing-segment active" in bar_html
+    assert "clarke-progress-segment active" in bar_html
 
     sections = _render_letter_sections([{"heading": "A", "content": "B"}])
     assert len(sections) == 4
