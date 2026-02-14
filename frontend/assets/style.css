@@ -126,6 +126,8 @@ body, p, span, div, input, textarea, button { font-family: 'Source Sans 3', 'Int
   animation: gradientDrift 15s ease-in-out infinite;
   border-radius: 20px;
   padding: 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  margin-bottom: 16px;
 }
 @keyframes gradientDrift {
   0% { background-position: 0% 50%; }
@@ -311,6 +313,7 @@ body, p, span, div, input, textarea, button { font-family: 'Source Sans 3', 'Int
   box-shadow: 0 2px 12px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.02);
   line-height: 1.7;
 }
+@keyframes cardShimmer { 0%{left:-100%;} 50%,100%{left:150%;} }
 
 .clarke-section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .clarke-section-header h3 { font-family:'Playfair Display', Georgia, serif; font-size:18px; font-weight:600; color:var(--clarke-blue); }
@@ -371,6 +374,7 @@ footer { display: none !important; }
 .gradio-container .clarke-screen-enter {
   background-clip: padding-box !important;
 }
+.clarke-btn-gold:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(201, 168, 76, 0.4); }
 
 .gradio-container .clarke-card,
 .gradio-container .paper-container,
@@ -379,6 +383,7 @@ footer { display: none !important; }
   background: rgba(255, 255, 255, 0.9) !important;
   border-color: var(--clarke-border) !important;
 }
+.clarke-btn-secondary:hover { border-color: var(--clarke-blue-light) !important; background: rgba(27,58,92,0.04) !important; transform: translateY(-1px); }
 
 .gradio-container .clarke-btn-primary,
 .gradio-container .clarke-btn-gold,
@@ -388,6 +393,7 @@ footer { display: none !important; }
   position: relative !important;
   z-index: 1 !important;
 }
+.clarke-btn-destructive:hover { background: var(--clarke-red) !important; color: #fff !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(192,57,43,0.3); }
 
 .gradio-container .clarke-btn-primary {
   background: linear-gradient(135deg, #1B3A5C 0%, #2E6BAD 100%) !important;
@@ -398,6 +404,15 @@ footer { display: none !important; }
   background: linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%) !important;
   color: #1B3A5C !important;
 }
+.clarke-btn-primary:disabled::after, .clarke-btn-gold:disabled::after { animation: none; }
+
+.clarke-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:600; letter-spacing:0.02em; }
+.clarke-badge-review { background: var(--clarke-warning-light); color: var(--clarke-warning); border:1px solid rgba(230,126,34,0.2); }
+.clarke-badge-signed { background: rgba(39,174,96,0.1); color: var(--clarke-success); border:1px solid rgba(39,174,96,0.2); }
+.clarke-badge-signed::before { content:'✓'; font-weight:700; }
+.clarke-badge-recording { background: rgba(201,168,76,0.1); color: var(--clarke-gold); border:1px solid rgba(201,168,76,0.2); animation: badgePulse 2s ease-in-out infinite; }
+.clarke-badge-processing { background: rgba(27,58,92,0.08); color: var(--clarke-blue); border:1px solid rgba(27,58,92,0.15); }
+@keyframes badgePulse { 0%,100%{opacity:.8;} 50%{opacity:1;} }
 
 .gradio-container .clarke-btn-secondary {
   background: transparent !important;
@@ -410,6 +425,31 @@ footer { display: none !important; }
   color: var(--clarke-red) !important;
   border-color: var(--clarke-red) !important;
 }
+.clarke-skeleton, .skeleton-loader { border-radius:8px; }
+.clarke-loading-text { border-radius:6px; height:20px; margin-bottom:12px; }
+.clarke-loading-card { border-radius:16px; height:140px; }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+.clarke-toast { position:fixed; top:20px; right:20px; z-index:10000; padding:16px 24px; border-radius:12px; font-size:15px; font-weight:600; box-shadow:0 8px 32px rgba(0,0,0,.12); animation: toastSlideIn .3s ease forwards; display:flex; align-items:center; gap:10px; }
+.clarke-toast-success { background:#fff; color:var(--clarke-success); border:1px solid rgba(39,174,96,.2); border-left:4px solid var(--clarke-success); }
+.clarke-toast-error { background:#fff; color:var(--clarke-red); border:1px solid rgba(192,57,43,.2); border-left:4px solid var(--clarke-red); }
+.clarke-toast-dismiss { animation: toastSlideOut .3s ease forwards; }
+@keyframes toastSlideIn { 0%{opacity:0; transform:translateX(100px);} 100%{opacity:1; transform:translateX(0);} }
+@keyframes toastSlideOut { 0%{opacity:1; transform:translateX(0);} 100%{opacity:0; transform:translateX(100px);} }
+
+.clarke-dialog-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(26,26,46,.4); backdrop-filter:blur(4px); z-index:9999; display:flex; align-items:center; justify-content:center; animation:overlayFadeIn .2s ease forwards; }
+@keyframes overlayFadeIn { 0%{opacity:0;} 100%{opacity:1;} }
+.clarke-dialog { background:#fff; border-radius:16px; padding:32px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.15); animation:dialogScaleIn .25s cubic-bezier(0.4,0,0.2,1) forwards; }
+@keyframes dialogScaleIn { 0%{opacity:0; transform:scale(.95);} 100%{opacity:1; transform:scale(1);} }
+.clarke-dialog h3 { font-family:'Playfair Display', Georgia, serif; font-size:21px; font-weight:600; margin-bottom:12px; }
+.clarke-dialog p { font-size:15px; color:var(--clarke-text-secondary); margin-bottom:24px; }
+.clarke-dialog-actions { display:flex; gap:12px; justify-content:flex-end; }
+
+.clarke-error-card { background:var(--clarke-red-light); border:1px solid rgba(192,57,43,.15); border-left:4px solid var(--clarke-red); border-radius:12px; padding:20px 24px; margin:16px 0; }
+.clarke-error-card h4 { font-family:'Playfair Display', Georgia, serif; font-size:17px; font-weight:600; color:var(--clarke-red); margin-bottom:8px; }
+.clarke-error-card p { font-size:14px; color:var(--clarke-text-primary); margin-bottom:12px; }
+.clarke-warning-card { background:var(--clarke-warning-light); border:1px solid rgba(230,126,34,.15); border-left:4px solid var(--clarke-warning); border-radius:12px; padding:20px 24px; margin:16px 0; }
+.clarke-warning-card h4 { font-family:'Playfair Display', Georgia, serif; font-size:17px; color:var(--clarke-warning); margin-bottom:8px; }
 
 .gradio-container .clarke-audio-container .gr-audio,
 .gradio-container .clarke-audio-container .gradio-audio,
