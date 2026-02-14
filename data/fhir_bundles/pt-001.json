@@ -6,22 +6,49 @@
       "resource": {
         "resourceType": "Patient",
         "id": "pt-001",
-        "identifier": [
-          {
-            "system": "https://fhir.nhs.uk/Id/nhs-number",
-            "value": "9434765829"
-          }
-        ],
-        "name": [
-          {
-            "use": "official",
-            "prefix": ["Mrs"],
-            "given": ["Margaret"],
-            "family": "Thompson"
-          }
-        ],
+        "identifier": [{"system": "https://fhir.nhs.uk/Id/nhs-number", "value": "9434765829"}],
+        "name": [{"use": "official", "prefix": ["Mrs"], "given": ["Margaret"], "family": "Thompson"}],
         "gender": "female",
-        "birthDate": "1958-03-14"
+        "birthDate": "1958-03-14",
+        "generalPractitioner": [{"display": "Dr Helen Carter"}]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-pt001-1",
+        "subject": {"reference": "Patient/pt-001"},
+        "clinicalStatus": {"coding": [{"code": "active"}]},
+        "code": {"text": "Type 2 diabetes mellitus"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-pt001-2",
+        "subject": {"reference": "Patient/pt-001"},
+        "clinicalStatus": {"coding": [{"code": "active"}]},
+        "code": {"text": "Chronic kidney disease stage 3a"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-pt001-1",
+        "subject": {"reference": "Patient/pt-001"},
+        "status": "active",
+        "authoredOn": "2026-01-20",
+        "medicationCodeableConcept": {"text": "Metformin 1g twice daily"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-pt001-2",
+        "subject": {"reference": "Patient/pt-001"},
+        "status": "active",
+        "authoredOn": "2026-01-22",
+        "medicationCodeableConcept": {"text": "Gliclazide 40mg once daily"}
       }
     },
     {
@@ -29,27 +56,62 @@
         "resourceType": "Observation",
         "id": "obs-hba1c-001",
         "status": "final",
-        "category": [
-          {
-            "coding": [
-              {
-                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
-                "code": "laboratory"
-              }
-            ]
-          }
-        ],
-        "code": {
-          "text": "HbA1c"
-        },
-        "subject": {
-          "reference": "Patient/pt-001"
-        },
-        "effectiveDateTime": "2026-01-15",
-        "valueQuantity": {
-          "value": 55,
-          "unit": "mmol/mol"
-        }
+        "category": [{"coding": [{"code": "laboratory"}]}],
+        "code": {"text": "HbA1c"},
+        "subject": {"reference": "Patient/pt-001"},
+        "effectiveDateTime": "2026-01-25",
+        "valueQuantity": {"value": 55, "unit": "mmol/mol"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-egfr-001",
+        "status": "final",
+        "category": [{"coding": [{"code": "laboratory"}]}],
+        "code": {"text": "eGFR"},
+        "subject": {"reference": "Patient/pt-001"},
+        "effectiveDateTime": "2026-01-25",
+        "valueQuantity": {"value": 52, "unit": "mL/min/1.73m2"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hba1c-older-001",
+        "status": "final",
+        "category": [{"coding": [{"code": "laboratory"}]}],
+        "code": {"text": "HbA1c"},
+        "subject": {"reference": "Patient/pt-001"},
+        "effectiveDateTime": "2025-10-25",
+        "valueQuantity": {"value": 48, "unit": "mmol/mol"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-pt001-1",
+        "patient": {"reference": "Patient/pt-001"},
+        "code": {"text": "Penicillin"},
+        "criticality": "high"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "report-pt001-1",
+        "subject": {"reference": "Patient/pt-001"},
+        "effectiveDateTime": "2026-01-26",
+        "conclusion": "Diabetes blood panel reviewed"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "enc-pt001-1",
+        "subject": {"reference": "Patient/pt-001"},
+        "period": {"start": "2026-01-26"},
+        "status": "finished"
       }
     }
   ]
