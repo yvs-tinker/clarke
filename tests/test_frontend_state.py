@@ -4,7 +4,16 @@ from datetime import datetime, timedelta, timezone
 
 from frontend.components import build_patient_card, build_status_badge
 from frontend.state import initial_consultation_state, show_screen
-from frontend.ui import _format_patient_context_html, _trend_symbol, _update_recording_timer
+from frontend.ui import (
+    _build_generated_document,
+    _build_processing_bar_html,
+    _format_patient_context_html,
+    _poll_processing_progress,
+    _render_letter_sections,
+    _sign_off_document,
+    _trend_symbol,
+    _update_recording_timer,
+)
 
 
 def test_initial_consultation_state_defaults() -> None:
@@ -113,3 +122,50 @@ def test_trend_symbol_and_timer_helpers() -> None:
     started_at = (datetime.now(tz=timezone.utc) - timedelta(seconds=65)).isoformat()
     timer = _update_recording_timer({"recording_started_at": started_at})
     assert timer in {"01:05", "01:04", "01:06"}
+
+
+def test_processing_helpers_and_document_lifecycle(tmp_path, monkeypatch) -> None:
+    """Ensure processing progression and sign-off helpers produce expected outputs.
+
+    Args:
+        tmp_path: Pytest temporary path fixture for file isolation.
+        monkeypatch: Pytest monkeypatch fixture for cwd redirection.
+
+    Returns:
+        None: Assertions validate helper and workflow outputs.
+    """
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data" / "demo").mkdir(parents=True)
+
+    bar_html = _build_processing_bar_html(1)
+    assert "processing-segment active" in bar_html
+
+    sections = _render_letter_sections([{"heading": "A", "content": "B"}])
+    assert len(sections) == 4
+    assert sections[0].startswith("A")
+
+    state = {
+        "selected_patient": {"name": "Mrs. Margaret Thompson"},
+        "patient_context": {
+            "demographics": {"nhs_number": "1234567890"},
+            "problem_list": ["Type 2 diabetes mellitus"],
+            "recent_labs": [{"name": "HbA1c", "value": "55", "unit": "mmol/mol"}],
+            "allergies": [{"substance": "Penicillin", "reaction": "Rash"}],
+        },
+        "consultation": {"status": "processing"},
+        "processing_step": 2,
+        "processing_steps": ["Finalising transcript…", "Synthesising patient context…", "Generating clinical letter…"],
+        "processing_started_at": datetime.now(tz=timezone.utc).isoformat(),
+    }
+
+    generated = _build_generated_document(state)
+    assert generated["status"] == "ready_for_review"
+
+    progressed = _poll_processing_progress(state)
+    assert progressed[0]["screen"] == "s5"
+    assert progressed[1].startswith("Processing complete")
+
+    signed = _sign_off_document(progressed[0], "Section 1\nLine", "Section 2\nLine", "", "")
+    assert "Signed Letter" in signed[2]
+    assert (tmp_path / "data" / "demo" / "latest_signed_letter.txt").exists()
