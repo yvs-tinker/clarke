@@ -30,3 +30,18 @@
 - ROUGE-L: 0.0977
 - Manual Review (n=10): NHS format pass rate=100.00%, clinical accuracy pass rate=0.00%
 - Fine-tuned comparison status: fine-tuned adapter not found (baseline-only evaluation)
+
+
+## Task 33 — Phase 4 Checkpoint
+- Timestamp (UTC): 2026-02-14T18:02:54.384326+00:00
+- Verification summary:
+  - `pytest tests -v`: PASS (72 passed)
+  - Mrs Thompson demo dry-run (mock model IDs + mock FHIR API): PASS
+- Nice-to-have inventory:
+  - [x] LoRA fine-tuning completed
+  - [x] LoRA adapter saved
+  - [x] WER evaluation completed
+  - [x] EHR Agent evaluation completed
+  - [x] BLEU/ROUGE-L evaluation completed
+  - [x] UI visually polished
+  - [x] `evaluation_report.md` populated
