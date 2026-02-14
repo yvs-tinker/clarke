@@ -88,40 +88,42 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
     imaging = context.get("recent_imaging", [])
     flags = context.get("clinical_flags", [])
 
+    problem_items = "".join(f"<li>{escape(str(problem))}</li>" for problem in context.get("problem_list", [])) or "<li>No active problems</li>"
     medication_items = "".join(
-        f"<li>{escape(str(item.get('name', 'Medication')))} "
-        f"{escape(str(item.get('dose', '')))} {escape(str(item.get('frequency', '')))}</li>"
+        f"<li class='clarke-medication-item'>{escape(str(item.get('name', 'Medication')))}"
+        f" <span class='clarke-medication-dose'>{escape(str(item.get('dose', '')))} {escape(str(item.get('frequency', '')))}</span></li>"
         for item in medications
-    ) or "<li>None documented</li>"
+    ) or "<li class='clarke-medication-item'>None documented</li>"
     allergy_items = "".join(
-        f"<li>⚠ {escape(str(item.get('substance', 'Unknown')))} — {escape(str(item.get('reaction', 'Reaction not recorded')))}</li>"
+        f"<li class='clarke-allergy-item'>{escape(str(item.get('substance', 'Unknown')))} — {escape(str(item.get('reaction', 'Reaction not recorded')))}</li>"
         for item in allergies
     ) or "<li>No known allergies</li>"
     lab_items = "".join(
-        f"<li>{escape(str(item.get('name', 'Lab')))}: {escape(str(item.get('value', '')))} {escape(str(item.get('unit', '')))} "
-        f"{_trend_symbol(str(item.get('trend', '')))}</li>"
+        f"<li><span class='clarke-lab-value'>{escape(str(item.get('name', 'Lab')))}: {escape(str(item.get('value', '')))} {escape(str(item.get('unit', '')))}</span>"
+        f" <span class='clarke-trend-{str(item.get('trend', 'stable')).strip().lower().replace('rising', 'up').replace('falling', 'down')}'></span></li>"
         for item in labs
     ) or "<li>No recent labs</li>"
     imaging_items = "".join(
         f"<li>{escape(str(item.get('type', 'Imaging')))} ({escape(str(item.get('date', '')))}): {escape(str(item.get('summary', '')))}</li>"
         for item in imaging
     ) or "<li>No recent imaging</li>"
-    problem_items = "".join(f"<li>{escape(str(problem))}</li>" for problem in context.get("problem_list", [])) or "<li>No active problems</li>"
-    flag_items = "".join(f"<li>{escape(str(flag))}</li>" for flag in flags) or "<li>No active clinical flags</li>"
+    flag_items = "".join(f"<li class='clarke-clinical-flag'>{escape(str(flag))}</li>" for flag in flags) or "<li>No active clinical flags</li>"
 
     return f"""
-    <div class=\"clarke-card\" style=\"padding:16px;\">
-      <h4 style=\"margin-top:0;\">Demographics</h4>
-      <p><strong>{escape(str(demographics.get('name', 'Unknown')))}</strong><br>
-      DOB: {escape(str(demographics.get('dob', 'N/A')))}<br>
-      NHS: <span class=\"mono\">{escape(str(demographics.get('nhs_number', 'N/A')))}</span><br>
-      Sex: {escape(str(demographics.get('sex', 'N/A')))}</p>
-      <h4>Problem List</h4><ul>{problem_items}</ul>
-      <h4>Medications</h4><ul>{medication_items}</ul>
-      <h4>Allergies</h4><ul>{allergy_items}</ul>
-      <h4>Recent Labs</h4><ul>{lab_items}</ul>
-      <h4>Recent Imaging</h4><ul>{imaging_items}</ul>
-      <h4>Clinical Flags</h4><ul>{flag_items}</ul>
+    <div class="clarke-card">
+      <div class="clarke-context-section">
+        <h3>Demographics</h3>
+        <p><strong>{escape(str(demographics.get('name', 'Unknown')))}</strong><br>
+        DOB: {escape(str(demographics.get('dob', 'N/A')))}<br>
+        NHS: <span class="mono">{escape(str(demographics.get('nhs_number', 'N/A')))}</span><br>
+        Sex: {escape(str(demographics.get('sex', 'N/A')))}</p>
+      </div>
+      <div class="clarke-context-section"><h3>Problem List</h3><ul>{problem_items}</ul></div>
+      <div class="clarke-context-section"><h3>Medications</h3><ul>{medication_items}</ul></div>
+      <div class="clarke-context-section"><h3>Allergies</h3><ul>{allergy_items}</ul></div>
+      <div class="clarke-context-section"><h3>Recent Labs</h3><ul>{lab_items}</ul></div>
+      <div class="clarke-context-section"><h3>Recent Imaging</h3><ul>{imaging_items}</ul></div>
+      <div class="clarke-context-section"><h3>Clinical Flags</h3><ul>{flag_items}</ul></div>
     </div>
     """
 
@@ -136,8 +138,11 @@ def _build_processing_bar_html(active_index: int) -> str:
         str: HTML snippet for processing progress bar.
     """
 
-    segments = [f"<div class='{'processing-segment active' if index <= active_index else 'processing-segment'}'></div>" for index in range(3)]
-    return f"<div class='processing-bar'>{''.join(segments)}</div>"
+    segments = []
+    for index in range(3):
+        state_class = 'clarke-progress-segment complete' if index < active_index else 'clarke-progress-segment active' if index == active_index else 'clarke-progress-segment'
+        segments.append(f"<div class='{state_class}'></div>")
+    return f"<div class='clarke-progress-bar'>{''.join(segments)}</div>"
 
 
 def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str, str, str, str]:
@@ -191,10 +196,10 @@ def _update_recording_timer(state: dict[str, Any]) -> str:
 
     started_at = str((state or {}).get("recording_started_at", "")).strip()
     if not started_at:
-        return "00:00"
+        return "<div class='clarke-recording-timer'>00:00</div>"
     elapsed_s = max(int((datetime.now(tz=timezone.utc) - datetime.fromisoformat(started_at)).total_seconds()), 0)
     minutes, seconds = divmod(elapsed_s, 60)
-    return f"{minutes:02d}:{seconds:02d}"
+    return f"<div class='clarke-recording-timer'>{minutes:02d}:{seconds:02d}</div>"
 
 
 def _handle_patient_selection(state: dict[str, Any], patient_id: str) -> tuple[dict[str, Any], str, str, str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
@@ -225,7 +230,7 @@ def _handle_patient_selection(state: dict[str, Any], patient_id: str) -> tuple[d
 
     updated_state["patient_context"] = context
     context_html = _format_patient_context_html(context)
-    summary_html = f"<div class='clarke-card' style='padding:12px;'><p><strong>{escape(patient['name'])}</strong></p><p class='caption'>{escape(patient['summary'])}</p></div>"
+    summary_html = f"<div class='clarke-card'><p><strong>{escape(patient['name'])}</strong></p><p class='caption'>{escape(patient['summary'])}</p></div>"
     return updated_state, feedback, context_html, summary_html, *show_screen("s2")
 
 
@@ -283,12 +288,12 @@ def _stage_from_pipeline(stage: str) -> tuple[str, int]:
     """
 
     mapping = {
-        "transcribing": ("Finalising transcript…", 0),
-        "retrieving_context": ("Synthesising patient context…", 1),
-        "generating_document": ("Generating clinical letter…", 2),
-        "complete": ("Generating clinical letter…", 2),
+        "transcribing": ("<div class='clarke-stage-label active clarke-stage-active'>Finalising transcript…</div>", 0),
+        "retrieving_context": ("<div class='clarke-stage-label active clarke-stage-active'>Synthesising patient context…</div>", 1),
+        "generating_document": ("<div class='clarke-stage-label active clarke-stage-active'>Generating clinical letter…</div>", 2),
+        "complete": ("<div class='clarke-stage-label active clarke-stage-active'>Generating clinical letter…</div>", 2),
     }
-    return mapping.get(stage, ("Finalising transcript…", 0))
+    return mapping.get(stage, ("<div class='clarke-stage-label active clarke-stage-active'>Finalising transcript…</div>", 0))
 
 
 def _start_processing(state: dict[str, Any], audio_path: str | None) -> tuple[dict[str, Any], str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
@@ -306,9 +311,9 @@ def _start_processing(state: dict[str, Any], audio_path: str | None) -> tuple[di
     updated_state = dict(state or initial_consultation_state())
     consultation_id = str((updated_state.get("consultation") or {}).get("id", ""))
     if not consultation_id:
-        return updated_state, "Consultation session is missing. Start consultation again.", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(active=False), *show_screen("s3")
+        return updated_state, "Consultation session is missing. Start consultation again.", "<div class='clarke-stage-label active clarke-stage-active'>Finalising transcript…</div>", _build_processing_bar_html(0), "<div class='clarke-processing-timer'>Elapsed: 00:00</div>", gr.update(active=False), *show_screen("s3")
     if not audio_path:
-        return updated_state, "Please capture audio before ending consultation.", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(active=False), *show_screen("s3")
+        return updated_state, "Please capture audio before ending consultation.", "<div class='clarke-stage-label active clarke-stage-active'>Finalising transcript…</div>", _build_processing_bar_html(0), "<div class='clarke-processing-timer'>Elapsed: 00:00</div>", gr.update(active=False), *show_screen("s3")
 
     try:
         with Path(audio_path).open("rb") as stream:
@@ -321,13 +326,13 @@ def _start_processing(state: dict[str, Any], audio_path: str | None) -> tuple[di
             )
         _api_request("POST", f"/consultations/{consultation_id}/end", timeout=180.0)
     except Exception as exc:
-        return updated_state, f"Failed to end consultation: {exc}", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(active=False), *show_screen("s3")
+        return updated_state, f"Failed to end consultation: {exc}", "<div class='clarke-stage-label active clarke-stage-active'>Finalising transcript…</div>", _build_processing_bar_html(0), "<div class='clarke-processing-timer'>Elapsed: 00:00</div>", gr.update(active=False), *show_screen("s3")
 
     updated_state["captured_audio_path"] = audio_path
     updated_state["processing_started_at"] = datetime.now(tz=timezone.utc).isoformat()
     updated_state["consultation"]["status"] = "processing"
     updated_state["screen"] = "s4"
-    return updated_state, "Consultation ended. Processing audio and generating document.", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(active=True), *show_screen("s4")
+    return updated_state, "Consultation ended. Processing audio and generating document.", "<div class='clarke-stage-label active clarke-stage-active'>Finalising transcript…</div>", _build_processing_bar_html(0), "<div class='clarke-processing-timer'>Elapsed: 00:00</div>", gr.update(active=True), *show_screen("s4")
 
 
 def _poll_processing_progress(state: dict[str, Any]) -> tuple[dict[str, Any], str, str, str, dict[str, Any], str, str, str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
@@ -345,11 +350,11 @@ def _poll_processing_progress(state: dict[str, Any]) -> tuple[dict[str, Any], st
     consultation_id = str((updated_state.get("consultation") or {}).get("id", ""))
 
     started_at = str(updated_state.get("processing_started_at", "") or "")
-    elapsed_label = "00:00"
+    elapsed_label = "<div class='clarke-processing-timer'>Elapsed: 00:00</div>"
     if started_at:
         elapsed_s = max(int((datetime.now(tz=timezone.utc) - datetime.fromisoformat(started_at)).total_seconds()), 0)
         minutes, seconds = divmod(elapsed_s, 60)
-        elapsed_label = f"{minutes:02d}:{seconds:02d}"
+        elapsed_label = f"<div class='clarke-processing-timer'>Elapsed: {minutes:02d}:{seconds:02d}</div>"
 
     if not consultation_id:
         generated_document = _build_generated_document(updated_state)
@@ -358,12 +363,12 @@ def _poll_processing_progress(state: dict[str, Any]) -> tuple[dict[str, Any], st
         updated_state["consultation"]["status"] = "review"
         updated_state["screen"] = "s5"
         section_1, section_2, section_3, section_4 = _render_letter_sections(generated_document.get("sections", []))
-        return updated_state, "Processing complete. Review the generated clinic letter.", "Generating clinical letter…", _build_processing_bar_html(2), gr.update(active=False), elapsed_label, section_1, section_2, section_3, section_4, gr.update(), gr.update(), gr.update(value="Ready for Review", variant="secondary"), *show_screen("s5")
+        return updated_state, "Processing complete. Review the generated clinic letter.", "<div class='clarke-stage-label active clarke-stage-active'>Generating clinical letter…</div>", _build_processing_bar_html(2), gr.update(active=False), elapsed_label, section_1, section_2, section_3, section_4, gr.update(), gr.update(), gr.update(value="Ready for Review", variant="secondary"), *show_screen("s5")
 
     try:
         progress = _api_request("GET", f"/consultations/{consultation_id}/progress")
     except Exception as exc:
-        return updated_state, f"Progress polling failed: {exc}", "Finalising transcript…", _build_processing_bar_html(0), gr.update(active=False), elapsed_label, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), *show_screen("s4")
+        return updated_state, f"Progress polling failed: {exc}", "<div class='clarke-stage-label active clarke-stage-active'>Finalising transcript…</div>", _build_processing_bar_html(0), gr.update(active=False), elapsed_label, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), *show_screen("s4")
 
     stage = str(progress.get("stage", "transcribing"))
     stage_label, segment_index = _stage_from_pipeline(stage)
@@ -421,7 +426,7 @@ def _regenerate_document(state: dict[str, Any]) -> tuple[dict[str, Any], str, st
     updated_state["processing_started_at"] = datetime.now(tz=timezone.utc).isoformat()
     updated_state["consultation"]["status"] = "processing"
     updated_state["screen"] = "s4"
-    return updated_state, "Regenerating entire clinic letter.", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(value="Ready for Review", variant="secondary"), gr.update(active=True), *show_screen("s4")
+    return updated_state, "Regenerating entire clinic letter.", "<div class='clarke-stage-label active clarke-stage-active'>Finalising transcript…</div>", _build_processing_bar_html(0), "<div class='clarke-processing-timer'>Elapsed: 00:00</div>", gr.update(value="Ready for Review", variant="secondary"), gr.update(active=True), *show_screen("s4")
 
 
 def _cancel_processing(state: dict[str, Any]) -> tuple[dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
@@ -517,75 +522,75 @@ def build_ui() -> gr.Blocks:
     with gr.Blocks(theme=clarke_theme, css=Path("frontend/assets/style.css").read_text(encoding="utf-8"), title="Clarke") as demo:
         app_state = gr.State(initial_consultation_state())
 
-        with gr.Row():
-            gr.Image("frontend/assets/clarke_logo.svg", show_label=False, container=False, height=40, width=40)
+        with gr.Row(elem_classes=["clarke-header"]):
+            gr.Image("frontend/assets/clarke_logo.svg", show_label=False, container=False, height=40, width=40, elem_classes=["clarke-logo-ring"])
             gr.HTML("<div><h3 style=\"margin:0;\">Clarke</h3><p class=\"caption\" style=\"margin:0;\">Clinical Documentation Copilot</p></div>")
             build_status_badge("ready")
 
         feedback_text = gr.Markdown("Select a patient card to open context.")
 
-        with gr.Column(visible=False) as screen_s2:
+        with gr.Column(visible=False, elem_classes=["clarke-screen-enter"]) as screen_s2:
             with gr.Row():
                 with gr.Column(scale=5):
-                    patient_context_panel = gr.HTML('<div class="skeleton-loader" style="height:220px;"></div>')
+                    patient_context_panel = gr.HTML('<div class="clarke-skeleton" style="height:220px;"></div>')
                 with gr.Column(scale=7):
                     with gr.Column(elem_classes=["paper-container"]):
                         gr.Markdown("## Start Consultation")
                         gr.Markdown("Patient context is loaded. Start consultation recording when ready.")
-                        start_consultation_button = gr.Button("Start Consultation", variant="primary")
-                        back_to_dashboard_button = gr.Button("Back to Dashboard", variant="secondary")
+                        start_consultation_button = gr.Button("Start Consultation", variant="primary", elem_classes=["clarke-btn-primary"])
+                        back_to_dashboard_button = gr.Button("Back to Dashboard", variant="secondary", elem_classes=["clarke-btn-secondary"])
 
-        with gr.Column(visible=False) as screen_s3:
+        with gr.Column(visible=False, elem_classes=["clarke-screen-enter"]) as screen_s3:
             with gr.Row():
                 with gr.Column(scale=4):
-                    patient_summary_panel = gr.HTML("<div class='clarke-card' style='padding:12px;'>No patient selected.</div>")
+                    patient_summary_panel = gr.HTML("<div class='clarke-card'>No patient selected.</div>")
                 with gr.Column(scale=8):
-                    gr.HTML('<div class="recording-indicator active"></div>')
-                    recording_timer = gr.Markdown("### 00:00")
+                    gr.HTML('<div class="clarke-recording-dot"></div><div class="clarke-recording-label">Recording</div>')
+                    recording_timer = gr.Markdown("<div class=\"clarke-recording-timer\">00:00</div>")
                     recording_tick = gr.Timer(value=1.0, active=False)
-                    consultation_audio = gr.Audio(sources=["microphone", "upload"], streaming=False, type="filepath", label="Consultation Audio")
-                    end_consultation_button = gr.Button("End Consultation", variant="primary")
+                    consultation_audio = gr.Audio(sources=["microphone", "upload"], streaming=False, type="filepath", label="Consultation Audio", elem_classes=["clarke-audio-container"])
+                    end_consultation_button = gr.Button("End Consultation", variant="primary", elem_classes=["clarke-btn-primary"])
 
-        with gr.Column(visible=False) as screen_s4:
+        with gr.Column(visible=False, elem_classes=["clarke-screen-enter"]) as screen_s4:
             with gr.Column(elem_classes=["paper-container"]):
                 gr.Markdown("## Processing")
-                processing_stage = gr.Markdown("Finalising transcript…")
+                processing_stage = gr.Markdown("<div class=\"clarke-stage-label active clarke-stage-active\">Finalising transcript…</div>")
                 processing_progress_bar = gr.HTML(_build_processing_bar_html(0))
-                processing_elapsed_timer = gr.Markdown("Elapsed: 00:00")
+                processing_elapsed_timer = gr.Markdown("<div class=\"clarke-processing-timer\">Elapsed: 00:00</div>")
                 processing_tick = gr.Timer(value=1.0, active=False)
-                cancel_processing_button = gr.Button("Cancel", variant="stop")
+                cancel_processing_button = gr.Button("Cancel", variant="stop", elem_classes=["clarke-btn-destructive"])
 
-        with gr.Column(visible=False) as screen_s5:
+        with gr.Column(visible=False, elem_classes=["clarke-screen-enter"]) as screen_s5:
             with gr.Row():
                 with gr.Column(scale=4):
                     gr.HTML("<div class='clarke-card' style='padding:12px;'><p><strong>Patient</strong></p></div>")
                 with gr.Column(scale=8):
                     review_status_badge = gr.Label(value="Ready for Review", label="Status")
-                    review_fhir_values = gr.HTML("<div class='clarke-card'><span class='mono'>FHIR values appear here.</span></div>")
+                    review_fhir_values = gr.HTML("<div class='clarke-card'><span class='clarke-fhir-value'>FHIR values appear here.</span></div>")
                     with gr.Column(elem_classes=["paper-container"]):
-                        section_one_text = gr.Textbox(label="Section 1", lines=5, interactive=True)
-                        section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True)
-                        section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True)
-                        section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True)
+                        section_one_text = gr.Textbox(label="Section 1", lines=5, interactive=True, elem_classes=["clarke-section-editing"])
+                        section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True, elem_classes=["clarke-section-editing"])
+                        section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True, elem_classes=["clarke-section-editing"])
+                        section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True, elem_classes=["clarke-section-editing"])
                     with gr.Row():
-                        sign_off_button = gr.Button("Sign Off & Export", variant="primary")
-                        regenerate_button = gr.Button("Regenerate Entire Letter", variant="secondary")
+                        sign_off_button = gr.Button("Sign Off & Export", variant="primary", elem_classes=["clarke-btn-primary"])
+                        regenerate_button = gr.Button("Regenerate Entire Letter", variant="secondary", elem_classes=["clarke-btn-secondary"])
 
-        with gr.Column(visible=False) as screen_s6:
+        with gr.Column(visible=False, elem_classes=["clarke-screen-enter"]) as screen_s6:
             with gr.Column(elem_classes=["paper-container"]):
                 signed_status_badge = gr.Label(value="Signed Off ✓", label="Status")
                 signed_letter_markdown = gr.Markdown("### Signed letter will appear here.")
                 copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False, show_copy_button=True)
                 download_text_file = gr.File(label="Download as Text")
-                next_patient_button = gr.Button("Next Patient", variant="primary")
+                next_patient_button = gr.Button("Next Patient", variant="primary", elem_classes=["clarke-btn-gold"])
 
-        with gr.Column(visible=True) as screen_s1:
-            with gr.Column(elem_classes=["hero-gradient"]):
-                gr.Markdown(f"### {clinician.get('name', 'Unknown Clinician')} — {clinician.get('specialty', 'Specialty')} — {clinic_payload.get('date', '')}")
+        with gr.Column(visible=True, elem_classes=["clarke-screen-enter"]) as screen_s1:
+            with gr.Column(elem_classes=["clarke-hero-bg"]):
+                gr.HTML(f"<div class='clarke-clinic-header'>{clinician.get('name', 'Unknown Clinician')} — {clinician.get('specialty', 'Specialty')} — {clinic_payload.get('date', '')}</div>")
             for patient in clinic_payload.get("patients", []):
                 with gr.Column(elem_classes=["clarke-card"]):
                     build_patient_card(patient)
-                    patient_button = gr.Button("Open Patient", variant="primary")
+                    patient_button = gr.Button("Open Patient", variant="primary", elem_classes=["clarke-btn-gold"])
                     patient_button.click(_handle_patient_selection, inputs=[app_state, gr.State(patient.get("id", ""))], outputs=[app_state, feedback_text, patient_context_panel, patient_summary_panel, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
 
         back_to_dashboard_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
