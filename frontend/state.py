@@ -21,6 +21,14 @@ def initial_consultation_state() -> dict[str, Any]:
         "screen": "s1",
         "consultation": {"id": None, "status": "idle"},
         "selected_patient": None,
+        "patient_context": None,
+        "generated_document": None,
+        "signed_document_text": "",
+        "captured_audio_path": "",
+        "processing_started_at": None,
+        "processing_step": 0,
+        "processing_steps": [],
+        "recording_started_at": None,
     }
 
 

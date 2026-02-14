@@ -428,7 +428,7 @@ def get_progress(consultation_id: str) -> dict[str, Any]:
 
 
 @app.post("/api/v1/consultations/{consultation_id}/document/sign-off")
-def sign_off_document(consultation_id: str) -> dict[str, Any]:
+def sign_off_document(consultation_id: str, payload: dict[str, Any] | None = Body(default=None)) -> dict[str, Any]:
     """Sign off a generated document and set consultation status to signed off.
 
     Args:
@@ -438,7 +438,11 @@ def sign_off_document(consultation_id: str) -> dict[str, Any]:
         dict[str, Any]: Signed-off document payload with updated status.
     """
 
+    sections = (payload or {}).get("sections", [])
+
     try:
+        if sections:
+            orchestrator.update_document_sections(consultation_id, sections)
         document = orchestrator.sign_off_document(consultation_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
