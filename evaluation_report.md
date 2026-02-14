@@ -21,3 +21,12 @@
   - pt-003: recall=1.0000, precision=1.0000, hallucination=0.0000 (matched=14, gold=14, output=14)
   - pt-004: recall=1.0000, precision=1.0000, hallucination=0.0000 (matched=15, gold=15, output=15)
   - pt-005: recall=1.0000, precision=1.0000, hallucination=0.0000 (matched=14, gold=14, output=14)
+
+## Task 31 — Document Generation Evaluation
+- Timestamp (UTC): 2026-02-14T17:16:52.406435+00:00
+- Evaluated Samples: 50
+- Model: mock
+- BLEU: 0.5668
+- ROUGE-L: 0.0977
+- Manual Review (n=10): NHS format pass rate=100.00%, clinical accuracy pass rate=0.00%
+- Fine-tuned comparison status: fine-tuned adapter not found (baseline-only evaluation)
