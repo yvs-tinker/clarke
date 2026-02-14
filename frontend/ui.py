@@ -3,19 +3,21 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 from typing import Any
 
 import gradio as gr
+import httpx
 
 from frontend.components import build_patient_card, build_status_badge
 from frontend.state import initial_consultation_state, select_patient, show_screen
 from frontend.theme import clarke_theme
 
 CLINIC_LIST_PATH = Path("data/clinic_list.json")
-FHIR_BUNDLE_DIR = Path("data/fhir_bundles")
+API_BASE_URL = os.getenv("CLARKE_API_BASE_URL", "http://127.0.0.1:7860/api/v1")
 
 
 def load_clinic_list(path: Path = CLINIC_LIST_PATH) -> dict[str, Any]:
@@ -50,6 +52,25 @@ def _trend_symbol(trend: str) -> str:
     return "→"
 
 
+def _api_request(method: str, endpoint: str, **kwargs: Any) -> Any:
+    """Execute an HTTP request to the Clarke backend API.
+
+    Args:
+        method (str): HTTP method name.
+        endpoint (str): API path beginning with '/'.
+        **kwargs (Any): Additional request keyword arguments.
+
+    Returns:
+        Any: Parsed JSON response payload.
+    """
+
+    timeout = kwargs.pop("timeout", 30.0)
+    with httpx.Client(timeout=timeout) as client:
+        response = client.request(method, f"{API_BASE_URL}{endpoint}", **kwargs)
+    response.raise_for_status()
+    return response.json()
+
+
 def _format_patient_context_html(context: dict[str, Any]) -> str:
     """Render patient context sections as HTML for the S2 side panel.
 
@@ -68,26 +89,23 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
     flags = context.get("clinical_flags", [])
 
     medication_items = "".join(
-        f"<li>{escape(str(item.get('name', 'Medication')))}"
-        f" {escape(str(item.get('dose', '')))} {escape(str(item.get('frequency', '')))}</li>"
+        f"<li>{escape(str(item.get('name', 'Medication')))} "
+        f"{escape(str(item.get('dose', '')))} {escape(str(item.get('frequency', '')))}</li>"
         for item in medications
     ) or "<li>None documented</li>"
-
     allergy_items = "".join(
         f"<li>⚠ {escape(str(item.get('substance', 'Unknown')))} — {escape(str(item.get('reaction', 'Reaction not recorded')))}</li>"
         for item in allergies
     ) or "<li>No known allergies</li>"
-
     lab_items = "".join(
-        f"<li>{escape(str(item.get('name', 'Lab')))}: {escape(str(item.get('value', '')))} {escape(str(item.get('unit', '')))} {_trend_symbol(str(item.get('trend', '')))}</li>"
+        f"<li>{escape(str(item.get('name', 'Lab')))}: {escape(str(item.get('value', '')))} {escape(str(item.get('unit', '')))} "
+        f"{_trend_symbol(str(item.get('trend', '')))}</li>"
         for item in labs
     ) or "<li>No recent labs</li>"
-
     imaging_items = "".join(
         f"<li>{escape(str(item.get('type', 'Imaging')))} ({escape(str(item.get('date', '')))}): {escape(str(item.get('summary', '')))}</li>"
         for item in imaging
     ) or "<li>No recent imaging</li>"
-
     problem_items = "".join(f"<li>{escape(str(problem))}</li>" for problem in context.get("problem_list", [])) or "<li>No active problems</li>"
     flag_items = "".join(f"<li>{escape(str(flag))}</li>" for flag in flags) or "<li>No active clinical flags</li>"
 
@@ -108,156 +126,57 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
     """
 
 
-def _load_mock_patient_context(patient_id: str) -> dict[str, Any]:
-    """Load patient context from local FHIR bundle as a lightweight UI mock.
+def _build_processing_bar_html(active_index: int) -> str:
+    """Render a three-step segmented processing progress bar.
 
     Args:
-        patient_id (str): Patient identifier used to select local bundle fixtures.
+        active_index (int): Zero-based index of current active processing stage.
 
     Returns:
-        dict[str, Any]: Context payload with demographics, problems, meds, allergies, and labs.
+        str: HTML snippet for processing progress bar.
     """
 
-    bundle_path = FHIR_BUNDLE_DIR / f"{patient_id}.json"
-    if not bundle_path.exists():
-        return {
-            "demographics": {"name": "Unknown", "dob": "", "nhs_number": "", "sex": ""},
-            "problem_list": [],
-            "medications": [],
-            "allergies": [],
-            "recent_labs": [],
-            "recent_imaging": [],
-            "clinical_flags": ["Context unavailable for selected patient."],
-        }
-
-    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
-    demographics: dict[str, Any] = {"name": "", "dob": "", "nhs_number": "", "sex": ""}
-    problems: list[str] = []
-    medications: list[dict[str, str]] = []
-    allergies: list[dict[str, str]] = []
-    labs: list[dict[str, str]] = []
-    imaging: list[dict[str, str]] = []
-
-    for entry in bundle.get("entry", []):
-        resource = entry.get("resource", {})
-        resource_type = resource.get("resourceType")
-        if resource_type == "Patient":
-            name = resource.get("name", [{}])[0]
-            full_name = " ".join([*(name.get("prefix", [])), *(name.get("given", [])), name.get("family", "")]).strip()
-            nhs_number = ""
-            for identifier in resource.get("identifier", []):
-                if identifier.get("value"):
-                    nhs_number = str(identifier.get("value"))
-                    break
-            demographics = {
-                "name": full_name,
-                "dob": str(resource.get("birthDate", "")),
-                "nhs_number": nhs_number,
-                "sex": str(resource.get("gender", "")).capitalize(),
-            }
-        elif resource_type == "Condition":
-            problems.append(str(resource.get("code", {}).get("text", "")))
-        elif resource_type == "MedicationRequest":
-            medications.append(
-                {
-                    "name": str(resource.get("medicationCodeableConcept", {}).get("text", "Medication")),
-                    "dose": "",
-                    "frequency": "",
-                }
-            )
-        elif resource_type == "AllergyIntolerance":
-            allergies.append(
-                {
-                    "substance": str(resource.get("code", {}).get("text", "Allergy")),
-                    "reaction": str(resource.get("reaction", [{}])[0].get("manifestation", [{}])[0].get("text", "Not recorded")),
-                }
-            )
-        elif resource_type == "Observation" and "laboratory" in str(resource.get("category", [{}])[0].get("coding", [{}])[0].get("code", "")):
-            labs.append(
-                {
-                    "name": str(resource.get("code", {}).get("text", "Lab")),
-                    "value": str(resource.get("valueQuantity", {}).get("value", "")),
-                    "unit": str(resource.get("valueQuantity", {}).get("unit", "")),
-                    "trend": "stable",
-                }
-            )
-        elif resource_type == "DiagnosticReport":
-            imaging.append(
-                {
-                    "type": str(resource.get("code", {}).get("text", "Imaging")),
-                    "date": str(resource.get("effectiveDateTime", ""))[:10],
-                    "summary": str(resource.get("conclusion", "No conclusion provided.")),
-                }
-            )
-
-    return {
-        "demographics": demographics,
-        "problem_list": [item for item in problems if item],
-        "medications": medications,
-        "allergies": allergies,
-        "recent_labs": labs[:5],
-        "recent_imaging": imaging[:3],
-        "clinical_flags": ["Review latest bloods and medication adherence."],
-    }
+    segments = [f"<div class='{'processing-segment active' if index <= active_index else 'processing-segment'}'></div>" for index in range(3)]
+    return f"<div class='processing-bar'>{''.join(segments)}</div>"
 
 
-def _handle_patient_selection(state: dict[str, Any], patient_id: str) -> tuple[dict[str, Any], str, str, str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-    """Update state and screen visibility when user selects a patient.
+def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str, str, str, str]:
+    """Map generated letter sections onto fixed textbox outputs.
 
     Args:
-        state (dict[str, Any]): Current UI session state.
-        patient_id (str): Selected patient identifier.
+        letter_sections (list[dict[str, str]]): Ordered letter sections with heading/content keys.
 
     Returns:
-        tuple[dict[str, Any], str, str, str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Updated state, feedback, context panel HTML, summary HTML, and visibility updates for S1-S6.
+        tuple[str, str, str, str]: Four section strings for review textboxes.
     """
 
-    clinic_payload = load_clinic_list()
-    patient = next((row for row in clinic_payload.get("patients", []) if row.get("id") == patient_id), None)
-    if patient is None:
-        return state, "Patient selection failed: patient not found.", "", "", *show_screen("s1")
-
-    updated_state = select_patient(state, patient)
-    updated_state["patient_context"] = _load_mock_patient_context(patient_id)
-    context_html = _format_patient_context_html(updated_state["patient_context"])
-    summary_html = f"<div class='clarke-card' style='padding:12px;'><p><strong>{escape(patient['name'])}</strong></p><p class='caption'>{escape(patient['summary'])}</p></div>"
-    feedback = f"Loaded patient context for {patient['name']} ({patient['id']})."
-    return updated_state, feedback, context_html, summary_html, *show_screen("s2")
+    resolved_sections = list(letter_sections)
+    while len(resolved_sections) < 4:
+        resolved_sections.append({"heading": f"Section {len(resolved_sections) + 1}", "content": ""})
+    return tuple(f"{s.get('heading', '')}\n{s.get('content', '').strip()}".strip() for s in resolved_sections[:4])
 
 
-def _handle_back_to_dashboard(state: dict[str, Any]) -> tuple[dict[str, Any], str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-    """Navigate from context screen back to dashboard.
+def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
+    """Create a deterministic fallback letter when backend document is unavailable.
 
     Args:
-        state (dict[str, Any]): Current application state.
+        state (dict[str, Any]): Current session state containing patient and context metadata.
 
     Returns:
-        tuple[dict[str, Any], str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Updated state, feedback text, and visibility updates for all screens.
+        dict[str, Any]: Document payload with editable sections and FHIR-derived highlights.
     """
 
-    updated_state = dict(state or initial_consultation_state())
-    updated_state["screen"] = "s1"
-    return updated_state, "Returned to dashboard.", *show_screen("s1")
-
-
-def _handle_start_consultation(state: dict[str, Any]) -> tuple[dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-    """Transition to live consultation and start recording timer.
-
-    Args:
-        state (dict[str, Any]): Current application state.
-
-    Returns:
-        tuple[dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Updated state, feedback text, timer activation update, and visibility updates for all screens.
-    """
-
-    updated_state = dict(state or initial_consultation_state())
-    updated_state["screen"] = "s3"
-    updated_state["recording_started_at"] = datetime.now(tz=timezone.utc).isoformat()
-    updated_state["consultation"]["status"] = "recording"
-    return updated_state, "Consultation recording started.", gr.update(active=True), *show_screen("s3")
+    selected_patient = (state or {}).get("selected_patient") or {}
+    patient_context = (state or {}).get("patient_context") or {}
+    first_lab = (patient_context.get("recent_labs") or [{"name": "Lab", "value": "", "unit": ""}])[0]
+    first_problem = (patient_context.get("problem_list") or ["Clinical issue"])[0]
+    sections = [
+        {"heading": "Clinical Summary", "content": f"Consultation focused on {first_problem.lower()}."},
+        {"heading": "Assessment", "content": f"Latest result: {first_lab.get('name')} {first_lab.get('value')} {first_lab.get('unit')}"},
+        {"heading": "Safety and Risks", "content": "Reviewed medication and allergy safety."},
+        {"heading": "Plan", "content": "Continue treatment and schedule follow-up."},
+    ]
+    return {"title": "NHS Clinic Letter", "status": "ready_for_review", "sections": sections, "patient_name": selected_patient.get("name", "Patient")}
 
 
 def _update_recording_timer(state: dict[str, Any]) -> str:
@@ -278,194 +197,201 @@ def _update_recording_timer(state: dict[str, Any]) -> str:
     return f"{minutes:02d}:{seconds:02d}"
 
 
-def _start_processing(state: dict[str, Any], audio_path: str | None) -> tuple[dict[str, Any], str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-    """Transition from recording to processing and initialise stage metadata.
+def _handle_patient_selection(state: dict[str, Any], patient_id: str) -> tuple[dict[str, Any], str, str, str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
+    """Update state and call backend context endpoint when user selects a patient.
 
     Args:
-        state (dict[str, Any]): Current UI state before processing begins.
+        state (dict[str, Any]): Current UI session state.
+        patient_id (str): Selected patient identifier.
+
+    Returns:
+        tuple[dict[str, Any], str, str, str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
+            Updated state, feedback, context HTML, summary HTML, and visibility updates.
+    """
+
+    clinic_payload = load_clinic_list()
+    patient = next((row for row in clinic_payload.get("patients", []) if row.get("id") == patient_id), None)
+    if patient is None:
+        return state, "Patient selection failed: patient not found.", "", "", *show_screen("s1")
+
+    updated_state = select_patient(state, patient)
+    try:
+        context = _api_request("POST", f"/patients/{patient_id}/context")
+    except Exception as exc:
+        context = updated_state.get("patient_context") or {}
+        feedback = f"Patient selected but context call failed: {exc}"
+    else:
+        feedback = f"Loaded patient context for {patient['name']} ({patient['id']})."
+
+    updated_state["patient_context"] = context
+    context_html = _format_patient_context_html(context)
+    summary_html = f"<div class='clarke-card' style='padding:12px;'><p><strong>{escape(patient['name'])}</strong></p><p class='caption'>{escape(patient['summary'])}</p></div>"
+    return updated_state, feedback, context_html, summary_html, *show_screen("s2")
+
+
+def _handle_back_to_dashboard(state: dict[str, Any]) -> tuple[dict[str, Any], str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
+    """Navigate from context screen back to dashboard.
+
+    Args:
+        state (dict[str, Any]): Current application state.
+
+    Returns:
+        tuple[dict[str, Any], str, dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
+            Updated state, feedback text, and visibility updates.
+    """
+
+    updated_state = dict(state or initial_consultation_state())
+    updated_state["screen"] = "s1"
+    return updated_state, "Returned to dashboard.", *show_screen("s1")
+
+
+def _handle_start_consultation(state: dict[str, Any]) -> tuple[dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
+    """Start consultation by calling backend and storing consultation_id.
+
+    Args:
+        state (dict[str, Any]): Current application state.
+
+    Returns:
+        tuple[dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
+            Updated state, feedback, timer update, and visibility updates.
+    """
+
+    updated_state = dict(state or initial_consultation_state())
+    patient_id = str((updated_state.get("selected_patient") or {}).get("id", ""))
+    if not patient_id:
+        return updated_state, "Please select a patient first.", gr.update(active=False), *show_screen("s1")
+
+    try:
+        payload = _api_request("POST", "/consultations/start", json={"patient_id": patient_id})
+    except Exception as exc:
+        return updated_state, f"Failed to start consultation: {exc}", gr.update(active=False), *show_screen("s2")
+
+    updated_state["consultation"] = {"id": payload.get("consultation_id"), "status": payload.get("status", "recording")}
+    updated_state["recording_started_at"] = datetime.now(tz=timezone.utc).isoformat()
+    updated_state["screen"] = "s3"
+    return updated_state, "Consultation recording started.", gr.update(active=True), *show_screen("s3")
+
+
+def _stage_from_pipeline(stage: str) -> tuple[str, int]:
+    """Map backend pipeline stage to UI label and progress segment index.
+
+    Args:
+        stage (str): Backend pipeline stage value.
+
+    Returns:
+        tuple[str, int]: Display label and active segment index.
+    """
+
+    mapping = {
+        "transcribing": ("Finalising transcript…", 0),
+        "retrieving_context": ("Synthesising patient context…", 1),
+        "generating_document": ("Generating clinical letter…", 2),
+        "complete": ("Generating clinical letter…", 2),
+    }
+    return mapping.get(stage, ("Finalising transcript…", 0))
+
+
+def _start_processing(state: dict[str, Any], audio_path: str | None) -> tuple[dict[str, Any], str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
+    """Upload audio and end consultation, then transition to processing screen.
+
+    Args:
+        state (dict[str, Any]): Current UI state.
         audio_path (str | None): File path returned by Gradio audio component.
 
     Returns:
         tuple[dict[str, Any], str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Updated state, feedback, active stage, progress bar HTML, elapsed timer label,
-            polling timer update, and visibility updates for S1-S6.
+            Updated state, feedback, stage label, progress bar, timer label, and visibility updates.
     """
 
     updated_state = dict(state or initial_consultation_state())
-    updated_state["screen"] = "s4"
-    updated_state["consultation"]["status"] = "processing"
+    consultation_id = str((updated_state.get("consultation") or {}).get("id", ""))
+    if not consultation_id:
+        return updated_state, "Consultation session is missing. Start consultation again.", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(active=False), *show_screen("s3")
+    if not audio_path:
+        return updated_state, "Please capture audio before ending consultation.", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(active=False), *show_screen("s3")
+
+    try:
+        with Path(audio_path).open("rb") as stream:
+            _api_request(
+                "POST",
+                f"/consultations/{consultation_id}/audio",
+                files={"audio_file": (Path(audio_path).name, stream, "audio/wav")},
+                data={"is_final": "true"},
+                timeout=120.0,
+            )
+        _api_request("POST", f"/consultations/{consultation_id}/end", timeout=180.0)
+    except Exception as exc:
+        return updated_state, f"Failed to end consultation: {exc}", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(active=False), *show_screen("s3")
+
+    updated_state["captured_audio_path"] = audio_path
     updated_state["processing_started_at"] = datetime.now(tz=timezone.utc).isoformat()
-    updated_state["processing_step"] = 0
-    updated_state["processing_steps"] = [
-        "Finalising transcript…",
-        "Synthesising patient context…",
-        "Generating clinical letter…",
-    ]
-    updated_state["captured_audio_path"] = audio_path or ""
-    return (
-        updated_state,
-        "Consultation ended. Processing audio and generating document.",
-        "Finalising transcript…",
-        _build_processing_bar_html(0),
-        "00:00",
-        gr.update(active=True),
-        *show_screen("s4"),
-    )
-
-
-def _build_processing_bar_html(active_index: int) -> str:
-    """Render a three-step segmented processing progress bar.
-
-    Args:
-        active_index (int): Zero-based index of current active processing stage.
-
-    Returns:
-        str: HTML snippet for processing progress bar.
-    """
-
-    segments: list[str] = []
-    for index in range(3):
-        segment_class = "processing-segment active" if index <= active_index else "processing-segment"
-        segments.append(f"<div class='{segment_class}'></div>")
-    return f"<div class='processing-bar'>{''.join(segments)}</div>"
-
-
-def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str, str, str, str]:
-    """Map generated letter sections onto fixed textbox outputs.
-
-    Args:
-        letter_sections (list[dict[str, str]]): Ordered letter sections with heading/content keys.
-
-    Returns:
-        tuple[str, str, str, str]: Four section strings for review textboxes.
-    """
-
-    resolved_sections = list(letter_sections)
-    while len(resolved_sections) < 4:
-        resolved_sections.append({"heading": f"Section {len(resolved_sections) + 1}", "content": ""})
-
-    return tuple(
-        f"{section.get('heading', f'Section {idx + 1}')}\n{section.get('content', '').strip()}".strip()
-        for idx, section in enumerate(resolved_sections[:4])
-    )
-
-
-def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
-    """Create a deterministic mock generated letter from selected patient context.
-
-    Args:
-        state (dict[str, Any]): Current session state containing patient and context metadata.
-
-    Returns:
-        dict[str, Any]: Document payload with editable sections and FHIR-derived highlights.
-    """
-
-    selected_patient = (state or {}).get("selected_patient") or {}
-    patient_context = (state or {}).get("patient_context") or {}
-    demographics = patient_context.get("demographics", {})
-    first_lab = (patient_context.get("recent_labs") or [{"name": "HbA1c", "value": "", "unit": ""}])[0]
-    first_allergy = (patient_context.get("allergies") or [{"substance": "No known allergies", "reaction": ""}])[0]
-    first_problem = (patient_context.get("problem_list") or ["Clinical problem not recorded"])[0]
-
-    letter_sections = [
-        {
-            "heading": "Clinical Summary",
-            "content": (
-                f"Thank you for reviewing {selected_patient.get('name', 'this patient')} today. "
-                f"This consultation focused on {first_problem.lower()}."
-            ),
-        },
-        {
-            "heading": "Assessment",
-            "content": (
-                f"Recent observations show {first_lab.get('name', 'laboratory result')} "
-                f"{first_lab.get('value', '')} {first_lab.get('unit', '')}. "
-                "The patient reported ongoing symptoms requiring follow-up."
-            ),
-        },
-        {
-            "heading": "Safety and Risks",
-            "content": (
-                f"Documented allergy: {first_allergy.get('substance', 'none recorded')} "
-                f"({first_allergy.get('reaction', 'reaction not specified')})."
-            ),
-        },
-        {
-            "heading": "Plan",
-            "content": "Continue current treatment, reinforce adherence, and repeat blood tests in 3 months.",
-        },
-    ]
-
-    return {
-        "title": "NHS Clinic Letter",
-        "status": "ready_for_review",
-        "sections": letter_sections,
-        "fhir_highlights": [
-            f"NHS Number: {demographics.get('nhs_number', 'N/A')}",
-            f"Primary Problem: {first_problem}",
-            f"Latest Lab: {first_lab.get('name', 'Lab')} {first_lab.get('value', '')} {first_lab.get('unit', '')}",
-            f"Allergy: {first_allergy.get('substance', 'None recorded')}",
-        ],
-    }
+    updated_state["consultation"]["status"] = "processing"
+    updated_state["screen"] = "s4"
+    return updated_state, "Consultation ended. Processing audio and generating document.", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(active=True), *show_screen("s4")
 
 
 def _poll_processing_progress(state: dict[str, Any]) -> tuple[dict[str, Any], str, str, str, dict[str, Any], str, str, str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-    """Advance the processing stage and transition to review once complete.
+    """Poll backend consultation progress and transition to review when complete.
 
     Args:
-        state (dict[str, Any]): Current state containing processing metadata.
+        state (dict[str, Any]): Current state containing consultation metadata.
 
     Returns:
         tuple[dict[str, Any], str, str, str, dict[str, Any], str, str, str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Updated state, feedback, active stage label, progress bar HTML, polling timer update,
-            elapsed timer label, four review section textbox values, FHIR highlights HTML,
-            status badge update, export text value, download file update, and screen visibility updates.
+            Updated state and UI updates for processing/review screens.
     """
 
     updated_state = dict(state or initial_consultation_state())
-    steps = updated_state.get("processing_steps") or [
-        "Finalising transcript…",
-        "Synthesising patient context…",
-        "Generating clinical letter…",
-    ]
-    current_step = int(updated_state.get("processing_step", 0))
-    started_at = str(updated_state.get("processing_started_at", "")).strip()
+    consultation_id = str((updated_state.get("consultation") or {}).get("id", ""))
+
+    started_at = str(updated_state.get("processing_started_at", "") or "")
     elapsed_label = "00:00"
     if started_at:
         elapsed_s = max(int((datetime.now(tz=timezone.utc) - datetime.fromisoformat(started_at)).total_seconds()), 0)
         minutes, seconds = divmod(elapsed_s, 60)
         elapsed_label = f"{minutes:02d}:{seconds:02d}"
 
-    if current_step < len(steps) - 1:
-        updated_state["processing_step"] = current_step + 1
-        next_step = steps[current_step + 1]
-        return (
-            updated_state,
-            f"Processing in progress: {next_step}",
-            next_step,
-            _build_processing_bar_html(current_step + 1),
-            gr.update(active=True),
-            elapsed_label,
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            *show_screen("s4"),
-        )
+    if not consultation_id:
+        generated_document = _build_generated_document(updated_state)
+        updated_state["generated_document"] = generated_document
+        updated_state["consultation"] = updated_state.get("consultation") or {"id": None, "status": "review"}
+        updated_state["consultation"]["status"] = "review"
+        updated_state["screen"] = "s5"
+        section_1, section_2, section_3, section_4 = _render_letter_sections(generated_document.get("sections", []))
+        return updated_state, "Processing complete. Review the generated clinic letter.", "Generating clinical letter…", _build_processing_bar_html(2), gr.update(active=False), elapsed_label, section_1, section_2, section_3, section_4, gr.update(), gr.update(), gr.update(value="Ready for Review", variant="secondary"), *show_screen("s5")
 
-    generated_document = _build_generated_document(updated_state)
-    updated_state["generated_document"] = generated_document
+    try:
+        progress = _api_request("GET", f"/consultations/{consultation_id}/progress")
+    except Exception as exc:
+        return updated_state, f"Progress polling failed: {exc}", "Finalising transcript…", _build_processing_bar_html(0), gr.update(active=False), elapsed_label, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), *show_screen("s4")
+
+    stage = str(progress.get("stage", "transcribing"))
+    stage_label, segment_index = _stage_from_pipeline(stage)
+
+    if stage != "complete":
+        return updated_state, f"Processing in progress: {stage_label}", stage_label, _build_processing_bar_html(segment_index), gr.update(active=True), elapsed_label, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), *show_screen("s4")
+
+    document_payload = _api_request("GET", f"/consultations/{consultation_id}/document").get("document")
+    if document_payload is None:
+        document_payload = _build_generated_document(updated_state)
+
+    sections = [{"heading": s.get("heading", "Section"), "content": s.get("content", "")} for s in document_payload.get("sections", [])]
+    updated_state["generated_document"] = document_payload
     updated_state["consultation"]["status"] = "review"
     updated_state["screen"] = "s5"
 
-    section_1, section_2, section_3, section_4 = _render_letter_sections(generated_document.get("sections", []))
-    highlight_markup = "<br>".join(f"<span class='mono'>{escape(item)}</span>" for item in generated_document.get("fhir_highlights", []))
+    section_1, section_2, section_3, section_4 = _render_letter_sections(sections)
+    highlights = [
+        f"NHS Number: {document_payload.get('nhs_number', 'N/A')}",
+        f"Patient: {document_payload.get('patient_name', 'N/A')}",
+        f"Status: {document_payload.get('status', 'review')}",
+    ]
+    highlight_markup = "<br>".join(f"<span class='mono'>{escape(item)}</span>" for item in highlights)
+
     return (
         updated_state,
         "Processing complete. Review the generated clinic letter.",
-        "Generating clinical letter…",
+        stage_label,
         _build_processing_bar_html(2),
         gr.update(active=False),
         elapsed_label,
@@ -481,32 +407,21 @@ def _poll_processing_progress(state: dict[str, Any]) -> tuple[dict[str, Any], st
 
 
 def _regenerate_document(state: dict[str, Any]) -> tuple[dict[str, Any], str, str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-    """Restart processing from S5 and regenerate the full document.
+    """Restart processing view before polling backend completion status again.
 
     Args:
         state (dict[str, Any]): Current UI state.
 
     Returns:
         tuple[dict[str, Any], str, str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Updated state, feedback text, stage label, progress bar HTML, elapsed timer,
-            status badge update, processing timer activation, and screen visibility updates.
+            Updated state and screen visibility updates.
     """
 
     updated_state = dict(state or initial_consultation_state())
     updated_state["processing_started_at"] = datetime.now(tz=timezone.utc).isoformat()
-    updated_state["processing_step"] = 0
     updated_state["consultation"]["status"] = "processing"
     updated_state["screen"] = "s4"
-    return (
-        updated_state,
-        "Regenerating entire clinic letter.",
-        "Finalising transcript…",
-        _build_processing_bar_html(0),
-        "00:00",
-        gr.update(value="Ready for Review", variant="secondary"),
-        gr.update(active=True),
-        *show_screen("s4"),
-    )
+    return updated_state, "Regenerating entire clinic letter.", "Finalising transcript…", _build_processing_bar_html(0), "00:00", gr.update(value="Ready for Review", variant="secondary"), gr.update(active=True), *show_screen("s4")
 
 
 def _cancel_processing(state: dict[str, Any]) -> tuple[dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
@@ -517,7 +432,7 @@ def _cancel_processing(state: dict[str, Any]) -> tuple[dict[str, Any], str, dict
 
     Returns:
         tuple[dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Updated state, feedback text, processing timer update, and visibility updates.
+            Updated state, feedback, and visibility updates.
     """
 
     updated_state = dict(state or initial_consultation_state())
@@ -527,10 +442,10 @@ def _cancel_processing(state: dict[str, Any]) -> tuple[dict[str, Any], str, dict
 
 
 def _sign_off_document(state: dict[str, Any], section_1: str, section_2: str, section_3: str, section_4: str) -> tuple[dict[str, Any], str, str, dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-    """Persist edited section text and transition to signed-off display.
+    """Persist edited sections to backend sign-off endpoint and show final letter.
 
     Args:
-        state (dict[str, Any]): Current UI state with generated document.
+        state (dict[str, Any]): Current UI state.
         section_1 (str): Edited section one text.
         section_2 (str): Edited section two text.
         section_3 (str): Edited section three text.
@@ -538,12 +453,28 @@ def _sign_off_document(state: dict[str, Any], section_1: str, section_2: str, se
 
     Returns:
         tuple[dict[str, Any], str, str, dict[str, Any], str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Updated state, feedback, read-only signed letter markdown, badge update,
-            clipboard text, download file update, and visibility updates.
+            Updated state and signed-off UI content.
     """
 
     updated_state = dict(state or initial_consultation_state())
+    consultation_id = str((updated_state.get("consultation") or {}).get("id", ""))
     edited_sections = [section_1, section_2, section_3, section_4]
+
+    payload_sections: list[dict[str, str]] = []
+    for index, section_text in enumerate(edited_sections):
+        if not section_text.strip():
+            continue
+        lines = section_text.splitlines()
+        heading = lines[0].strip() if lines else f"Section {index + 1}"
+        content = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
+        payload_sections.append({"heading": heading, "content": content})
+
+    if consultation_id:
+        try:
+            _api_request("POST", f"/consultations/{consultation_id}/document/sign-off", json={"sections": payload_sections})
+        except Exception as exc:
+            return updated_state, f"Sign-off failed: {exc}", "", gr.update(value="Ready for Review", variant="secondary"), "", gr.update(), *show_screen("s5")
+
     signed_letter = "\n\n".join(part.strip() for part in edited_sections if part and part.strip())
     updated_state["signed_document_text"] = signed_letter
     updated_state["consultation"]["status"] = "signed_off"
@@ -552,15 +483,7 @@ def _sign_off_document(state: dict[str, Any], section_1: str, section_2: str, se
     export_path = Path("data") / "demo" / "latest_signed_letter.txt"
     export_path.write_text(signed_letter + "\n", encoding="utf-8")
 
-    return (
-        updated_state,
-        "Document signed off. You can now copy or download the letter.",
-        f"### Signed Letter\n\n{signed_letter}",
-        gr.update(value="Signed Off ✓", variant="primary"),
-        signed_letter,
-        gr.update(value=str(export_path)),
-        *show_screen("s6"),
-    )
+    return updated_state, "Document signed off. You can now copy or download the letter.", f"### Signed Letter\n\n{signed_letter}", gr.update(value="Signed Off ✓", variant="primary"), signed_letter, gr.update(value=str(export_path)), *show_screen("s6")
 
 
 def _next_patient(state: dict[str, Any]) -> tuple[dict[str, Any], str, str, str, str, str, str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
@@ -571,26 +494,11 @@ def _next_patient(state: dict[str, Any]) -> tuple[dict[str, Any], str, str, str,
 
     Returns:
         tuple[dict[str, Any], str, str, str, str, str, str, str, str, str, dict[str, Any], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Reset state, feedback text, cleared review/signed content, status badge update,
-            and visibility updates for all screens.
+            Reset state and cleared UI content updates.
     """
 
     refreshed_state = initial_consultation_state()
-    refreshed_state["highlight_next_patient"] = True
-    return (
-        refreshed_state,
-        "Ready for next patient. Please select a patient card.",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        gr.update(value="Ready for Review", variant="secondary"),
-        *show_screen("s1"),
-    )
+    return refreshed_state, "Ready for next patient. Please select a patient card.", "", "", "", "", "", "", "", "", gr.update(value="Ready for Review", variant="secondary"), *show_screen("s1")
 
 
 def build_ui() -> gr.Blocks:
@@ -635,10 +543,8 @@ def build_ui() -> gr.Blocks:
                     gr.HTML('<div class="recording-indicator active"></div>')
                     recording_timer = gr.Markdown("### 00:00")
                     recording_tick = gr.Timer(value=1.0, active=False)
-                    consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="Consultation Audio")
+                    consultation_audio = gr.Audio(sources=["microphone", "upload"], streaming=False, type="filepath", label="Consultation Audio")
                     end_consultation_button = gr.Button("End Consultation", variant="primary")
-                    with gr.Accordion("Transcript", open=False):
-                        gr.Markdown("Transcript will appear after consultation processing.")
 
         with gr.Column(visible=False) as screen_s4:
             with gr.Column(elem_classes=["paper-container"]):
@@ -652,7 +558,7 @@ def build_ui() -> gr.Blocks:
         with gr.Column(visible=False) as screen_s5:
             with gr.Row():
                 with gr.Column(scale=4):
-                    patient_summary_review_panel = gr.HTML("<div class='clarke-card' style='padding:12px;'>No patient selected.</div>")
+                    gr.HTML("<div class='clarke-card' style='padding:12px;'><p><strong>Patient</strong></p></div>")
                 with gr.Column(scale=8):
                     review_status_badge = gr.Label(value="Ready for Review", label="Status")
                     review_fhir_values = gr.HTML("<div class='clarke-card'><span class='mono'>FHIR values appear here.</span></div>")
@@ -675,159 +581,21 @@ def build_ui() -> gr.Blocks:
 
         with gr.Column(visible=True) as screen_s1:
             with gr.Column(elem_classes=["hero-gradient"]):
-                gr.Markdown(
-                    f"### {clinician.get('name', 'Unknown Clinician')} — {clinician.get('specialty', 'Specialty')} — {clinic_payload.get('date', '')}"
-                )
+                gr.Markdown(f"### {clinician.get('name', 'Unknown Clinician')} — {clinician.get('specialty', 'Specialty')} — {clinic_payload.get('date', '')}")
             for patient in clinic_payload.get("patients", []):
                 with gr.Column(elem_classes=["clarke-card"]):
                     build_patient_card(patient)
                     patient_button = gr.Button("Open Patient", variant="primary")
-                    patient_button.click(
-                        _handle_patient_selection,
-                        inputs=[app_state, gr.State(patient.get("id", ""))],
-                        outputs=[app_state, feedback_text, patient_context_panel, patient_summary_panel, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
-                        show_progress="full",
-                    )
+                    patient_button.click(_handle_patient_selection, inputs=[app_state, gr.State(patient.get("id", ""))], outputs=[app_state, feedback_text, patient_context_panel, patient_summary_panel, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
 
-        back_to_dashboard_button.click(
-            _handle_back_to_dashboard,
-            inputs=[app_state],
-            outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
-            show_progress="hidden",
-        )
-
-        start_consultation_button.click(
-            _handle_start_consultation,
-            inputs=[app_state],
-            outputs=[app_state, feedback_text, recording_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
-            show_progress="hidden",
-        )
-
-        recording_tick.tick(
-            _update_recording_timer,
-            inputs=[app_state],
-            outputs=[recording_timer],
-            show_progress="hidden",
-        )
-
-        end_consultation_button.click(
-            _start_processing,
-            inputs=[app_state, consultation_audio],
-            outputs=[
-                app_state,
-                feedback_text,
-                processing_stage,
-                processing_progress_bar,
-                processing_elapsed_timer,
-                processing_tick,
-                screen_s1,
-                screen_s2,
-                screen_s3,
-                screen_s4,
-                screen_s5,
-                screen_s6,
-            ],
-            show_progress="full",
-        )
-
-        processing_tick.tick(
-            _poll_processing_progress,
-            inputs=[app_state],
-            outputs=[
-                app_state,
-                feedback_text,
-                processing_stage,
-                processing_progress_bar,
-                processing_tick,
-                processing_elapsed_timer,
-                section_one_text,
-                section_two_text,
-                section_three_text,
-                section_four_text,
-                review_fhir_values,
-                copy_to_clipboard_text,
-                review_status_badge,
-                screen_s1,
-                screen_s2,
-                screen_s3,
-                screen_s4,
-                screen_s5,
-                screen_s6,
-            ],
-            show_progress="hidden",
-        )
-
-        cancel_processing_button.click(
-            _cancel_processing,
-            inputs=[app_state],
-            outputs=[app_state, feedback_text, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
-            show_progress="hidden",
-        )
-
-        regenerate_button.click(
-            _regenerate_document,
-            inputs=[app_state],
-            outputs=[
-                app_state,
-                feedback_text,
-                processing_stage,
-                processing_progress_bar,
-                processing_elapsed_timer,
-                review_status_badge,
-                processing_tick,
-                screen_s1,
-                screen_s2,
-                screen_s3,
-                screen_s4,
-                screen_s5,
-                screen_s6,
-            ],
-            show_progress="full",
-        )
-
-        sign_off_button.click(
-            _sign_off_document,
-            inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text],
-            outputs=[
-                app_state,
-                feedback_text,
-                signed_letter_markdown,
-                signed_status_badge,
-                copy_to_clipboard_text,
-                download_text_file,
-                screen_s1,
-                screen_s2,
-                screen_s3,
-                screen_s4,
-                screen_s5,
-                screen_s6,
-            ],
-            show_progress="full",
-        )
-
-        next_patient_button.click(
-            _next_patient,
-            inputs=[app_state],
-            outputs=[
-                app_state,
-                feedback_text,
-                section_one_text,
-                section_two_text,
-                section_three_text,
-                section_four_text,
-                signed_letter_markdown,
-                copy_to_clipboard_text,
-                processing_stage,
-                processing_elapsed_timer,
-                review_status_badge,
-                screen_s1,
-                screen_s2,
-                screen_s3,
-                screen_s4,
-                screen_s5,
-                screen_s6,
-            ],
-            show_progress="hidden",
-        )
+        back_to_dashboard_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        start_consultation_button.click(_handle_start_consultation, inputs=[app_state], outputs=[app_state, feedback_text, recording_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        recording_tick.tick(_update_recording_timer, inputs=[app_state], outputs=[recording_timer], show_progress="hidden")
+        end_consultation_button.click(_start_processing, inputs=[app_state, consultation_audio], outputs=[app_state, feedback_text, processing_stage, processing_progress_bar, processing_elapsed_timer, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+        processing_tick.tick(_poll_processing_progress, inputs=[app_state], outputs=[app_state, feedback_text, processing_stage, processing_progress_bar, processing_tick, processing_elapsed_timer, section_one_text, section_two_text, section_three_text, section_four_text, review_fhir_values, copy_to_clipboard_text, review_status_badge, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        cancel_processing_button.click(_cancel_processing, inputs=[app_state], outputs=[app_state, feedback_text, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        regenerate_button.click(_regenerate_document, inputs=[app_state], outputs=[app_state, feedback_text, processing_stage, processing_progress_bar, processing_elapsed_timer, review_status_badge, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+        sign_off_button.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_markdown, signed_status_badge, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+        next_patient_button.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_markdown, copy_to_clipboard_text, processing_stage, processing_elapsed_timer, review_status_badge, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
 
     return demo

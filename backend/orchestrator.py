@@ -335,6 +335,33 @@ class PipelineOrchestrator:
         context_payload["retrieval_warnings"] = warnings
         return PatientContext.model_validate(context_payload)
 
+
+    def update_document_sections(self, consultation_id: str, sections: list[dict[str, str]]) -> ClinicalDocument:
+        """Update editable document sections before sign-off.
+
+        Args:
+            consultation_id (str): Consultation identifier.
+            sections (list[dict[str, str]]): Edited sections with heading and content keys.
+
+        Returns:
+            ClinicalDocument: Updated in-memory document.
+        """
+
+        consultation = self.get_consultation(consultation_id)
+        if consultation.document is None:
+            raise ModelExecutionError("No generated document available to edit")
+
+        existing_sections = list(consultation.document.sections)
+        updates_by_heading = {str(item.get("heading", "")).strip().lower(): str(item.get("content", "")) for item in sections if str(item.get("heading", "")).strip()}
+
+        for idx, section in enumerate(existing_sections):
+            key = section.heading.strip().lower()
+            if key in updates_by_heading:
+                existing_sections[idx] = section.model_copy(update={"content": updates_by_heading[key]})
+
+        consultation.document = consultation.document.model_copy(update={"sections": existing_sections})
+        return consultation.document
+
     def sign_off_document(self, consultation_id: str) -> ClinicalDocument:
         """Mark a generated consultation document as signed off.
 
