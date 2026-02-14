@@ -256,6 +256,14 @@ class PipelineOrchestrator:
         max_tokens = int(self._doc_generator.settings.DOC_GEN_MAX_TOKENS)
         try:
             return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=max_tokens)
+        except TypeError as exc:
+            if "max_new_tokens" not in str(exc):
+                raise
+            logger.warning(
+                "Document generator does not accept max_new_tokens override; falling back to default signature",
+                consultation_id=consultation_id,
+            )
+            return self._doc_generator.generate_document(transcript_text, context)
         except torch.cuda.OutOfMemoryError as exc:
             self._clear_cuda_cache()
             reduced_tokens = max(256, max_tokens // 2)
