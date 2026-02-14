@@ -2,25 +2,24 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from shutil import copyfileobj
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 
 from backend.audio import convert_to_wav_16k, validate_audio
 from backend.config import get_settings
-from backend.errors import AudioError, get_component_logger
-from backend.models.medasr import MedASRModel
-from backend.models.model_manager import ModelManager
+from backend.errors import AudioError, ModelExecutionError, get_component_logger
+from backend.orchestrator import PipelineOrchestrator
+from backend.schemas import ConsultationStatus, Patient
 
 app = FastAPI(title="Clarke API", version="0.1.0")
 settings = get_settings()
 logger = get_component_logger("api")
-model_manager = ModelManager()
-medasr_model = MedASRModel(model_manager=model_manager)
-consultation_store: dict[str, dict[str, Any]] = {}
+orchestrator = PipelineOrchestrator()
 
 
 def _iso_timestamp() -> str:
@@ -36,6 +35,96 @@ def _iso_timestamp() -> str:
     return datetime.now(tz=timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _load_clinic_list_payload() -> dict[str, Any]:
+    """Load clinic list fixture JSON from disk.
+
+    Args:
+        None: Reads static clinic list fixture file.
+
+    Returns:
+        dict[str, Any]: Parsed clinic list JSON payload.
+    """
+
+    clinic_path = Path("data/clinic_list.json")
+    if not clinic_path.exists():
+        raise HTTPException(status_code=500, detail="Clinic list file is missing")
+    return json.loads(clinic_path.read_text(encoding="utf-8"))
+
+
+def _load_patient_resource(patient_id: str) -> dict[str, Any]:
+    """Load patient resource for a patient id from local FHIR bundle fixture.
+
+    Args:
+        patient_id (str): Patient identifier.
+
+    Returns:
+        dict[str, Any]: FHIR Patient resource from bundle fixture.
+    """
+
+    bundle_path = Path("data/fhir_bundles") / f"{patient_id}.json"
+    if not bundle_path.exists():
+        return {}
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    for entry in bundle.get("entry", []):
+        resource = entry.get("resource", {})
+        if resource.get("resourceType") == "Patient":
+            return resource
+    return {}
+
+
+def _patient_from_records(clinic_row: dict[str, Any], patient_resource: dict[str, Any]) -> Patient:
+    """Build a Patient schema object from clinic list and FHIR records.
+
+    Args:
+        clinic_row (dict[str, Any]): Patient row from `clinic_list.json`.
+        patient_resource (dict[str, Any]): FHIR Patient resource dictionary.
+
+    Returns:
+        Patient: Normalised patient object for API responses.
+    """
+
+    nhs_number = ""
+    for identifier in patient_resource.get("identifier", []):
+        value = str(identifier.get("value", "")).strip()
+        if value:
+            nhs_number = value
+            break
+
+    date_of_birth = str(patient_resource.get("birthDate", ""))
+    if date_of_birth and "-" in date_of_birth:
+        yyyy, mm, dd = date_of_birth.split("-")
+        date_of_birth = f"{dd}/{mm}/{yyyy}"
+
+    return Patient(
+        id=str(clinic_row.get("id", "")),
+        nhs_number=nhs_number,
+        name=str(clinic_row.get("name", "")),
+        date_of_birth=date_of_birth,
+        age=int(clinic_row.get("age", 0)),
+        sex=str(clinic_row.get("sex", "")),
+        appointment_time=str(clinic_row.get("time", "")),
+        summary=str(clinic_row.get("summary", "")),
+    )
+
+
+def _get_patient(patient_id: str) -> Patient:
+    """Resolve a patient from local fixture data.
+
+    Args:
+        patient_id (str): Patient identifier.
+
+    Returns:
+        Patient: Patient record for the requested id.
+    """
+
+    payload = _load_clinic_list_payload()
+    for row in payload.get("patients", []):
+        if str(row.get("id")) == patient_id:
+            resource = _load_patient_resource(patient_id)
+            return _patient_from_records(row, resource)
+    raise HTTPException(status_code=404, detail=f"Patient not found: {patient_id}")
+
+
 def _health_fhir_status() -> dict[str, Any]:
     """Compute lightweight FHIR service health metadata for health endpoint.
 
@@ -48,8 +137,6 @@ def _health_fhir_status() -> dict[str, Any]:
 
     clinic_list_path = Path("data/clinic_list.json")
     if settings.USE_MOCK_FHIR and clinic_list_path.exists():
-        import json
-
         payload = json.loads(clinic_list_path.read_text(encoding="utf-8"))
         patients = payload.get("patients", [])
         return {"status": "connected", "patient_count": len(patients)}
@@ -85,10 +172,10 @@ def get_health() -> dict[str, Any]:
         dict[str, Any]: Health response payload.
     """
 
-    gpu_info = model_manager.check_gpu()
+    gpu_info = orchestrator._medasr_model.model_manager.check_gpu()
     models = {
         "medasr": {
-            "loaded": model_manager.get_model("medasr") is not None,
+            "loaded": orchestrator._medasr_model.model_manager.get_model("medasr") is not None,
             "device": "cuda:0" if gpu_info["vram_total_bytes"] > 0 else "cpu",
         },
         "medgemma_4b": {"loaded": False, "device": "n/a", "quantised": "4bit"},
@@ -105,6 +192,87 @@ def get_health() -> dict[str, Any]:
             "vram_total_gb": round(float(gpu_info["vram_total_bytes"]) / 1_000_000_000, 2),
         },
         "timestamp": _iso_timestamp(),
+    }
+
+
+@app.get("/api/v1/patients")
+def get_patients() -> dict[str, list[dict[str, Any]]]:
+    """Return clinic patient list with normalised schema fields.
+
+    Args:
+        None: Reads local clinic list and FHIR bundle fixtures.
+
+    Returns:
+        dict[str, list[dict[str, Any]]]: Patient list payload.
+    """
+
+    payload = _load_clinic_list_payload()
+    patients: list[dict[str, Any]] = []
+    for row in payload.get("patients", []):
+        patient_id = str(row.get("id", ""))
+        if not patient_id:
+            continue
+        patient_model = _patient_from_records(row, _load_patient_resource(patient_id))
+        patients.append(patient_model.model_dump())
+    return {"patients": patients}
+
+
+@app.get("/api/v1/patients/{patient_id}")
+def get_patient(patient_id: str) -> dict[str, Any]:
+    """Return a single patient by id.
+
+    Args:
+        patient_id (str): Patient identifier.
+
+    Returns:
+        dict[str, Any]: Patient payload.
+    """
+
+    patient = _get_patient(patient_id)
+    return patient.model_dump()
+
+
+@app.post("/api/v1/patients/{patient_id}/context")
+def generate_patient_context(patient_id: str) -> dict[str, Any]:
+    """Generate patient context via EHR agent and return context JSON.
+
+    Args:
+        patient_id (str): Patient identifier.
+
+    Returns:
+        dict[str, Any]: Structured patient context payload.
+    """
+
+    _get_patient(patient_id)
+    context = orchestrator._ehr_agent.get_patient_context(patient_id)
+    return context.model_dump(mode="json")
+
+
+@app.post("/api/v1/consultations/start", status_code=201)
+def start_consultation(payload: dict[str, str], background_tasks: BackgroundTasks) -> dict[str, Any]:
+    """Start a consultation session and trigger context prefetch in background.
+
+    Args:
+        payload (dict[str, str]): Request body containing patient_id.
+        background_tasks (BackgroundTasks): FastAPI background task runner.
+
+    Returns:
+        dict[str, Any]: Consultation identifier and initial state.
+    """
+
+    patient_id = payload.get("patient_id", "")
+    if not patient_id:
+        raise HTTPException(status_code=400, detail="patient_id is required")
+    patient = _get_patient(patient_id)
+
+    consultation = orchestrator.start_consultation(patient)
+    background_tasks.add_task(orchestrator.prefetch_context, consultation.id)
+
+    return {
+        "consultation_id": consultation.id,
+        "patient_id": patient_id,
+        "status": ConsultationStatus.RECORDING.value,
+        "started_at": consultation.started_at,
     }
 
 
@@ -125,6 +293,11 @@ def upload_audio(
         dict[str, Any]: Upload acknowledgement and validated duration seconds.
     """
 
+    try:
+        consultation = orchestrator.get_consultation(consultation_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     extension = Path(audio_file.filename or "").suffix.lower()
     if extension not in {".wav", ".webm"}:
         raise HTTPException(status_code=400, detail="Only WAV or WebM audio uploads are supported")
@@ -144,12 +317,7 @@ def upload_audio(
         logger.error("Audio processing failed", consultation_id=consultation_id, error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    consultation_store[consultation_id] = {
-        "audio_file_path": str(processed_path),
-        "is_final": is_final,
-        "duration_s": audio_metadata["duration_s"],
-        "updated_at": _iso_timestamp(),
-    }
+    consultation.audio_file_path = str(processed_path)
 
     logger.info(
         "Stored consultation audio",
@@ -163,3 +331,91 @@ def upload_audio(
         "audio_received": True,
         "duration_s": audio_metadata["duration_s"],
     }
+
+
+@app.post("/api/v1/consultations/{consultation_id}/end", status_code=202)
+def end_consultation(consultation_id: str) -> dict[str, Any]:
+    """End a consultation and execute full processing pipeline.
+
+    Args:
+        consultation_id (str): Consultation identifier.
+
+    Returns:
+        dict[str, Any]: Pipeline kickoff and status metadata.
+    """
+
+    try:
+        consultation = orchestrator.end_consultation(consultation_id)
+        progress = orchestrator.get_progress(consultation_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ModelExecutionError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return {
+        "consultation_id": consultation.id,
+        "status": ConsultationStatus.PROCESSING.value,
+        "pipeline_stage": progress.stage.value,
+        "message": "Pipeline started. Poll /progress for updates.",
+    }
+
+
+@app.get("/api/v1/consultations/{consultation_id}/transcript")
+def get_transcript(consultation_id: str) -> dict[str, Any]:
+    """Return transcript for a consultation when available.
+
+    Args:
+        consultation_id (str): Consultation identifier.
+
+    Returns:
+        dict[str, Any]: Transcript payload.
+    """
+
+    try:
+        consultation = orchestrator.get_consultation(consultation_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    if consultation.transcript is None:
+        raise HTTPException(status_code=404, detail="Transcript not generated yet")
+    return consultation.transcript.model_dump(mode="json")
+
+
+@app.get("/api/v1/consultations/{consultation_id}/document")
+def get_document(consultation_id: str) -> dict[str, Any]:
+    """Return generated document placeholder for a consultation.
+
+    Args:
+        consultation_id (str): Consultation identifier.
+
+    Returns:
+        dict[str, Any]: Consultation document object or null.
+    """
+
+    try:
+        consultation = orchestrator.get_consultation(consultation_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return {
+        "consultation_id": consultation_id,
+        "document": consultation.document.model_dump(mode="json") if consultation.document else None,
+    }
+
+
+@app.get("/api/v1/consultations/{consultation_id}/progress")
+def get_progress(consultation_id: str) -> dict[str, Any]:
+    """Return latest pipeline progress object for a consultation.
+
+    Args:
+        consultation_id (str): Consultation identifier.
+
+    Returns:
+        dict[str, Any]: Pipeline progress payload.
+    """
+
+    try:
+        progress = orchestrator.get_progress(consultation_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return progress.model_dump(mode="json")
