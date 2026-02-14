@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from backend import api
-from backend.schemas import PatientContext, Transcript
+from backend.schemas import ClinicalDocument, ConsultationStatus, DocumentSection, PatientContext, Transcript
 
 
 def _make_wav_file(path: Path, duration_s: float = 6.0, sample_rate: int = 16000) -> Path:
@@ -43,6 +43,42 @@ def _make_wav_file(path: Path, duration_s: float = 6.0, sample_rate: int = 16000
         wav_file.writeframes(bytes(frames))
 
     return path
+
+
+def _mock_document(consultation_id: str, variant: str = "base") -> ClinicalDocument:
+    """Build deterministic mock ClinicalDocument for API orchestration tests.
+
+    Args:
+        consultation_id (str): Consultation identifier used for document payload.
+        variant (str): Text variant to support regenerate-section assertions.
+
+    Returns:
+        ClinicalDocument: Mock generated document with stable section headings.
+    """
+
+    suffix = "" if variant == "base" else f" ({variant})"
+    return ClinicalDocument(
+        consultation_id=consultation_id,
+        letter_date="2026-02-13",
+        patient_name="Mrs. Margaret Thompson",
+        patient_dob="14/03/1958",
+        nhs_number="943 476 5829",
+        addressee="Dr. Patel, Riverside Medical Centre",
+        salutation="Dear Dr. Patel,",
+        sections=[
+            DocumentSection(heading="History Of Presenting Complaint", content=f"History content{suffix}", editable=True),
+            DocumentSection(heading="Examination Findings", content=f"Examination content{suffix}", editable=True),
+            DocumentSection(heading="Investigation Results", content=f"Investigation content{suffix}", editable=True),
+            DocumentSection(heading="Assessment And Plan", content=f"Plan content{suffix}", editable=True),
+            DocumentSection(heading="Current Medications", content=f"Medication content{suffix}", editable=True),
+        ],
+        medications_list=["Metformin 1 g BD", "Gliclazide 40 mg OD"],
+        sign_off="Dr. S. Chen, Consultant Diabetologist",
+        status=ConsultationStatus.REVIEW,
+        generated_at=datetime.now(tz=timezone.utc).isoformat(),
+        generation_time_s=0.42,
+        discrepancies=[],
+    )
 
 
 def _mock_context(patient_id: str) -> PatientContext:
@@ -142,6 +178,11 @@ def test_consultation_flow_start_audio_end_and_progress(monkeypatch, tmp_path: P
         )
 
     monkeypatch.setattr(api.orchestrator._medasr_model, "transcribe", _mock_transcribe)
+    monkeypatch.setattr(
+        api.orchestrator._doc_generator,
+        "generate_document",
+        lambda transcript, context: _mock_document("placeholder", "base"),
+    )
 
     start_response = client.post("/api/v1/consultations/start", json={"patient_id": "pt-001"})
     assert start_response.status_code == 201
@@ -159,6 +200,7 @@ def test_consultation_flow_start_audio_end_and_progress(monkeypatch, tmp_path: P
     end_response = client.post(f"/api/v1/consultations/{consultation_id}/end")
     assert end_response.status_code == 202
     assert end_response.json()["pipeline_stage"] == "complete"
+    assert end_response.json()["status"] == "review"
 
     progress_response = client.get(f"/api/v1/consultations/{consultation_id}/progress")
     assert progress_response.status_code == 200
@@ -172,7 +214,9 @@ def test_consultation_flow_start_audio_end_and_progress(monkeypatch, tmp_path: P
 
     document_response = client.get(f"/api/v1/consultations/{consultation_id}/document")
     assert document_response.status_code == 200
-    assert document_response.json()["document"] is None
+    document_payload = document_response.json()["document"]
+    assert document_payload is not None
+    assert len(document_payload["sections"]) >= 4
 
 
 def test_context_endpoint_returns_patient_context(monkeypatch) -> None:
@@ -194,3 +238,75 @@ def test_context_endpoint_returns_patient_context(monkeypatch) -> None:
     payload = response.json()
     assert payload["patient_id"] == "pt-001"
     assert any("penicillin" in allergy["substance"].lower() for allergy in payload["allergies"])
+
+
+def test_document_sign_off_and_regenerate_section(monkeypatch, tmp_path: Path) -> None:
+    """Verify document sign-off and per-section regeneration endpoints update consultation state.
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch): Fixture for replacing model calls with deterministic mocks.
+        tmp_path (Path): Temporary path used to generate WAV input for consultation flow.
+
+    Returns:
+        None: Assertions validate signed-off status and regenerated section content.
+    """
+
+    client = TestClient(api.app)
+
+    monkeypatch.setattr(api.orchestrator._ehr_agent, "get_patient_context", lambda patient_id: _mock_context(patient_id))
+
+    def _mock_transcribe(audio_path: str) -> Transcript:
+        return Transcript(
+            consultation_id="ignored",
+            text="Follow-up consultation transcript for document actions.",
+            duration_s=45.0,
+            word_count=6,
+            created_at=datetime.now(tz=timezone.utc).isoformat(),
+        )
+
+    regenerate_state = {"count": 0}
+
+    def _mock_generate_document(transcript: str, context: PatientContext) -> ClinicalDocument:
+        regenerate_state["count"] += 1
+        variant = "base" if regenerate_state["count"] == 1 else "regen"
+        return _mock_document("placeholder", variant)
+
+    monkeypatch.setattr(api.orchestrator._medasr_model, "transcribe", _mock_transcribe)
+    monkeypatch.setattr(api.orchestrator._doc_generator, "generate_document", _mock_generate_document)
+
+    start_response = client.post("/api/v1/consultations/start", json={"patient_id": "pt-001"})
+    assert start_response.status_code == 201
+    consultation_id = start_response.json()["consultation_id"]
+
+    wav_path = _make_wav_file(tmp_path / "sample_actions.wav")
+    with wav_path.open("rb") as audio_stream:
+        upload_response = client.post(
+            f"/api/v1/consultations/{consultation_id}/audio",
+            files={"audio_file": ("sample_actions.wav", audio_stream, "audio/wav")},
+            data={"is_final": "true"},
+        )
+    assert upload_response.status_code == 200
+
+    end_response = client.post(f"/api/v1/consultations/{consultation_id}/end")
+    assert end_response.status_code == 202
+
+    sign_off_response = client.post(f"/api/v1/consultations/{consultation_id}/document/sign-off")
+    assert sign_off_response.status_code == 200
+    sign_off_payload = sign_off_response.json()
+    assert sign_off_payload["status"] == "signed_off"
+    assert sign_off_payload["document"]["status"] == "signed_off"
+
+    regenerate_response = client.post(
+        f"/api/v1/consultations/{consultation_id}/document/regenerate-section",
+        json={"section_heading": "Investigation Results"},
+    )
+    assert regenerate_response.status_code == 200
+    regenerate_payload = regenerate_response.json()
+    assert regenerate_payload["status"] == "review"
+
+    updated_section = next(
+        section
+        for section in regenerate_payload["document"]["sections"]
+        if section["heading"].lower() == "investigation results"
+    )
+    assert "regen" in updated_section["content"].lower()

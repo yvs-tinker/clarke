@@ -8,7 +8,7 @@ from pathlib import Path
 from shutil import copyfileobj
 from typing import Any
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Body, FastAPI, File, Form, HTTPException, UploadFile
 
 from backend.audio import convert_to_wav_16k, validate_audio
 from backend.config import get_settings
@@ -354,9 +354,9 @@ def end_consultation(consultation_id: str) -> dict[str, Any]:
 
     return {
         "consultation_id": consultation.id,
-        "status": ConsultationStatus.PROCESSING.value,
+        "status": consultation.status.value,
         "pipeline_stage": progress.stage.value,
-        "message": "Pipeline started. Poll /progress for updates.",
+        "message": "Pipeline completed. Document is ready for review.",
     }
 
 
@@ -419,3 +419,61 @@ def get_progress(consultation_id: str) -> dict[str, Any]:
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return progress.model_dump(mode="json")
+
+
+@app.post("/api/v1/consultations/{consultation_id}/document/sign-off")
+def sign_off_document(consultation_id: str) -> dict[str, Any]:
+    """Sign off a generated document and set consultation status to signed off.
+
+    Args:
+        consultation_id (str): Consultation identifier.
+
+    Returns:
+        dict[str, Any]: Signed-off document payload with updated status.
+    """
+
+    try:
+        document = orchestrator.sign_off_document(consultation_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ModelExecutionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "consultation_id": consultation_id,
+        "status": ConsultationStatus.SIGNED_OFF.value,
+        "document": document.model_dump(mode="json"),
+    }
+
+
+@app.post("/api/v1/consultations/{consultation_id}/document/regenerate-section")
+def regenerate_document_section(
+    consultation_id: str,
+    payload: dict[str, str] = Body(...),
+) -> dict[str, Any]:
+    """Regenerate one document section while keeping other sections unchanged.
+
+    Args:
+        consultation_id (str): Consultation identifier.
+        payload (dict[str, str]): Request body containing `section_heading`.
+
+    Returns:
+        dict[str, Any]: Updated document payload.
+    """
+
+    section_heading = payload.get("section_heading", "").strip()
+    if not section_heading:
+        raise HTTPException(status_code=400, detail="section_heading is required")
+
+    try:
+        document = orchestrator.regenerate_document_section(consultation_id, section_heading)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ModelExecutionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "consultation_id": consultation_id,
+        "status": ConsultationStatus.REVIEW.value,
+        "document": document.model_dump(mode="json"),
+    }
