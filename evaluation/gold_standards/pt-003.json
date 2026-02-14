@@ -1,0 +1,19 @@
+{
+  "patient_id": "pt-003",
+  "gold_facts": [
+    "name: Ms Priya Patel",
+    "dob: 1997-06-30",
+    "sex: Female",
+    "problem: Asthma",
+    "problem: Allergic rhinitis",
+    "medication: Salbutamol inhaler",
+    "medication: Cetirizine",
+    "allergy: Peanut",
+    "allergy severity: Peanut=high",
+    "lab: Peak flow=320 L/min",
+    "lab: SpO2=97 %",
+    "lab: Eosinophils=0.42 10*9/L",
+    "report type: Chest X-ray report",
+    "report summary: No acute cardiopulmonary abnormality."
+  ]
+}

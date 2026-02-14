@@ -7,3 +7,17 @@
   - mrs_thompson: WER=0.0000 (reference_words=214, hypothesis_words=214)
   - mr_okafor: WER=0.0000 (reference_words=194, hypothesis_words=194)
   - ms_patel: WER=0.0000 (reference_words=236, hypothesis_words=236)
+
+## Task 30 — EHR Agent Fact Recall Evaluation
+- Timestamp (UTC): 2026-02-14T17:01:27.245454+00:00
+- Targets: recall > 85%, precision > 90%, hallucination < 10%
+- Fact Recall Average: 1.0000
+- Precision Average: 0.9867
+- Hallucination Rate Average: 0.0133
+- Target Status: recall=PASS, precision=PASS, hallucination=PASS
+- Per-patient metrics:
+  - pt-001: recall=1.0000, precision=0.9333, hallucination=0.0667 (matched=14, gold=14, output=15)
+  - pt-002: recall=1.0000, precision=1.0000, hallucination=0.0000 (matched=14, gold=14, output=14)
+  - pt-003: recall=1.0000, precision=1.0000, hallucination=0.0000 (matched=14, gold=14, output=14)
+  - pt-004: recall=1.0000, precision=1.0000, hallucination=0.0000 (matched=15, gold=15, output=15)
+  - pt-005: recall=1.0000, precision=1.0000, hallucination=0.0000 (matched=14, gold=14, output=14)
