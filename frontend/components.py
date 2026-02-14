@@ -10,7 +10,9 @@ STATUS_CLASS_MAP: dict[str, str] = {
     "idle": "clarke-badge-processing",
     "loading": "clarke-badge-processing",
     "ready": "clarke-badge-review",
+    "ready_for_review": "clarke-badge-review",
     "signed": "clarke-badge-signed",
+    "signed_off": "clarke-badge-signed",
     "error": "clarke-badge-review",
 }
 

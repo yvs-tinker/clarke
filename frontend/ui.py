@@ -545,7 +545,7 @@ def build_ui() -> gr.Blocks:
                 with gr.Column(scale=4):
                     patient_summary_panel = gr.HTML("<div class='clarke-card'>No patient selected.</div>")
                 with gr.Column(scale=8):
-                    gr.HTML('<div class="clarke-recording-dot"></div><div class="clarke-recording-label">Recording</div>')
+                    gr.HTML('<div class="clarke-recording-indicator"><div class="clarke-recording-ring"></div><div class="clarke-recording-dot"></div><div class="clarke-recording-label">Recording…</div></div>')
                     recording_timer = gr.Markdown("<div class=\"clarke-recording-timer\">00:00</div>")
                     recording_tick = gr.Timer(value=1.0, active=False)
                     consultation_audio = gr.Audio(sources=["microphone", "upload"], streaming=False, type="filepath", label="Consultation Audio", elem_classes=["clarke-audio-container"])
@@ -565,9 +565,9 @@ def build_ui() -> gr.Blocks:
                 with gr.Column(scale=4):
                     gr.HTML("<div class='clarke-card' style='padding:12px;'><p><strong>Patient</strong></p></div>")
                 with gr.Column(scale=8):
-                    review_status_badge = gr.Label(value="Ready for Review", label="Status")
+                    review_status_badge = gr.Label(value="Ready for Review", label="Status", elem_classes=["clarke-badge", "clarke-badge-review"])
                     review_fhir_values = gr.HTML("<div class='clarke-card'><span class='clarke-fhir-value'>FHIR values appear here.</span></div>")
-                    with gr.Column(elem_classes=["paper-container"]):
+                    with gr.Column(elem_classes=["paper-container", "clarke-document-reveal"]):
                         section_one_text = gr.Textbox(label="Section 1", lines=5, interactive=True, elem_classes=["clarke-section-editing"])
                         section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True, elem_classes=["clarke-section-editing"])
                         section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True, elem_classes=["clarke-section-editing"])
@@ -578,7 +578,7 @@ def build_ui() -> gr.Blocks:
 
         with gr.Column(visible=False, elem_classes=["clarke-screen-enter"]) as screen_s6:
             with gr.Column(elem_classes=["paper-container"]):
-                signed_status_badge = gr.Label(value="Signed Off ✓", label="Status")
+                signed_status_badge = gr.Label(value="Signed Off ✓", label="Status", elem_classes=["clarke-badge", "clarke-badge-signed"])
                 signed_letter_markdown = gr.Markdown("### Signed letter will appear here.")
                 copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False)
                 download_text_file = gr.File(label="Download as Text")

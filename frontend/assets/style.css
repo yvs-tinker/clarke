@@ -457,3 +457,173 @@ footer { display: none !important; }
   border: 2px dashed var(--clarke-border) !important;
   background: var(--clarke-bg-warm) !important;
 }
+
+/* Task 32 polish overrides */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+:root {
+  --clarke-blue: #1E3A5F;
+  --clarke-blue-light: #2B5EA7;
+  --clarke-gold: #D4A035;
+  --clarke-gold-light: #F0D078;
+  --clarke-bg-primary: #FAFBFD;
+  --clarke-bg-warm: #FFF8F0;
+  --clarke-border: #E2E6EE;
+}
+
+html, body, .gradio-container {
+  background: var(--clarke-bg-primary) !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+body, p, span, div, input, textarea, button,
+.gradio-container * {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+.clarke-hero-bg, .hero-gradient {
+  background: linear-gradient(165deg, #FDE8C8 0%, #F5E6D8 25%, #EEF0F8 55%, #E8ECF8 80%, #FAFBFD 100%) !important;
+}
+
+.clarke-card,
+.clarke-patient-card,
+.patient-card {
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(26, 26, 46, 0.06), 0 1px 2px rgba(26, 26, 46, 0.04) !important;
+}
+
+.clarke-patient-card,
+.patient-card {
+  border-left: 4px solid var(--clarke-blue) !important;
+}
+
+.clarke-patient-card:hover,
+.patient-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(26, 26, 46, 0.1) !important;
+}
+
+.clarke-recording-indicator {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  margin: 4px auto 10px;
+}
+
+.clarke-recording-dot, .recording-indicator {
+  width: 80px !important;
+  height: 80px !important;
+  background: var(--clarke-gold) !important;
+  border-radius: 50%;
+  position: relative;
+}
+
+.clarke-recording-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 160, 53, 0.25) 0%, rgba(212, 160, 53, 0) 70%);
+  animation: clarke-recording-pulse 2s ease-in-out infinite;
+}
+
+.clarke-recording-ring {
+  position: absolute;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: conic-gradient(var(--clarke-gold), var(--clarke-blue), var(--clarke-gold));
+  animation: clarke-recording-rotate 3s linear infinite;
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%);
+  mask: radial-gradient(circle, transparent 58%, #000 60%);
+}
+
+.clarke-recording-label {
+  color: #8B6914 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  animation: clarke-recording-label-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes clarke-recording-pulse {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@keyframes clarke-recording-rotate {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes clarke-recording-label-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.clarke-progress-segment.active,
+.processing-segment.active {
+  background: var(--clarke-blue) !important;
+  box-shadow: 0 0 10px rgba(30, 58, 95, 0.35);
+}
+
+.clarke-progress-segment.complete,
+.processing-segment.complete {
+  background: var(--clarke-blue-light) !important;
+}
+
+.clarke-badge,
+.gradio-container .clarke-badge {
+  border-radius: 20px !important;
+  padding: 4px 12px !important;
+  font-size: 13px !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+}
+
+.clarke-badge-review {
+  background: rgba(230, 126, 34, 0.12) !important;
+  color: #B35F00 !important;
+  border: none !important;
+}
+
+.clarke-badge-signed {
+  background: rgba(39, 174, 96, 0.12) !important;
+  color: #1B7A42 !important;
+  border: none !important;
+}
+
+.clarke-document-reveal {
+  position: relative;
+  animation: clarke-document-reveal 800ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top center;
+}
+
+.clarke-document-reveal::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 160, 53, 0.45);
+  box-shadow: 0 0 0 6px rgba(212, 160, 53, 0.08);
+  animation: clarke-document-sparkle 200ms ease-out;
+  pointer-events: none;
+}
+
+@keyframes clarke-document-reveal {
+  0% { opacity: 0; transform: translateY(8px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes clarke-document-sparkle {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+.clarke-skeleton,
+.skeleton-loader,
+.clarke-loading-text,
+.clarke-loading-card {
+  background: linear-gradient(90deg, #EEF2F7 25%, #F7F9FC 50%, #EEF2F7 75%) !important;
+  background-size: 200% 100% !important;
+  animation: shimmer 1.5s ease-in-out infinite !important;
+}
