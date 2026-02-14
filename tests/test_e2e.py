@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from jinja2 import Environment, FileSystemLoader
 
 from backend.config import get_settings
@@ -203,6 +204,94 @@ def _mock_document(consultation_id: str) -> ClinicalDocument:
     )
 
 
+
+
+def _context_from_bundle(patient_id: str) -> PatientContext:
+    """Build a deterministic PatientContext from local FHIR bundle fixtures.
+
+    Args:
+        patient_id (str): Patient identifier whose bundle should be transformed.
+
+    Returns:
+        PatientContext: Structured context built from fixture resources.
+    """
+
+    bundle_path = Path(f"data/fhir_bundles/{patient_id}.json")
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+
+    def _obs_value(resource: dict) -> str:
+        quantity = resource.get("valueQuantity") or {}
+        code_text = resource.get("code", {}).get("text", "Observation")
+        return f"{code_text}: {quantity.get('value', '')} {quantity.get('unit', '')}".strip()
+
+    demographics = {"name": "", "dob": "", "nhs_number": ""}
+    problems: list[str] = []
+    medications: list[dict[str, str]] = []
+    allergies: list[dict[str, str]] = []
+    labs: list[dict[str, str]] = []
+    imaging: list[dict[str, str]] = []
+
+    for entry in bundle.get("entry", []):
+        resource = entry.get("resource", {})
+        resource_type = resource.get("resourceType")
+        if resource_type == "Patient":
+            name_obj = resource.get("name", [{}])[0]
+            demographics = {
+                "name": " ".join(name_obj.get("given", []) + [name_obj.get("family", "")]).strip(),
+                "dob": resource.get("birthDate", ""),
+                "nhs_number": next((i.get("value", "") for i in resource.get("identifier", []) if "nhs-number" in i.get("system", "")), ""),
+            }
+        elif resource_type == "Condition":
+            problems.append(resource.get("code", {}).get("text", ""))
+        elif resource_type == "MedicationRequest":
+            medications.append(
+                {
+                    "name": resource.get("medicationCodeableConcept", {}).get("text", ""),
+                    "dose": resource.get("dosageInstruction", [{}])[0].get("text", ""),
+                    "frequency": "",
+                    "fhir_id": resource.get("id", ""),
+                }
+            )
+        elif resource_type == "AllergyIntolerance":
+            allergies.append(
+                {
+                    "substance": resource.get("code", {}).get("text", ""),
+                    "reaction": resource.get("reaction", [{}])[0].get("manifestation", [{}])[0].get("text", ""),
+                    "severity": resource.get("criticality", "unknown"),
+                }
+            )
+        elif resource_type == "DiagnosticReport":
+            imaging.append({"type": resource.get("code", {}).get("text", "Report"), "date": resource.get("effectiveDateTime", ""), "summary": resource.get("conclusion", "")})
+        elif resource_type == "Observation":
+            quantity = resource.get("valueQuantity") or {}
+            labs.append(
+                {
+                    "name": resource.get("code", {}).get("text", "Observation"),
+                    "value": str(quantity.get("value", "")),
+                    "unit": str(quantity.get("unit", "")),
+                    "reference_range": None,
+                    "date": resource.get("effectiveDateTime", "1970-01-01"),
+                    "trend": None,
+                    "previous_value": None,
+                    "previous_date": None,
+                    "fhir_resource_id": resource.get("id", ""),
+                }
+            )
+
+    return PatientContext(
+        patient_id=patient_id,
+        demographics=demographics,
+        problem_list=[item for item in problems if item],
+        medications=medications,
+        allergies=allergies,
+        recent_labs=labs,
+        recent_imaging=imaging,
+        clinical_flags=[],
+        last_letter_excerpt=None,
+        retrieval_warnings=[],
+        retrieved_at=datetime.now(tz=timezone.utc).isoformat(),
+    )
+
 def _start_consultation_and_upload_audio(client: TestClient, tmp_path: Path) -> str:
     """Start a consultation and upload a valid WAV file.
 
@@ -370,3 +459,143 @@ def test_oversized_context_truncates_and_proceeds(monkeypatch, tmp_path: Path) -
     assert response.status_code == 202
     warnings = captured_context["ctx"].retrieval_warnings
     assert any("truncated" in warning.lower() for warning in warnings)
+
+
+
+
+@pytest.mark.parametrize(
+    ("patient_id", "audio_name"),
+    [
+        ("pt-001", "mrs_thompson.wav"),
+        ("pt-002", "mr_okafor.wav"),
+        ("pt-003", "ms_patel.wav"),
+    ],
+)
+def test_task25_three_demo_scenarios(monkeypatch, patient_id: str, audio_name: str) -> None:
+    """Verify the three demo scenarios complete with expected transcript, context, edit, and sign-off actions.
+
+    Args:
+        patient_id (str): Demo patient identifier.
+        audio_name (str): Demo fixture audio filename to upload.
+
+    Returns:
+        None: Assertions validate task-25 acceptance criteria across all demo patients.
+    """
+
+    client = TestClient(api.app)
+
+    monkeypatch.setattr(api.orchestrator._ehr_agent, "get_patient_context", lambda current_patient_id: _context_from_bundle(current_patient_id))
+
+    def _scenario_document(transcript: str, context: PatientContext, max_new_tokens: int | None = None) -> ClinicalDocument:
+        section_text = f"Summary: {transcript} | Context markers: {json.dumps(context.model_dump(mode='json'))}"
+        return ClinicalDocument(
+            consultation_id="placeholder",
+            letter_date="2026-02-13",
+            patient_name=context.demographics.get("name", "Unknown"),
+            patient_dob=context.demographics.get("dob", ""),
+            nhs_number=context.demographics.get("nhs_number", ""),
+            addressee="Dr. Patel",
+            salutation="Dear Dr. Patel,",
+            sections=[DocumentSection(heading="Assessment And Plan", content=section_text, editable=True)],
+            medications_list=[med.get("name", "") for med in context.medications],
+            sign_off="Dr. S. Chen",
+            status=ConsultationStatus.REVIEW,
+            generated_at=datetime.now(tz=timezone.utc).isoformat(),
+            generation_time_s=0.1,
+            discrepancies=[],
+        )
+
+    monkeypatch.setattr(api.orchestrator._doc_generator, "generate_document", _scenario_document)
+
+    transcript_map = {
+        "mrs_thompson": Path("data/demo/mrs_thompson_transcript.txt"),
+        "mr_okafor": Path("data/demo/mr_okafor_transcript.txt"),
+        "ms_patel": Path("data/demo/ms_patel_transcript.txt"),
+    }
+
+    def _scenario_transcript(audio_path: str) -> Transcript:
+        lower_path = Path(audio_path).stem.lower()
+        transcript_text = ""
+        for key, transcript_path in transcript_map.items():
+            if key in lower_path:
+                transcript_text = transcript_path.read_text(encoding="utf-8").strip()
+                break
+        return Transcript(
+            consultation_id="placeholder",
+            text=transcript_text or "fallback transcript",
+            duration_s=60.0,
+            word_count=len((transcript_text or "fallback transcript").split()),
+            created_at=datetime.now(tz=timezone.utc).isoformat(),
+        )
+
+    monkeypatch.setattr(api.orchestrator._medasr_model, "transcribe", _scenario_transcript)
+
+    start_response = client.post("/api/v1/consultations/start", json={"patient_id": patient_id})
+    assert start_response.status_code == 201
+    consultation_id = start_response.json()["consultation_id"]
+
+    context_response = client.post(f"/api/v1/patients/{patient_id}/context")
+    assert context_response.status_code == 200
+    context_payload = context_response.json()
+    context_text = json.dumps(context_payload).lower()
+    if patient_id == "pt-001":
+        assert "hba1c" in context_text and "55" in context_text and "egfr" in context_text and "52" in context_text
+        assert "penicillin" in context_text
+    elif patient_id == "pt-002":
+        assert "normal coronary" in context_text
+    else:
+        assert "peak flow" in context_text and "320" in context_text
+
+    demo_audio = Path("data/demo") / audio_name
+    with demo_audio.open("rb") as audio_stream:
+        upload_response = client.post(
+            f"/api/v1/consultations/{consultation_id}/audio",
+            files={"audio_file": (audio_name, audio_stream, "audio/wav")},
+            data={"is_final": "true"},
+        )
+    assert upload_response.status_code == 200
+
+    end_response = client.post(f"/api/v1/consultations/{consultation_id}/end")
+    assert end_response.status_code == 202
+
+    transcript_response = client.get(f"/api/v1/consultations/{consultation_id}/transcript")
+    assert transcript_response.status_code == 200
+    transcript_text = transcript_response.json()["text"].lower()
+    if patient_id == "pt-001":
+        assert "hba1c" in transcript_text and "gliclazide" in transcript_text
+    elif patient_id == "pt-002":
+        assert "angiogram" in transcript_text and "chest pain" in transcript_text
+    else:
+        assert "asthma" in transcript_text and "peak flow" in transcript_text
+
+    document_response = client.get(f"/api/v1/consultations/{consultation_id}/document")
+    assert document_response.status_code == 200
+    document = document_response.json()["document"]
+    assert document is not None
+    rendered_document_text = json.dumps(document).lower()
+    if patient_id == "pt-001":
+        assert "hba1c" in rendered_document_text and "55" in rendered_document_text and "mmol/mol" in rendered_document_text
+    elif patient_id == "pt-002":
+        assert "normal coronary" in rendered_document_text and "angiogram" in rendered_document_text
+    else:
+        assert "preventer" in rendered_document_text and "peak flow" in rendered_document_text
+
+    editable_section = document["sections"][0]
+    edited_content = f"{editable_section['content']}\nEdited for Task 25 verification."
+    signoff_response = client.post(
+        f"/api/v1/consultations/{consultation_id}/document/sign-off",
+        json={
+            "sections": [
+                {
+                    "heading": editable_section["heading"],
+                    "content": edited_content,
+                }
+            ]
+        },
+    )
+    assert signoff_response.status_code == 200
+    signed_document = signoff_response.json()["document"]
+    assert signed_document["status"] == "signed_off"
+
+    signed_section = next(section for section in signed_document["sections"] if section["heading"] == editable_section["heading"])
+    assert "edited for task 25 verification" in signed_section["content"].lower()

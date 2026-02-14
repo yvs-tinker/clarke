@@ -304,7 +304,8 @@ def upload_audio(
 
     uploads_root = Path("data/uploads") / consultation_id
     raw_path = uploads_root / f"raw{extension}"
-    wav_path = uploads_root / "audio_16k.wav"
+    original_stem = Path(audio_file.filename or "audio").stem or "audio"
+    wav_path = uploads_root / f"{original_stem}_16k.wav"
 
     try:
         _save_upload_temp(audio_file, raw_path)
