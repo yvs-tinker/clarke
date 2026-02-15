@@ -452,17 +452,22 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
 def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str, str, str, str]:
     """Map generated letter sections onto fixed textbox outputs.
 
+    Combines all sections into section 1 as the full editable letter.
+    Sections 2-4 are hidden and returned empty.
+
     Args:
         letter_sections (list[dict[str, str]]): Ordered letter sections.
 
     Returns:
-        tuple[str, str, str, str]: Four section strings for review textboxes.
+        tuple[str, str, str, str]: Combined letter in slot 1, empty slots 2-4.
     """
 
-    resolved = list(letter_sections)
-    while len(resolved) < 4:
-        resolved.append({"heading": f"Section {len(resolved) + 1}", "content": ""})
-    return tuple(f"{s.get('heading', '')}\n{s.get('content', '').strip()}".strip() for s in resolved[:4])
+    combined = "\n\n".join(
+        f"{s.get('heading', '')}\n{s.get('content', '').strip()}".strip()
+        for s in letter_sections
+        if s.get('content', '').strip()
+    )
+    return (combined, "", "", "")
 
 
 def _handle_patient_selection(state: dict[str, Any], patient_index: int):
@@ -771,7 +776,7 @@ def _sign_off_document(state, section_1, section_2, section_3, section_4):
         except Exception as exc:
             return updated_state, f"Sign-off failed: {exc}", gr.update(), "", gr.update(), *show_screen("s5")
 
-    signed_letter = "\n\n".join(part.strip() for part in edited_sections if part and part.strip())
+    signed_letter = section_1.strip() if section_1 and section_1.strip() else "\n\n".join(part.strip() for part in edited_sections if part and part.strip())
     
     updated_state["signed_document_text"] = signed_letter
     selected_index = int(updated_state.get('current_patient_index', 0))
@@ -886,10 +891,10 @@ def build_ui() -> gr.Blocks:
             gr.HTML("<div style='min-height:100vh;background:#F8F6F1;padding:32px 48px;margin:0;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0 0 16px 0;'>Document Review</h2></div>")
             review_status_badge = gr.HTML(build_status_badge_html("✎ Ready for Review", "#F59E0B"))
             review_fhir_values = gr.HTML("<span style='font-family:JetBrains Mono,monospace;'>FHIR values appear here.</span>")
-            section_one_text = gr.Textbox(label="Section 1", lines=5, interactive=True)
-            section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True)
-            section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True)
-            section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True)
+            section_one_text = gr.Textbox(label="NHS Clinic Letter", lines=20, interactive=True)
+            section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True, visible=False)
+            section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True, visible=False)
+            section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True, visible=False)
             hidden_regenerate_button = gr.Button("hidden-regenerate", visible=True, elem_id="hidden-regenerate")
             gr.HTML("<div></div>")
             gr.HTML("""<div style='position:sticky; bottom:0; left:0; right:0; z-index:100;'><button onclick=\"(function(){var el=document.getElementById('hidden-sign-off');if(!el){console.error('Clarke: hidden-sign-off not found');return;}if(el.tagName==='BUTTON'){el.click();}else{var b=el.querySelector('button');if(b)b.click();}console.log('Clarke: Sign Off & Export clicked');})()\" style='display:block; width:100%; padding:18px 0; border:none; cursor:pointer; background:linear-gradient(135deg, #D4AF37 0%, #F0D060 100%); color:#1A1A2E; font-family:'Inter',sans-serif; font-weight:700; font-size:16px; letter-spacing:0.5px; transition:all 0.3s ease; box-shadow:0 -4px 16px rgba(212,175,55,0.3);' onmouseover=\"this.style.background='linear-gradient(135deg,#E8C84A,#F5E070)';this.style.boxShadow='0 -4px 24px rgba(212,175,55,0.5)';this.style.transform='translateY(-1px)'\" onmouseout=\"this.style.background='linear-gradient(135deg,#D4AF37,#F0D060)';this.style.boxShadow='0 -4px 16px rgba(212,175,55,0.3)';this.style.transform='translateY(0)'\">Sign Off & Export</button></div>""")
@@ -899,8 +904,8 @@ def build_ui() -> gr.Blocks:
             gr.HTML("")
             signed_status_badge = gr.HTML(build_status_badge_html("✓ Signed Off", "#22C55E"))
             signed_letter_html = gr.HTML("")
-            copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False)
-            download_text_file = gr.File(label="Download as Text")
+            copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False, visible=False)
+            download_text_file = gr.File(label="Download as Text", visible=False)
             hidden_copy_button = gr.Button("hidden-copy", visible=True, elem_id="hidden-copy")
             hidden_download_button = gr.Button("hidden-download", visible=True, elem_id="hidden-download")
             gr.HTML("""<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"(function(){var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){document.querySelectorAll('textarea').forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}try{navigator.clipboard.writeText(text.trim()).then(function(){alert('Copied to clipboard!');});}catch(e){var ta=document.createElement('textarea');ta.value=text.trim();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Copied to clipboard!');}})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📋 Copy to Clipboard</button><button onclick=\"(function(){console.log('Clarke: Download clicked');var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){document.querySelectorAll('textarea').forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}var a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(text.trim());a.download='clinic_letter.txt';a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);console.log('Clarke: Download complete via data URI');})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📄 Download as Text</button></div>""")

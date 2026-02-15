@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from html import escape
 from typing import Any
 
@@ -162,6 +163,11 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
     """
 
     clinician = clinic_payload.get("clinician", {})
+    _now = datetime.now()
+    _hour = _now.hour
+    _greeting = "Good morning" if _hour < 12 else ("Good afternoon" if _hour < 18 else "Good evening")
+    _time_str = _now.strftime("%H:%M")
+    _doctor_first = str(clinician.get('name', 'Dr. Sarah Chen')).split(',')[0]
     completed_lookup = set(completed_patients or [])
     cards: list[str] = []
     for index, patient in enumerate(clinic_payload.get("patients", [])):
@@ -202,28 +208,33 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
 }}
 .completed-patient-card:hover {{ opacity: 0.7 !important; box-shadow: 0 4px 14px rgba(0,0,0,0.08) !important; transform: translateY(-2px) scale(1.005) !important; }}
 @keyframes clarkeShimmerDrift1 {{
-  0% {{ transform: translate(0, 0) scale(1); opacity: 0.7; }}
-  50% {{ transform: translate(5%, 8%) scale(1.1); opacity: 1; }}
-  100% {{ transform: translate(0, 0) scale(1); opacity: 0.7; }}
+  0% {{ transform: translate(0,0) scale(1); opacity:0.6; }}
+  33% {{ transform: translate(6%,10%) scale(1.15); opacity:1; }}
+  66% {{ transform: translate(-3%,5%) scale(1.05); opacity:0.8; }}
+  100% {{ transform: translate(0,0) scale(1); opacity:0.6; }}
 }}
 @keyframes clarkeShimmerDrift2 {{
-  0% {{ transform: translate(0, 0) scale(1); opacity: 0.6; }}
-  50% {{ transform: translate(-6%, -5%) scale(1.15); opacity: 1; }}
-  100% {{ transform: translate(0, 0) scale(1); opacity: 0.6; }}
+  0% {{ transform: translate(0,0) scale(1); opacity:0.5; }}
+  33% {{ transform: translate(-8%,-6%) scale(1.2); opacity:1; }}
+  66% {{ transform: translate(4%,-3%) scale(1.08); opacity:0.7; }}
+  100% {{ transform: translate(0,0) scale(1); opacity:0.5; }}
 }}
 @keyframes clarkeShimmerDrift3 {{
-  0% {{ transform: translate(0, 0) scale(1); opacity: 0.5; }}
-  50% {{ transform: translate(4%, -6%) scale(1.08); opacity: 1; }}
-  100% {{ transform: translate(0, 0) scale(1); opacity: 0.5; }}
+  0% {{ transform: translate(0,0) scale(1); opacity:0.55; }}
+  33% {{ transform: translate(5%,-8%) scale(1.12); opacity:1; }}
+  66% {{ transform: translate(-4%,4%) scale(1.06); opacity:0.75; }}
+  100% {{ transform: translate(0,0) scale(1); opacity:0.55; }}
 }}
 </style>
 <div id="clarke-app-wrapper" style="min-height: 100vh; margin: 0; padding: 0; background: #F8F6F1; position: relative; overflow: hidden;">
   <!-- Golden sunlight shimmer layers -->
   <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;overflow:hidden;">
-    <div style="position:absolute;top:-20%;left:-10%;width:65%;height:55%;background:radial-gradient(ellipse at center, rgba(255,193,7,0.13) 0%, rgba(255,193,7,0) 70%);animation:clarkeShimmerDrift1 12s ease-in-out infinite;"></div>
-    <div style="position:absolute;top:30%;right:-15%;width:60%;height:50%;background:radial-gradient(ellipse at center, rgba(212,175,55,0.11) 0%, rgba(212,175,55,0) 70%);animation:clarkeShimmerDrift2 16s ease-in-out infinite;"></div>
-    <div style="position:absolute;bottom:-10%;left:20%;width:55%;height:45%;background:radial-gradient(ellipse at center, rgba(255,179,0,0.09) 0%, rgba(255,179,0,0) 70%);animation:clarkeShimmerDrift3 14s ease-in-out infinite;"></div>
-    <div style="position:absolute;top:10%;left:40%;width:45%;height:40%;background:radial-gradient(ellipse at center, rgba(255,215,64,0.10) 0%, rgba(255,215,64,0) 65%);animation:clarkeShimmerDrift1 18s ease-in-out infinite reverse;"></div>
+    <div style="position:absolute;top:-10%;left:-5%;width:70%;height:50%;background:radial-gradient(ellipse at center, rgba(255,193,7,0.22) 0%, rgba(255,193,7,0) 65%);animation:clarkeShimmerDrift1 10s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:25%;right:-8%;width:65%;height:45%;background:radial-gradient(ellipse at center, rgba(212,175,55,0.18) 0%, rgba(212,175,55,0) 65%);animation:clarkeShimmerDrift2 14s ease-in-out infinite;"></div>
+    <div style="position:absolute;bottom:5%;left:10%;width:60%;height:40%;background:radial-gradient(ellipse at center, rgba(255,179,0,0.20) 0%, rgba(255,179,0,0) 65%);animation:clarkeShimmerDrift3 12s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:50%;left:30%;width:50%;height:35%;background:radial-gradient(ellipse at center, rgba(255,215,64,0.16) 0%, rgba(255,215,64,0) 60%);animation:clarkeShimmerDrift1 16s ease-in-out infinite reverse;"></div>
+    <div style="position:absolute;top:5%;right:15%;width:45%;height:30%;background:radial-gradient(ellipse at center, rgba(255,213,79,0.15) 0%, rgba(255,213,79,0) 60%);animation:clarkeShimmerDrift3 20s ease-in-out infinite reverse;"></div>
+    <div style="position:absolute;bottom:20%;left:-5%;width:55%;height:35%;background:radial-gradient(ellipse at center, rgba(212,175,55,0.14) 0%, rgba(212,175,55,0) 60%);animation:clarkeShimmerDrift2 18s ease-in-out infinite reverse;"></div>
   </div>
   <div style="position:relative;z-index:1;padding:32px 48px 24px 48px;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
@@ -245,6 +256,9 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
         <input id="clarke-patient-search" type="text" placeholder="Search patients..." oninput="(function(v){{document.querySelectorAll('.patient-card').forEach(function(c){{var t=c.innerText.toLowerCase();c.style.display=t.includes(v.toLowerCase())?'':'none';}});}})(this.value)" style="padding:10px 16px 10px 38px;border:1px solid rgba(212,175,55,0.25);border-radius:10px;background:rgba(255,255,255,0.8);backdrop-filter:blur(8px);font-family:'DM Serif Display',serif;font-size:15px;color:#1A1A2E;width:240px;outline:none;transition:all 0.3s ease;" onfocus="this.style.borderColor='#D4AF37';this.style.boxShadow='0 0 12px rgba(212,175,55,0.15)'" onblur="this.style.borderColor='rgba(212,175,55,0.25)';this.style.boxShadow='none'" />
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#D4AF37;font-size:15px;pointer-events:none;">&#128269;</span>
       </div>
+    </div>
+    <div style="font-family:'DM Serif Display',serif;font-size:18px;color:#999;margin-bottom:16px;">
+      {_greeting}, {escape(_doctor_first)} <span style="font-family:'Inter',sans-serif;font-size:14px;color:#bbb;margin-left:8px;">&#183; {_time_str}</span>
     </div>
     <div style="padding:14px 22px;background:rgba(212,175,55,0.06);backdrop-filter:blur(12px);border:1px solid rgba(212,175,55,0.15);border-radius:12px;border-left:4px solid #D4AF37;">
       <span style="font-family:'DM Serif Display',serif;font-size:20px;color:#1A1A2E;">{escape(str(clinician.get('name', 'Dr. Sarah Chen')))}</span>
