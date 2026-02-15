@@ -34,15 +34,24 @@ def _hidden_click_js(elem_id: str, action_label: str) -> str:
     return (
         "(function(){"
         f"console.log('Clarke: {action_label} button clicked');"
-        f"var wrapper=document.getElementById('{elem_id}');"
-        "console.log('Clarke: Found wrapper:', wrapper);"
-        "if(wrapper){"
-        "var btn=(wrapper.tagName&&wrapper.tagName.toLowerCase()==='button')?wrapper:wrapper.querySelector('button');"
-        "console.log('Clarke: Found inner button:', btn);"
-        "if(btn){btn.click();console.log('Clarke: Inner button clicked successfully');}"
-        f"else{{console.error('Clarke: No button element found inside #{elem_id}');}}"
+        f"var el=document.getElementById('{elem_id}');"
+        "console.log('Clarke: Found element:', el);"
+        "if(!el){"
+        f"console.error('Clarke: Element #{elem_id} not found in DOM');"
+        "return;"
         "}"
-        f"else{{console.error('Clarke: Wrapper #{elem_id} not found in DOM');}}"
+        "if(el.tagName==='BUTTON'){"
+        "el.click();"
+        "console.log('Clarke: Clicked element directly (it IS the button)');"
+        "}else{"
+        "var btn=el.querySelector('button');"
+        "if(btn){"
+        "btn.click();"
+        "console.log('Clarke: Clicked inner button');"
+        "}else{"
+        f"console.error('Clarke: No clickable button found for #{elem_id}');"
+        "}"
+        "}"
         "})()"
     )
 
@@ -627,10 +636,30 @@ document.addEventListener('DOMContentLoaded', function() {
                    'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient'];
         ids.forEach(function(id) {
             var el = document.getElementById(id);
-            var btn = el ? ((el.tagName&&el.tagName.toLowerCase()==='button') ? el : el.querySelector('button')) : null;
-            console.log('Clarke DOM check: ' + id + ' wrapper=' + !!el + ' button=' + !!btn);
+            var clickable = el ? (el.tagName === 'BUTTON' || !!el.querySelector('button')) : false;
+            console.log('Clarke DOM check: ' + id + ' found=' + !!el + ' clickable=' + clickable);
         });
     }, 2000);
+
+    setTimeout(function() {
+        var bridgeIds = ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
+                         'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient'];
+        bridgeIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.style.cssText = 'position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;';
+                var parent = el.parentElement;
+                if (parent) {
+                    parent.style.cssText = 'position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;';
+                    var grandparent = parent.parentElement;
+                    if (grandparent && grandparent.id && grandparent.id.startsWith('component-')) {
+                        grandparent.style.cssText = 'position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;';
+                    }
+                }
+            }
+        });
+        console.log('Clarke: Bridge buttons hidden');
+    }, 500);
 });
 </script>""")
 
