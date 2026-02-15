@@ -9,9 +9,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import torch
 from jinja2 import Environment, FileSystemLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+try:
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+except ModuleNotFoundError:  # pragma: no cover - mock mode support
+    torch = None
+    AutoModelForCausalLM = None
+    AutoTokenizer = None
+    BitsAndBytesConfig = None
 
 from backend.config import get_settings
 from backend.errors import ModelExecutionError, get_component_logger
@@ -72,6 +79,9 @@ class DocumentGenerator:
             return
         if self._model is not None and self._tokenizer is not None:
             return
+
+        if AutoModelForCausalLM is None or AutoTokenizer is None or BitsAndBytesConfig is None or torch is None:
+            raise ModelExecutionError("transformers and torch are required for non-mock document generation")
 
         try:
             bnb_config = BitsAndBytesConfig(

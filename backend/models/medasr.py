@@ -6,7 +6,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import librosa
-from transformers import pipeline
+try:
+    from transformers import pipeline
+except ModuleNotFoundError:  # pragma: no cover - mock mode support
+    pipeline = None
 
 from backend.config import get_settings
 from backend.errors import ModelExecutionError
@@ -65,6 +68,9 @@ class MedASRModel:
 
         if self._pipeline is not None:
             return
+
+        if pipeline is None:
+            raise ModelExecutionError("transformers is required for non-mock MedASR mode")
 
         device = "cuda:0"
         if self.model_manager.check_gpu()["vram_total_bytes"] == 0:

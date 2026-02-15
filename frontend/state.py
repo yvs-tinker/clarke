@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import gradio as gr
+
 SCREEN_ORDER: tuple[str, ...] = ("s1", "s2", "s3", "s4", "s5", "s6")
 
 
@@ -32,20 +34,20 @@ def initial_consultation_state() -> dict[str, Any]:
     }
 
 
-def show_screen(screen_name: str) -> tuple[dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
+def show_screen(screen_name: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Generate Gradio visibility updates for all six screen containers.
 
     Args:
         screen_name (str): Screen identifier to display (s1-s6).
 
     Returns:
-        tuple[dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool], dict[str, bool]]:
-            Ordered visibility updates matching SCREEN_ORDER.
+        tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+            Ordered Gradio `update` payloads matching SCREEN_ORDER.
     """
 
     if screen_name not in SCREEN_ORDER:
         screen_name = "s1"
-    return tuple({"visible": name == screen_name} for name in SCREEN_ORDER)
+    return tuple(gr.update(visible=name == screen_name) for name in SCREEN_ORDER)
 
 
 def select_patient(state: dict[str, Any], patient: dict[str, Any]) -> dict[str, Any]:

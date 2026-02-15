@@ -15,7 +15,6 @@ jinja2==3.1.5
 jiwer==3.0.5
 rouge_score==0.1.2
 sacrebleu==2.5.1
-openai-whisper==20240930
 reportlab==4.2.5
 wandb==0.18.7
 huggingface_hub==0.27.0

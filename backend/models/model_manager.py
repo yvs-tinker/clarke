@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import torch
+try:
+    import torch
+except ModuleNotFoundError:  # pragma: no cover - lightweight environments
+    torch = None
 
 
 class ModelManager:
@@ -60,7 +63,7 @@ class ModelManager:
         Returns:
             None: Invokes CUDA cache clear side effects.
         """
-        if torch.cuda.is_available():
+        if torch is not None and torch.cuda.is_available():
             torch.cuda.empty_cache()
 
     def check_gpu(self) -> dict[str, str | int]:
@@ -72,7 +75,7 @@ class ModelManager:
         Returns:
             dict[str, str | int]: gpu_name, vram_used_bytes, vram_total_bytes.
         """
-        if not torch.cuda.is_available():
+        if torch is None or not torch.cuda.is_available():
             return {
                 "gpu_name": "cpu-mock",
                 "vram_used_bytes": 0,

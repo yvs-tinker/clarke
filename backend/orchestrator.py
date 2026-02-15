@@ -9,7 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-import torch
+try:
+    import torch
+except ModuleNotFoundError:  # pragma: no cover - mock/lightweight runtime
+    torch = None
+
 
 from backend.errors import ModelExecutionError, get_component_logger
 from backend.audio import validate_audio
@@ -55,7 +59,7 @@ class PipelineOrchestrator:
             None: Performs in-place cache cleanup only.
         """
 
-        if torch.cuda.is_available():
+        if torch is not None and torch.cuda.is_available():
             torch.cuda.empty_cache()
 
     @staticmethod
