@@ -220,22 +220,31 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
 <div id="clarke-app-wrapper" style="min-height: 100vh; margin: 0; padding: 0; background: #F8F6F1; position: relative; overflow: hidden;">
   <!-- Golden sunlight shimmer layers -->
   <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;overflow:hidden;">
-    <div style="position:absolute;top:-20%;left:-10%;width:60%;height:50%;background:radial-gradient(ellipse at center, rgba(255,193,7,0.06) 0%, rgba(255,193,7,0) 70%);animation:clarkeShimmerDrift1 12s ease-in-out infinite;"></div>
-    <div style="position:absolute;top:30%;right:-15%;width:55%;height:45%;background:radial-gradient(ellipse at center, rgba(212,175,55,0.05) 0%, rgba(212,175,55,0) 70%);animation:clarkeShimmerDrift2 16s ease-in-out infinite;"></div>
-    <div style="position:absolute;bottom:-10%;left:20%;width:50%;height:40%;background:radial-gradient(ellipse at center, rgba(255,179,0,0.04) 0%, rgba(255,179,0,0) 70%);animation:clarkeShimmerDrift3 14s ease-in-out infinite;"></div>
-    <div style="position:absolute;top:10%;left:40%;width:40%;height:35%;background:radial-gradient(ellipse at center, rgba(255,215,64,0.045) 0%, rgba(255,215,64,0) 65%);animation:clarkeShimmerDrift1 18s ease-in-out infinite reverse;"></div>
+    <div style="position:absolute;top:-20%;left:-10%;width:65%;height:55%;background:radial-gradient(ellipse at center, rgba(255,193,7,0.13) 0%, rgba(255,193,7,0) 70%);animation:clarkeShimmerDrift1 12s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:30%;right:-15%;width:60%;height:50%;background:radial-gradient(ellipse at center, rgba(212,175,55,0.11) 0%, rgba(212,175,55,0) 70%);animation:clarkeShimmerDrift2 16s ease-in-out infinite;"></div>
+    <div style="position:absolute;bottom:-10%;left:20%;width:55%;height:45%;background:radial-gradient(ellipse at center, rgba(255,179,0,0.09) 0%, rgba(255,179,0,0) 70%);animation:clarkeShimmerDrift3 14s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:10%;left:40%;width:45%;height:40%;background:radial-gradient(ellipse at center, rgba(255,215,64,0.10) 0%, rgba(255,215,64,0) 65%);animation:clarkeShimmerDrift1 18s ease-in-out infinite reverse;"></div>
   </div>
   <div style="position:relative;z-index:1;padding:32px 48px 24px 48px;">
-    <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-      <div style="display:inline-block;">
-        <svg width="56" height="48" viewBox="0 0 56 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Superman-style: wide flat top, long angled sides, sharp bottom point -->
-          <path d="M2 2 L54 2 L52 6 L28 46 L4 6 Z" fill="#B8941F" />
-          <path d="M6 5 L50 5 L48 8 L28 42 L8 8 Z" fill="#D4AF37" />
-          <path d="M9 7.5 L47 7.5 L45.5 10 L28 39 L10.5 10 Z" fill="#D4AF37" />
-        </svg>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:inline-block;">
+          <svg width="48" height="44" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- 5-sided Superman pentagon: flat top, wide shoulders, long sides, bottom point -->
+            <!-- Outer border (gold) -->
+            <path d="M20,2 L80,2 L98,28 L50,88 L2,28 Z" fill="#D4AF37"/>
+            <!-- Gap (warm white) -->
+            <path d="M26,8 L74,8 L89,30 L50,80 L11,30 Z" fill="#F8F6F1"/>
+            <!-- Inner fill (gold, matches Clarke text) -->
+            <path d="M31,14 L69,14 L82,32 L50,73 L18,32 Z" fill="#D4AF37"/>
+          </svg>
+        </div>
+        <span style="font-family:'DM Serif Display',serif; font-size:32px; color:#D4AF37; font-weight:400;">Clarke</span>
       </div>
-      <span style="font-family:'DM Serif Display',serif; font-size:32px; color:#D4AF37; font-weight:400;">Clarke</span>
+      <div style="position:relative;">
+        <input id="clarke-patient-search" type="text" placeholder="Search patients..." oninput="(function(v){{document.querySelectorAll('.patient-card').forEach(function(c){{var t=c.innerText.toLowerCase();c.style.display=t.includes(v.toLowerCase())?'':'none';}});}})(this.value)" style="padding:10px 16px 10px 38px;border:1px solid rgba(212,175,55,0.25);border-radius:10px;background:rgba(255,255,255,0.8);backdrop-filter:blur(8px);font-family:'DM Serif Display',serif;font-size:15px;color:#1A1A2E;width:240px;outline:none;transition:all 0.3s ease;" onfocus="this.style.borderColor='#D4AF37';this.style.boxShadow='0 0 12px rgba(212,175,55,0.15)'" onblur="this.style.borderColor='rgba(212,175,55,0.25)';this.style.boxShadow='none'" />
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#D4AF37;font-size:15px;pointer-events:none;">&#128269;</span>
+      </div>
     </div>
     <div style="padding:14px 22px;background:rgba(212,175,55,0.06);backdrop-filter:blur(12px);border:1px solid rgba(212,175,55,0.15);border-radius:12px;border-left:4px solid #D4AF37;">
       <span style="font-family:'DM Serif Display',serif;font-size:20px;color:#1A1A2E;">{escape(str(clinician.get('name', 'Dr. Sarah Chen')))}</span>
