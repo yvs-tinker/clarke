@@ -37,7 +37,7 @@ def _hidden_click_js(elem_id: str, action_label: str) -> str:
         f"var wrapper=document.getElementById('{elem_id}');"
         "console.log('Clarke: Found wrapper:', wrapper);"
         "if(wrapper){"
-        "var btn=wrapper.querySelector('button');"
+        "var btn=(wrapper.tagName&&wrapper.tagName.toLowerCase()==='button')?wrapper:wrapper.querySelector('button');"
         "console.log('Clarke: Found inner button:', btn);"
         "if(btn){btn.click();console.log('Clarke: Inner button clicked successfully');}"
         f"else{{console.error('Clarke: No button element found inside #{elem_id}');}}"
@@ -627,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
                    'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient'];
         ids.forEach(function(id) {
             var el = document.getElementById(id);
-            var btn = el ? el.querySelector('button') : null;
+            var btn = el ? ((el.tagName&&el.tagName.toLowerCase()==='button') ? el : el.querySelector('button')) : null;
             console.log('Clarke DOM check: ' + id + ' wrapper=' + !!el + ' button=' + !!btn);
         });
     }, 2000);
