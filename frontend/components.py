@@ -203,18 +203,14 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
       <div style="display:inline-block; animation: clarkeLogoShimmer 3s ease-in-out infinite;">
         <svg width="52" height="48" viewBox="0 0 52 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 4 L48 4 L50 8 L26 46 L2 8 Z" fill="url(#goldGrad)" stroke="#B8941F" stroke-width="1.5"/>
-          <path d="M8 8 L44 8 L46 11 L26 42 L6 11 Z" fill="url(#goldInner)" />
+          <path d="M4 4 L48 4 L50 8 L26 46 L2 8 Z" fill="#B8941F" />
+          <path d="M7 6 L45 6 L47 9 L26 43 L5 9 Z" fill="url(#clarkeLogo)" />
           <defs>
-            <linearGradient id="goldGrad" x1="0" y1="0" x2="52" y2="48">
-              <stop offset="0%" stop-color="#F0D060"/>
-              <stop offset="50%" stop-color="#D4AF37"/>
-              <stop offset="100%" stop-color="#B8941F"/>
-            </linearGradient>
-            <linearGradient id="goldInner" x1="0" y1="0" x2="52" y2="48">
-              <stop offset="0%" stop-color="#D4AF37"/>
-              <stop offset="50%" stop-color="#F0D060"/>
-              <stop offset="100%" stop-color="#D4AF37"/>
+            <linearGradient id="clarkeLogo" x1="5" y1="6" x2="47" y2="43" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#F5E27A"/>
+              <stop offset="30%" stop-color="#D4AF37"/>
+              <stop offset="60%" stop-color="#F0D060"/>
+              <stop offset="100%" stop-color="#C49A2A"/>
             </linearGradient>
           </defs>
         </svg>
