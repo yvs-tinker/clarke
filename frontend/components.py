@@ -18,15 +18,24 @@ def _open_patient_click_js(index: int) -> str:
     return (
         "(function(){"
         f"console.log('Clarke: Open Patient button clicked for index {index}');"
-        f"var wrapper=document.getElementById('hidden-select-{index}');"
-        "console.log('Clarke: Found wrapper:', wrapper);"
-        "if(wrapper){"
-        "var btn=wrapper.querySelector('button');"
-        "console.log('Clarke: Found inner button:', btn);"
-        "if(btn){btn.click();console.log('Clarke: Inner button clicked successfully');}"
-        f"else{{console.error('Clarke: No button element found inside #hidden-select-{index}');}}"
+        f"var el=document.getElementById('hidden-select-{index}');"
+        "console.log('Clarke: Found element:', el);"
+        "if(!el){"
+        f"console.error('Clarke: Element #hidden-select-{index} not found in DOM');"
+        "return;"
         "}"
-        f"else{{console.error('Clarke: Wrapper #hidden-select-{index} not found in DOM');}}"
+        "if(el.tagName==='BUTTON'){"
+        "el.click();"
+        "console.log('Clarke: Clicked element directly (it IS the button)');"
+        "}else{"
+        "var btn=el.querySelector('button');"
+        "if(btn){"
+        "btn.click();"
+        "console.log('Clarke: Clicked inner button');"
+        "}else{"
+        f"console.error('Clarke: No clickable button found for #hidden-select-{index}');"
+        "}"
+        "}"
         "})()"
     )
 
@@ -135,7 +144,38 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
         cards.append(card)
 
     return f"""
-<div id="clarke-app-wrapper" style="position: relative; overflow: hidden;">
+<style>
+    .gradio-container {{
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+    }}
+    .gradio-container > .main {{
+        max-width: 100% !important;
+        padding: 0 !important;
+        gap: 0 !important;
+    }}
+    .gradio-container > .main > .wrap {{
+        max-width: 100% !important;
+        padding: 0 !important;
+        gap: 0 !important;
+    }}
+    #component-0 {{
+        max-width: 100% !important;
+        padding: 0 !important;
+        gap: 0 !important;
+    }}
+    body {{
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    footer {{
+        display: none !important;
+    }}
+</style>
+<div id="clarke-app-wrapper" style="min-height:100vh; background: linear-gradient(180deg, #0A0E1A 0%, #1E3A8A 12%, #6B2040 25%, #C4522A 38%, #D4AF37 48%, #E8C84A 55%, #F0E0A0 65%, #F8F6F1 78%, #F8F6F1 100%); background-attachment:fixed; padding:0; margin:0; position: relative; overflow: hidden;">
   <div style="position: relative; padding: 28px 40px 60px 40px; background: linear-gradient(170deg, #04070F 0%, #0A0E1A 12%, #132A78 26%, #530E0E 36%, #B91C1C 44%, #F97316 52%, #F8FAFC 62%, #93C5FD 72%, #1E3A8A 84%, #0A0E1A 100%); background-size: 100% 300%; animation: gradientFlow 12s ease-in-out infinite;">
     <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 100px; background: linear-gradient(to bottom, transparent, #F8F6F1); pointer-events: none;"></div>
     <div style="display: flex; align-items: center; margin-bottom: 20px; position: relative; z-index: 2;">
@@ -156,7 +196,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
       <span style="font-family: 'Inter', sans-serif; font-size: 14px; color: #94A3B8; margin-left: 12px;">{escape(str(clinician.get('specialty', 'General Practice')))} — {escape(str(clinic_payload.get('date', '13 February 2026')))}</span>
     </div>
   </div>
-  <div id="clarke-content-area" style="padding: 32px 40px 48px 40px;">
+  <div id="clarke-content-area" style="background:#F8F6F1; border-radius:0 0 16px 16px; margin:0 24px 24px 24px; padding:32px 24px; box-shadow:0 4px 24px rgba(0,0,0,0.08); min-height:60vh; position:relative; z-index:1;">
     {''.join(cards)}
   </div>
 </div>
