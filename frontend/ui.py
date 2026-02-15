@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import wave
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -108,14 +109,7 @@ def _trend_symbol(trend: str) -> str:
 
 
 def _format_patient_context_html(context: dict[str, Any]) -> str:
-    """Render patient context sections as frosted HTML cards for S2.
-
-    Args:
-        context (dict[str, Any]): Structured patient context payload.
-
-    Returns:
-        str: HTML markup for patient context display.
-    """
+    """Render patient context cards for S2 inside a unified content block."""
 
     demographics = context.get("demographics", {})
     problem_list = context.get("problem_list", [])
@@ -123,68 +117,65 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
     allergies = context.get("allergies", [])
     labs = context.get("recent_labs", [])
 
-    sections: list[str] = []
-    sections.append(
-        f"<div style='background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);border:1px solid rgba(212,175,55,0.1);border-radius:14px;padding:20px 24px;margin-bottom:14px;animation:revealUp 0.5s ease forwards;'><h3 style='font-family:DM Serif Display,serif;font-size:18px;color:#1E3A8A;margin:0 0 12px 0;padding-bottom:8px;border-bottom:1px solid rgba(212,175,55,0.15);'>Demographics</h3><div style='font-family:Inter,sans-serif;font-size:15px;color:#1A1A2E;line-height:1.6;'>{escape(str(demographics.get('name', 'Unknown')))}<br>DOB: {escape(str(demographics.get('dob', 'N/A')))}<br>NHS: <span style='font-family:JetBrains Mono,monospace;'>{escape(str(demographics.get('nhs_number', 'N/A')))}</span><br>Sex: {escape(str(demographics.get('sex', 'N/A')))}</div></div>"
-    )
-    problem_markup = "<br>".join(escape(str(item)) for item in problem_list) or "No active problems"
-    sections.append(f"<div style='background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);border:1px solid rgba(212,175,55,0.1);border-radius:14px;padding:20px 24px;margin-bottom:14px;'><h3 style='font-family:DM Serif Display,serif;font-size:18px;color:#1E3A8A;margin:0 0 12px;'>Problem List</h3><div style='font-family:Inter,sans-serif;color:#1A1A2E;'>{problem_markup}</div></div>")
-    med_markup = "<br>".join(f"{escape(str(m.get('name', 'Medication')))} — {escape(str(m.get('dose', '')))} {escape(str(m.get('frequency', '')))}" for m in medications) or "None documented"
-    sections.append(f"<div style='background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);border:1px solid rgba(212,175,55,0.1);border-radius:14px;padding:20px 24px;margin-bottom:14px;'><h3 style='font-family:DM Serif Display,serif;font-size:18px;color:#1E3A8A;margin:0 0 12px;'>Medications</h3><div style='font-family:Inter,sans-serif;color:#1A1A2E;'>{med_markup}</div></div>")
+    age = demographics.get("age")
+    demo_items = [
+        f"<p style='margin:4px 0;color:#1A1A2E;'>{escape(str(demographics.get('name', 'Unknown')))}</p>",
+        f"<p style='margin:4px 0;color:#555;'>{escape(str(age if age is not None else 'N/A'))} · {escape(str(demographics.get('sex', 'N/A')))}</p>",
+        f"<p style='margin:4px 0;color:#555;'>DOB: {escape(str(demographics.get('dob', 'N/A')))}</p>",
+        f"<p style='margin:4px 0;color:#555;'>NHS: {escape(str(demographics.get('nhs_number', 'N/A')))}</p>",
+    ]
+
+    def _card(title: str, body: str, span_two: bool = False) -> str:
+        span_style = "grid-column:span 2;" if span_two else ""
+        return (
+            "<div style='background:rgba(255,255,255,0.72);backdrop-filter:blur(8px);border-radius:12px;"
+            "padding:20px;border:1px solid rgba(212,175,55,0.15);" + span_style + "'>"
+            f"<h3 style='color:#D4AF37;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 12px 0;'>{title}</h3>{body}</div>"
+        )
+
+    problems = "".join(f"<p style='margin:4px 0;color:#1A1A2E;'>{escape(str(item))}</p>" for item in problem_list) or "<p style='margin:4px 0;color:#555;'>No active problems</p>"
+    meds = "".join(
+        f"<p style=\"margin:4px 0;color:#1A1A2E;font-family:'JetBrains Mono',monospace;font-size:13px;\">{escape(str(m.get('name', 'Medication')))} {escape(str(m.get('dose', '')))} {escape(str(m.get('frequency', '')))}</p>"
+        for m in medications
+    ) or "<p style='margin:4px 0;color:#555;'>None documented</p>"
     allergy_markup = "".join(
-        f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15);border-left:3px solid #EF4444;border-radius:8px;padding:8px 14px;margin-bottom:6px;font-family:Inter,sans-serif;font-size:14px;font-weight:600;color:#DC2626;'>⚠ {escape(str(a.get('substance', 'Unknown')))} — {escape(str(a.get('reaction', 'Reaction not recorded')))}</div>"
+        f"<p style='margin:4px 0;color:#c0392b;'>⚠ {escape(str(a.get('substance', 'Unknown')))} — {escape(str(a.get('reaction', 'Reaction not recorded')))}</p>"
         for a in allergies
-    ) or "<div style='font-family:Inter,sans-serif;color:#1A1A2E;'>No known allergies</div>"
-    sections.append(f"<div style='background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);border:1px solid rgba(212,175,55,0.1);border-radius:14px;padding:20px 24px;margin-bottom:14px;'><h3 style='font-family:DM Serif Display,serif;font-size:18px;color:#1E3A8A;margin:0 0 12px;'>Allergies</h3>{allergy_markup}</div>")
-    lab_markup = "<br>".join(
-        f"{escape(str(l.get('name', 'Lab')))}: <span style='font-family:JetBrains Mono,monospace;font-size:14px;color:#1A1A2E;'>{escape(str(l.get('value', '')))} {escape(str(l.get('unit', '')))}</span>{_trend_symbol(str(l.get('trend', 'stable')))}"
+    ) or "<p style='margin:4px 0;color:#555;'>No known allergies</p>"
+    lab_markup = "".join(
+        f"<p style=\"margin:4px 0;color:#1A1A2E;font-family:'JetBrains Mono',monospace;font-size:13px;\">{escape(str(l.get('name', 'Lab')))}: {escape(str(l.get('value', '')))} {escape(str(l.get('unit', '')))}{_trend_symbol(str(l.get('trend', 'stable')))}</p>"
         for l in labs
-    ) or "No recent labs"
-    sections.append(f"<div style='background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);border:1px solid rgba(212,175,55,0.1);border-radius:14px;padding:20px 24px;margin-bottom:14px;'><h3 style='font-family:DM Serif Display,serif;font-size:18px;color:#1E3A8A;margin:0 0 12px;'>Recent Labs</h3><div style='font-family:Inter,sans-serif;color:#1A1A2E;line-height:1.8;'>{lab_markup}</div></div>")
-    return "".join(sections)
+    ) or "<p style='margin:4px 0;color:#555;'>No recent labs</p>"
+
+    return "".join(
+        [
+            _card("Demographics", "".join(demo_items)),
+            _card("Problem List", problems),
+            _card("Medications", meds),
+            _card("Allergies", allergy_markup),
+            _card("Recent Labs", lab_markup, span_two=True),
+        ]
+    )
 
 
-def _context_screen_html(patient: dict[str, Any]) -> str:
-    """Build static S2 shell with hidden-button bridge hooks.
-
-    Args:
-        patient (dict[str, Any]): Selected patient payload.
-
-    Returns:
-        str: Context screen shell HTML.
-    """
+def _context_screen_html(patient: dict[str, Any], context: dict[str, Any]) -> str:
+    """Build S2 shell + actions + context in one HTML block to avoid Gradio spacing gaps."""
 
     name = escape(str(patient.get("name", "Patient")))
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;animation:fadeSlideIn 0.4s ease forwards;"><h2 style="font-family:'DM Serif Display',serif;font-size:28px;color:#1A1A2E;margin-bottom:10px;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin:20px 0;"><button onclick="{_hidden_click_js('hidden-start-consultation', 'Start Consultation')}" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;position:relative;overflow:hidden;">Start Consultation<div style="position:absolute;top:0;left:-100%;width:50%;height:100%;background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);animation:btnShine 3s ease-in-out infinite;"></div></button><button onclick="{_hidden_click_js('hidden-back', 'Back to Dashboard')}" style="background:transparent;color:#1E3A8A;font-family:Inter,sans-serif;font-size:15px;font-weight:600;padding:12px 28px;border:2px solid rgba(30,58,138,0.2);border-radius:10px;">← Back to Dashboard</button></div></div>"""
+    context_cards = _format_patient_context_html(context)
+    return f"""<div style="min-height:100vh;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);"><h2 style="font-family:'DM Serif Display',serif;color:#1A1A2E;margin:0 0 16px 0;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin-bottom:24px;"><button onclick="{_hidden_click_js('hidden-start-consultation', 'Start Consultation')}" style="background:linear-gradient(135deg,#D4AF37,#F0D060);color:#1A1A2E;border:none;padding:12px 28px;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;">Start Consultation</button><button onclick="{_hidden_click_js('hidden-back', 'Back to Dashboard')}" style="background:transparent;color:#1A1A2E;border:2px solid #ccc;padding:12px 28px;border-radius:8px;font-weight:500;cursor:pointer;font-size:15px;">← Back to Dashboard</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">{context_cards}</div></div></div>"""
 
 
 def _recording_screen_html(timer_text: str) -> str:
-    """Render S3 header block with timer.
+    """Render S3 recording screen in warm-white card layout."""
 
-    Args:
-        timer_text (str): Elapsed MM:SS timer text.
-
-    Returns:
-        str: Recording summary HTML.
-    """
-
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;"><div style="text-align:center;padding:48px 0;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div></div><div style="margin-top:24px;"><button onclick="{_hidden_click_js('hidden-end-consultation', 'End Consultation')}" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;">End Consultation</button></div></div>"""
+    return f"""<div style="min-height:100vh;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div><button onclick="{_hidden_click_js('hidden-end-consultation', 'End Consultation')}" style="margin-top:24px;background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;">End Consultation</button></div></div>"""
 
 
 def _processing_screen_html(stage_number: int, stage_label: str, stage_description: str, elapsed: str) -> str:
-    """Render S4 processing screen with circular progress visual.
+    """Render S4 processing screen in warm-white card layout."""
 
-    Args:
-        stage_number (int): Current stage number.
-        stage_label (str): Stage label.
-        stage_description (str): Stage detail text.
-        elapsed (str): Elapsed timer text.
-
-    Returns:
-        str: Processing screen HTML.
-    """
-
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#0A0E1A 0%, #111827 30%, #1E3A8A 50%, #111827 70%, #0A0E1A 100%);background-size:100% 300%;animation:gradientFlow 10s ease-in-out infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(255,255,255,0.1);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#F8FAFC;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#94A3B8;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel', 'Cancel Processing')}" style="margin-top:24px;background:transparent;color:#F8FAFC;border:1px solid rgba(255,255,255,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div>"""
+    return f"""<div style="min-height:100vh;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(30,58,138,0.15);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#1A1A2E;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#64748B;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel', 'Cancel Processing')}" style="margin-top:24px;background:transparent;color:#1A1A2E;border:1px solid rgba(30,58,138,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div></div>"""
 
 
 def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
@@ -240,7 +231,7 @@ def _handle_patient_selection(state: dict[str, Any], patient_index: int):
     clinic_payload = load_clinic_list()
     patients = clinic_payload.get("patients", [])
     if patient_index < 0 or patient_index >= len(patients):
-        return state, "Patient selection failed: patient index out of range.", "", _context_screen_html({}), *show_screen("s1")
+        return state, "Patient selection failed: patient index out of range.", _context_screen_html({}, {}), *show_screen("s1")
 
     patient = patients[patient_index]
     patient_id = str(patient.get("id", ""))
@@ -254,7 +245,7 @@ def _handle_patient_selection(state: dict[str, Any], patient_index: int):
         feedback = f"Loaded patient context for {patient['name']} ({patient_id})."
 
     updated_state["patient_context"] = context
-    return updated_state, feedback, _format_patient_context_html(context), _context_screen_html(patient), *show_screen("s2")
+    return updated_state, feedback, _context_screen_html(patient, context), *show_screen("s2")
 
 
 def _handle_back_to_dashboard(state):
@@ -335,6 +326,28 @@ def _stage_from_pipeline(stage: str) -> tuple[int, str, str]:
     return mapping.get(stage, mapping["transcribing"])
 
 
+
+
+def _ensure_mock_audio_file(audio_path: str | None) -> str | None:
+    """Create a short silent WAV when running in mock mode and no audio was captured."""
+
+    if audio_path:
+        return audio_path
+    if os.getenv("MEDASR_MODEL_ID", "").lower() != "mock":
+        return None
+
+    upload_dir = Path("data/uploads/mock")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    silent_path = upload_dir / "silent.wav"
+    if not silent_path.exists():
+        with wave.open(str(silent_path), "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(16000)
+            wav_file.writeframes(b"\x00\x00" * 16000)
+    return str(silent_path)
+
+
 def _start_processing(state, audio_path):
     """Upload audio and end consultation, then transition to processing screen.
 
@@ -350,17 +363,19 @@ def _start_processing(state, audio_path):
     consultation_id = str((updated_state.get("consultation") or {}).get("id", ""))
     if not consultation_id:
         return updated_state, "Consultation session is missing. Start consultation again.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
-    if not audio_path:
+
+    resolved_audio_path = _ensure_mock_audio_file(audio_path)
+    if not resolved_audio_path:
         return updated_state, "Please capture audio before ending consultation.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
     try:
-        with Path(audio_path).open("rb") as stream:
-            _api_request("POST", f"/consultations/{consultation_id}/audio", files={"audio_file": (Path(audio_path).name, stream, "audio/wav")}, data={"is_final": "true"}, timeout=120.0)
+        with Path(resolved_audio_path).open("rb") as stream:
+            _api_request("POST", f"/consultations/{consultation_id}/audio", files={"audio_file": (Path(resolved_audio_path).name, stream, "audio/wav")}, data={"is_final": "true"}, timeout=120.0)
         _api_request("POST", f"/consultations/{consultation_id}/end", timeout=180.0)
     except Exception as exc:
         return updated_state, f"Failed to end consultation: {exc}", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
-    updated_state["captured_audio_path"] = audio_path
+    updated_state["captured_audio_path"] = resolved_audio_path
     updated_state["processing_started_at"] = datetime.now(tz=timezone.utc).isoformat()
     updated_state["consultation"]["status"] = "processing"
     updated_state["screen"] = "s4"
@@ -564,8 +579,7 @@ def build_ui() -> gr.Blocks:
         feedback_text = gr.Markdown("", visible=False)
 
         with gr.Column(visible=False) as screen_s2:
-            context_shell_html = gr.HTML(_context_screen_html({}))
-            patient_context_panel = gr.HTML("<div></div>")
+            context_screen_html = gr.HTML(_context_screen_html({}, {}))
             hidden_start_button = gr.Button("hidden-start-consultation", visible=True, elem_id="hidden-start-consultation")
             hidden_back_button = gr.Button("hidden-back", visible=True, elem_id="hidden-back")
 
@@ -581,7 +595,7 @@ def build_ui() -> gr.Blocks:
             hidden_cancel_button = gr.Button("hidden-cancel", visible=True, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
-            gr.HTML("<div style='min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;'>Document Review</h2></div>")
+            gr.HTML("<div style='min-height:100vh;padding:24px;'><div style='background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin-top:0;'>Document Review</h2></div></div>")
             review_status_badge = gr.HTML(build_status_badge_html("✎ Ready for Review", "#F59E0B"))
             review_fhir_values = gr.HTML("<span style='font-family:JetBrains Mono,monospace;'>FHIR values appear here.</span>")
             section_one_text = gr.Textbox(label="Section 1", lines=5, interactive=True)
@@ -593,7 +607,7 @@ def build_ui() -> gr.Blocks:
             gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate', 'Regenerate')}\" style='background:transparent;border:1px solid rgba(30,58,138,0.15);padding:10px 16px;border-radius:8px;'>↻ Regenerate</button><button onclick=\"{_hidden_click_js('hidden-sign-off', 'Sign Off & Export')}\" style='background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);border:none;padding:10px 16px;border-radius:8px;'>Sign Off & Export</button></div>")
 
         with gr.Column(visible=False) as screen_s6:
-            gr.HTML("<div style='min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;'></div>")
+            gr.HTML("<div style='min-height:100vh;padding:24px;'><div style='background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);'></div></div>")
             signed_status_badge = gr.HTML(build_status_badge_html("✓ Signed Off", "#22C55E"))
             signed_letter_html = gr.HTML("")
             copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False)
@@ -613,7 +627,7 @@ def build_ui() -> gr.Blocks:
             hidden_btn.click(
                 fn=lambda state, idx=i: _handle_patient_selection(state, idx),
                 inputs=[app_state],
-                outputs=[app_state, feedback_text, patient_context_panel, context_shell_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
+                outputs=[app_state, feedback_text, context_screen_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
                 show_progress="full",
             )
 
@@ -633,7 +647,7 @@ def build_ui() -> gr.Blocks:
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         var ids = ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
-                   'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient'];
+                   'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient','hidden-back'];
         ids.forEach(function(id) {
             var el = document.getElementById(id);
             var clickable = el ? (el.tagName === 'BUTTON' || !!el.querySelector('button')) : false;
@@ -643,22 +657,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setTimeout(function() {
         var bridgeIds = ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
-                         'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient'];
+                     'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient',
+                     'hidden-back','hidden-cancel','hidden-regenerate','hidden-copy','hidden-download'];
         bridgeIds.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) {
-                el.style.cssText = 'position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;';
-                var parent = el.parentElement;
-                if (parent) {
-                    parent.style.cssText = 'position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;';
-                    var grandparent = parent.parentElement;
-                    if (grandparent && grandparent.id && grandparent.id.startsWith('component-')) {
-                        grandparent.style.cssText = 'position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;';
+                el.style.cssText = 'position:fixed!important;top:-9999px!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;';
+                var p = el.parentElement;
+                for (var i = 0; i < 3 && p; i++) {
+                    if (p.tagName === 'DIV') {
+                        p.style.cssText = 'position:fixed!important;top:-9999px!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;overflow:hidden!important;';
+                        if (p.children.length > 2) break;
                     }
+                    p = p.parentElement;
                 }
             }
         });
-        console.log('Clarke: Bridge buttons hidden');
+        console.log('Clarke: Bridge buttons hidden via off-screen positioning');
     }, 500);
 });
 </script>""")

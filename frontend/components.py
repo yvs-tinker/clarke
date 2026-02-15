@@ -63,18 +63,41 @@ def build_global_style_block() -> str:
   @keyframes progressGlow {0%, 100% { opacity: 0.6; }50% { opacity: 1; }}
   @keyframes cardShimmer {0% { left: -100%; }60% { left: 150%; }100% { left: 150%; }}
 
-  html, body { margin: 0 !important; padding: 0 !important; width: 100%; min-height: 100%; }
-  .gradio-container {
-    background: transparent !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
+  html, body { margin:0 !important; padding:0 !important; overflow-x:hidden !important; }
+  body {
+    background: linear-gradient(180deg, #0A0E1A 0%, #1E3A8A 12%, #6B2040 25%, #C4522A 38%, #D4AF37 48%, #E8C84A 55%, #F0E0A0 65%, #F8F6F1 78%, #F8F6F1 100%) !important;
+    background-attachment: fixed !important;
+    min-height: 100vh !important;
   }
-  .gradio-container > .main { padding: 0 !important; gap: 0 !important; }
-  .gradio-container > div { padding: 0 !important; margin: 0 !important; gap: 0 !important; }
-  .gradio-container .gr-block,.gradio-container .gr-box,.gradio-container .gr-panel,.gradio-container .gr-padded,.gradio-container .block,.gradio-container .panel,.gradio-container .wrap {background: transparent !important;border: none !important;box-shadow: none !important;}
+  .gradio-container { max-width:100% !important; width:100% !important; padding:0 !important; margin:0 !important; background:transparent !important; }
+  .gradio-container > .main { max-width:100% !important; padding:0 !important; gap:0 !important; }
+  .gradio-container > .main > .wrap { max-width:100% !important; padding:0 !important; gap:0 !important; }
+  .gradio-container .contain { gap:0 !important; }
+  #component-0 { max-width:100% !important; padding:0 !important; gap:0 !important; }
   footer { display: none !important; }
+  #hidden-select-0, #hidden-select-1, #hidden-select-2, #hidden-select-3, #hidden-select-4,
+  #hidden-start-consultation, #hidden-end-consultation, #hidden-sign-off, #hidden-next-patient,
+  #hidden-back, #hidden-cancel, #hidden-regenerate, #hidden-copy, #hidden-download {
+    display:block !important;
+    position:fixed !important;
+    top:-9999px !important;
+    left:-9999px !important;
+    width:1px !important;
+    height:1px !important;
+    opacity:0 !important;
+    overflow:hidden !important;
+    pointer-events:none !important;
+  }
+  [id^="hidden-select-"], [id="hidden-start-consultation"], [id="hidden-end-consultation"],
+  [id="hidden-sign-off"], [id="hidden-next-patient"], [id="hidden-back"],
+  [id="hidden-cancel"], [id="hidden-regenerate"], [id="hidden-copy"], [id="hidden-download"] {
+    position:fixed !important;
+    top:-9999px !important;
+    left:-9999px !important;
+    width:1px !important;
+    height:1px !important;
+    opacity:0 !important;
+  }
   * {cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='11' cy='11' r='4' fill='%23D4AF37' opacity='0.9'/%3E%3Ccircle cx='11' cy='11' r='10' fill='none' stroke='%23D4AF37' stroke-width='1.5' opacity='0.3'/%3E%3C/svg%3E") 11 11, auto;}
   button, a, [role="button"] {cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='11' cy='11' r='5' fill='%23D4AF37' opacity='1'/%3E%3Ccircle cx='11' cy='11' r='10' fill='none' stroke='%23D4AF37' stroke-width='2' opacity='0.5'/%3E%3C/svg%3E") 11 11, pointer;}
 </style>
@@ -144,40 +167,8 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
         cards.append(card)
 
     return f"""
-<style>
-    .gradio-container {{
-        max-width: 100% !important;
-        width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        background: transparent !important;
-    }}
-    .gradio-container > .main {{
-        max-width: 100% !important;
-        padding: 0 !important;
-        gap: 0 !important;
-    }}
-    .gradio-container > .main > .wrap {{
-        max-width: 100% !important;
-        padding: 0 !important;
-        gap: 0 !important;
-    }}
-    #component-0 {{
-        max-width: 100% !important;
-        padding: 0 !important;
-        gap: 0 !important;
-    }}
-    body {{
-        margin: 0 !important;
-        padding: 0 !important;
-    }}
-    footer {{
-        display: none !important;
-    }}
-</style>
-<div id="clarke-app-wrapper" style="min-height:100vh; background: linear-gradient(180deg, #0A0E1A 0%, #1E3A8A 12%, #6B2040 25%, #C4522A 38%, #D4AF37 48%, #E8C84A 55%, #F0E0A0 65%, #F8F6F1 78%, #F8F6F1 100%); background-attachment:fixed; padding:0; margin:0; position: relative; overflow: hidden;">
-  <div style="position: relative; padding: 28px 40px 60px 40px; background: linear-gradient(170deg, #04070F 0%, #0A0E1A 12%, #132A78 26%, #530E0E 36%, #B91C1C 44%, #F97316 52%, #F8FAFC 62%, #93C5FD 72%, #1E3A8A 84%, #0A0E1A 100%); background-size: 100% 300%; animation: gradientFlow 12s ease-in-out infinite;">
-    <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 100px; background: linear-gradient(to bottom, transparent, #F8F6F1); pointer-events: none;"></div>
+<div id="clarke-app-wrapper" style="min-height:100vh; padding:0; margin:0;">
+  <div style="background:transparent; padding:32px 48px 24px 48px;">
     <div style="display: flex; align-items: center; margin-bottom: 20px; position: relative; z-index: 2;">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 52" style="width: 44px; height: 48px; margin-right: 14px; filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.4));">
         <defs>
@@ -191,7 +182,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
       </svg>
       <span style="font-family: 'DM Serif Display', serif; font-size: 36px; color: #D4AF37; letter-spacing: -0.01em; text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);">Clarke</span>
     </div>
-    <div style="padding: 14px 22px; background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; border-left: 4px solid #D4AF37; position: relative; z-index: 2;">
+    <div style="padding: 14px 22px; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 12px; border-left: 4px solid #D4AF37; position: relative; z-index: 2;">
       <span style="font-family: 'DM Serif Display', serif; font-size: 20px; color: #F8FAFC;">{escape(str(clinician.get('name', 'Dr. Sarah Chen')))}</span>
       <span style="font-family: 'Inter', sans-serif; font-size: 14px; color: #94A3B8; margin-left: 12px;">{escape(str(clinician.get('specialty', 'General Practice')))} — {escape(str(clinic_payload.get('date', '13 February 2026')))}</span>
     </div>
