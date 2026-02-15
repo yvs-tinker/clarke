@@ -235,10 +235,10 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
 
     age = demographics.get("age")
     demo_items = [
-        f"<p style='margin:4px 0;color:#1A1A2E;'>{escape(str(demographics.get('name', 'Unknown')))}</p>",
-        f"<p style='margin:4px 0;color:#555;'>{escape(str(age if age is not None else 'N/A'))} · {escape(str(demographics.get('sex', 'N/A')))}</p>",
-        f"<p style='margin:4px 0;color:#555;'>DOB: {escape(str(demographics.get('dob', 'N/A')))}</p>",
-        f"<p style='margin:4px 0;color:#555;'>NHS: {escape(str(demographics.get('nhs_number', 'N/A')))}</p>",
+        f"<p style='margin:4px 0;color:#1A1A2E;font-family:Inter,sans-serif;'>{escape(str(demographics.get('name', 'Unknown')))}</p>",
+        f"<p style='margin:4px 0;color:#555;font-family:Inter,sans-serif;'>{escape(str(age if age is not None else 'N/A'))} · {escape(str(demographics.get('sex', 'N/A')))}</p>",
+        f"<p style='margin:4px 0;color:#555;font-family:Inter,sans-serif;'>DOB: {escape(str(demographics.get('dob', 'N/A')))}</p>",
+        f"<p style='margin:4px 0;color:#555;font-family:Inter,sans-serif;'>NHS: {escape(str(demographics.get('nhs_number', 'N/A')))}</p>",
     ]
 
     def _card(title: str, body: str, span_two: bool = False) -> str:
@@ -246,22 +246,22 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
         return (
             "<div style='background:rgba(255,255,255,0.72);backdrop-filter:blur(8px);border-radius:12px;"
             "padding:20px;border:1px solid rgba(212,175,55,0.15);" + span_style + "'>"
-            f"<h3 style='color:#D4AF37;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 12px 0;'>{title}</h3>{body}</div>"
+            f"<h3 style='color:#D4AF37;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 12px 0;font-family:Inter,sans-serif;'>{title}</h3>{body}</div>"
         )
 
-    problems = "".join(f"<p style='margin:4px 0;color:#1A1A2E;'>{escape(str(item))}</p>" for item in problem_list) or "<p style='margin:4px 0;color:#555;'>No active problems</p>"
+    problems = "".join(f"<p style='margin:4px 0;color:#1A1A2E;font-family:Inter,sans-serif;'>{escape(str(item))}</p>" for item in problem_list) or "<p style='margin:4px 0;color:#555;font-family:Inter,sans-serif;'>No active problems</p>"
     meds = "".join(
         f"<p style=\"margin:4px 0;color:#1A1A2E;font-family:'JetBrains Mono',monospace;font-size:13px;\">{escape(str(m.get('name', 'Medication')))} {escape(str(m.get('dose', '')))} {escape(str(m.get('frequency', '')))}</p>"
         for m in medications
-    ) or "<p style='margin:4px 0;color:#555;'>None documented</p>"
+    ) or "<p style='margin:4px 0;color:#555;font-family:Inter,sans-serif;'>None documented</p>"
     allergy_markup = "".join(
-        f"<p style='margin:4px 0;color:#c0392b;'>⚠ {escape(str(a.get('substance', 'Unknown')))} — {escape(str(a.get('reaction', 'Reaction not recorded')))}</p>"
+        f"<p style='margin:4px 0;color:#c0392b;font-family:Inter,sans-serif;'>⚠ {escape(str(a.get('substance', 'Unknown')))} — {escape(str(a.get('reaction', 'Reaction not recorded')))}</p>"
         for a in allergies
-    ) or "<p style='margin:4px 0;color:#555;'>No known allergies</p>"
+    ) or "<p style='margin:4px 0;color:#555;font-family:Inter,sans-serif;'>No known allergies</p>"
     lab_markup = "".join(
         f"<p style=\"margin:4px 0;color:#1A1A2E;font-family:'JetBrains Mono',monospace;font-size:13px;\">{escape(str(l.get('name', 'Lab')))}: {escape(str(l.get('value', '')))} {escape(str(l.get('unit', '')))}{_trend_symbol(str(l.get('trend', 'stable')))}</p>"
         for l in labs
-    ) or "<p style='margin:4px 0;color:#555;'>No recent labs</p>"
+    ) or "<p style='margin:4px 0;color:#555;font-family:Inter,sans-serif;'>No recent labs</p>"
 
     return "".join(
         [
@@ -402,11 +402,12 @@ def _handle_patient_selection(state: dict[str, Any], patient_index: int):
     clinic_payload = load_clinic_list()
     patients = clinic_payload.get("patients", [])
     if patient_index < 0 or patient_index >= len(patients):
-        return state, "Patient selection failed: patient index out of range.", _context_screen_html({}, {}), *show_screen("s1")
+        return state, "Patient selection failed: patient index out of range.", _context_screen_html({}, {}), "", "", "", "", "", gr.update(), *show_screen("s1")
 
     patient = patients[patient_index]
-    patient_id = str(patient.get("id", ""))
     updated_state = select_patient(state, patient)
+    updated_state['current_patient_index'] = patient_index
+    patient_id = str(patient.get("id", ""))
     if os.getenv("USE_MOCK_FHIR", "").lower() == "true":
         context = _mock_context_for_index(patient_index)
         feedback = f"Loaded mock patient context for {patient['name']} ({patient_id})."
@@ -420,7 +421,16 @@ def _handle_patient_selection(state: dict[str, Any], patient_index: int):
             feedback = f"Loaded patient context for {patient['name']} ({patient_id})."
 
     updated_state["patient_context"] = context
-    return updated_state, feedback, _context_screen_html(patient, context), *show_screen("s2")
+
+    completed_patients = set(updated_state.get("completed_patients", []))
+    if patient_index in completed_patients:
+        generated = updated_state.get("signed_letters", {}).get(str(patient_index), "")
+        if generated:
+            updated_state["signed_document_text"] = generated
+            updated_state["screen"] = "s5"
+            return updated_state, f"Opened completed patient {patient['name']} in Document Review.", _context_screen_html(patient, context), generated, "", "", "", f"<div style='min-height:100vh;background:#F8F6F1;padding:24px 48px 48px 48px;margin:0;'><div style='font-family:Inter,sans-serif;font-size:16px;line-height:1.75;color:#1A1A2E;white-space:pre-wrap;' id='signed-letter-text'>{escape(generated)}</div></div>", "<span style='font-family:Inter,sans-serif;'>Previously signed letter loaded for review.</span>", *show_screen("s5")
+
+    return updated_state, feedback, _context_screen_html(patient, context), "", "", "", "", "", gr.update(), *show_screen("s2")
 
 
 def _handle_back_to_dashboard(state):
@@ -685,6 +695,10 @@ def _sign_off_document(state, section_1, section_2, section_3, section_4):
     signed_letter = "\n\n".join(part.strip() for part in edited_sections if part and part.strip())
     
     updated_state["signed_document_text"] = signed_letter
+    selected_index = int(updated_state.get('current_patient_index', 0))
+    signed_letters = dict(updated_state.get('signed_letters', {}))
+    signed_letters[str(selected_index)] = signed_letter
+    updated_state['signed_letters'] = signed_letters
     updated_state["consultation"]["status"] = "signed_off"
     updated_state["screen"] = "s6"
     export_path = Path("data") / "demo" / "latest_signed_letter.txt"
@@ -740,8 +754,17 @@ def _next_patient(state):
         tuple[...]: Reset state and cleared UI content updates.
     """
 
+    updated_state = dict(state or initial_consultation_state())
+    completed = set(updated_state.get('completed_patients', []))
+    current_index = int(updated_state.get('current_patient_index', 0))
+    completed.add(current_index)
+    updated_state['completed_patients'] = sorted(completed)
+    dashboard = build_dashboard_html(load_clinic_list(), completed_patients=updated_state['completed_patients'])
+
     refreshed_state = initial_consultation_state()
-    return refreshed_state, "Ready for next patient. Please select a patient card.", "", "", "", "", "", "", *show_screen("s1")
+    refreshed_state['completed_patients'] = updated_state['completed_patients']
+    refreshed_state['signed_letters'] = dict(updated_state.get('signed_letters', {}))
+    return refreshed_state, "Ready for next patient. Please select a patient card.", "", "", "", "", "", "", dashboard, *show_screen("s1")
 
 
 def build_ui() -> gr.Blocks:
@@ -770,7 +793,8 @@ def build_ui() -> gr.Blocks:
             recording_html = gr.HTML(_recording_screen_html("00:00"))
             consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="Consultation Audio", elem_id="clarke-audio-input")
             recording_tick = gr.Timer(value=1.0, active=False)
-            end_consultation_btn = gr.Button("End Consultation", variant="primary", elem_id="end-consultation-btn")
+            gr.HTML("""<div style='position:sticky; bottom:0; left:0; right:0; z-index:100;'><button onclick=\"(function(){var el=document.getElementById('hidden-end-consultation');if(!el){console.error('Clarke: hidden-end-consultation not found');return;}if(el.tagName==='BUTTON'){el.click();}else{var b=el.querySelector('button');if(b)b.click();}console.log('Clarke: End Consultation clicked');})()\" style='display:block; width:100%; padding:18px 0; border:none; cursor:pointer; background:linear-gradient(135deg, #D4AF37 0%, #F0D060 100%); color:#1A1A2E; font-family:'Inter',sans-serif; font-weight:700; font-size:16px; letter-spacing:0.5px; transition:all 0.3s ease; box-shadow:0 -4px 16px rgba(212,175,55,0.3);' onmouseover=\"this.style.background='linear-gradient(135deg,#E8C84A,#F5E070)';this.style.boxShadow='0 -4px 24px rgba(212,175,55,0.5)';this.style.transform='translateY(-1px)'\" onmouseout=\"this.style.background='linear-gradient(135deg,#D4AF37,#F0D060)';this.style.boxShadow='0 -4px 16px rgba(212,175,55,0.3)';this.style.transform='translateY(0)'\">End Consultation</button></div>""")
+            hidden_end_btn = gr.Button("hidden-end-consultation", visible=True, elem_id="hidden-end-consultation")
 
         with gr.Column(visible=False) as screen_s4:
             processing_html = gr.HTML(_processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"))
@@ -787,7 +811,8 @@ def build_ui() -> gr.Blocks:
             section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True)
             hidden_regenerate_button = gr.Button("hidden-regenerate", visible=True, elem_id="hidden-regenerate")
             gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate', 'Regenerate')}\" class='clarke-btn-secondary'>↻ Regenerate</button></div>")
-            sign_off_btn = gr.Button("Sign Off & Export", variant="primary", elem_id="sign-off-btn")
+            gr.HTML("""<div style='position:sticky; bottom:0; left:0; right:0; z-index:100;'><button onclick=\"(function(){var el=document.getElementById('hidden-sign-off');if(!el){console.error('Clarke: hidden-sign-off not found');return;}if(el.tagName==='BUTTON'){el.click();}else{var b=el.querySelector('button');if(b)b.click();}console.log('Clarke: Sign Off & Export clicked');})()\" style='display:block; width:100%; padding:18px 0; border:none; cursor:pointer; background:linear-gradient(135deg, #D4AF37 0%, #F0D060 100%); color:#1A1A2E; font-family:'Inter',sans-serif; font-weight:700; font-size:16px; letter-spacing:0.5px; transition:all 0.3s ease; box-shadow:0 -4px 16px rgba(212,175,55,0.3);' onmouseover=\"this.style.background='linear-gradient(135deg,#E8C84A,#F5E070)';this.style.boxShadow='0 -4px 24px rgba(212,175,55,0.5)';this.style.transform='translateY(-1px)'\" onmouseout=\"this.style.background='linear-gradient(135deg,#D4AF37,#F0D060)';this.style.boxShadow='0 -4px 16px rgba(212,175,55,0.3)';this.style.transform='translateY(0)'\">Sign Off & Export</button></div>""")
+            hidden_sign_off_btn = gr.Button("hidden-sign-off", visible=True, elem_id="hidden-sign-off")
 
         with gr.Column(visible=False) as screen_s6:
             gr.HTML("")
@@ -797,11 +822,12 @@ def build_ui() -> gr.Blocks:
             download_text_file = gr.File(label="Download as Text")
             hidden_copy_button = gr.Button("hidden-copy", visible=True, elem_id="hidden-copy")
             hidden_download_button = gr.Button("hidden-download", visible=True, elem_id="hidden-download")
-            gr.HTML(f"<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"(function(){{var text=document.getElementById('signed-letter-text');if(text){{navigator.clipboard.writeText(text.innerText).then(function(){{alert('Copied to clipboard');}});}};{_hidden_click_js('hidden-copy', 'Copy to Clipboard')} }})()\" class='clarke-btn-secondary'>📋 Copy to Clipboard</button><button onclick=\"{_hidden_click_js('hidden-download', 'Download as Text')}\" class='clarke-btn-secondary'>📄 Download as Text</button></div>")
-            next_patient_btn = gr.Button("Next Patient →", variant="primary", elem_id="next-patient-btn")
+            gr.HTML("""<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"(function(){var letterEl=document.getElementById('signed-letter-text');if(!letterEl){var textboxes=document.querySelectorAll('textarea');var text='';textboxes.forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});if(!text){alert('No letter text found');return;}navigator.clipboard.writeText(text).then(function(){alert('Copied to clipboard!');});return;}navigator.clipboard.writeText(letterEl.innerText).then(function(){alert('Copied to clipboard!');});})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📋 Copy to Clipboard</button><button onclick=\"(function(){var letterEl=document.getElementById('signed-letter-text');var text=letterEl?letterEl.innerText:'';if(!text){var textboxes=document.querySelectorAll('textarea');textboxes.forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}var blob=new Blob([text],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='clinic_letter.txt';a.click();URL.revokeObjectURL(a.href);console.log('Clarke: Letter downloaded');})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📄 Download as Text</button></div>""")
+            gr.HTML("""<div style='position:sticky; bottom:0; left:0; right:0; z-index:100;'><button onclick=\"(function(){var el=document.getElementById('hidden-next-patient');if(!el){console.error('Clarke: hidden-next-patient not found');return;}if(el.tagName==='BUTTON'){el.click();}else{var b=el.querySelector('button');if(b)b.click();}console.log('Clarke: Next Patient clicked');})()\" style='display:block; width:100%; padding:18px 0; border:none; cursor:pointer; background:linear-gradient(135deg, #D4AF37 0%, #F0D060 100%); color:#1A1A2E; font-family:'Inter',sans-serif; font-weight:700; font-size:16px; letter-spacing:0.5px; transition:all 0.3s ease; box-shadow:0 -4px 16px rgba(212,175,55,0.3);' onmouseover=\"this.style.background='linear-gradient(135deg,#E8C84A,#F5E070)';this.style.boxShadow='0 -4px 24px rgba(212,175,55,0.5)';this.style.transform='translateY(-1px)'\" onmouseout=\"this.style.background='linear-gradient(135deg,#D4AF37,#F0D060)';this.style.boxShadow='0 -4px 16px rgba(212,175,55,0.3)';this.style.transform='translateY(0)'\">Next Patient →</button></div>""")
+            hidden_next_patient_btn = gr.Button("hidden-next-patient", visible=True, elem_id="hidden-next-patient")
 
         with gr.Column(visible=True) as screen_s1:
-            gr.HTML(build_dashboard_html(clinic_payload))
+            dashboard_html = gr.HTML(build_dashboard_html(clinic_payload))
             hidden_patient_buttons: list[gr.Button] = []
             for i in range(5):
                 hidden_patient_buttons.append(gr.Button(f"hidden-select-{i}", elem_id=f"hidden-select-{i}", visible=True))
@@ -810,21 +836,21 @@ def build_ui() -> gr.Blocks:
             hidden_btn.click(
                 fn=lambda state, idx=i: _handle_patient_selection(state, idx),
                 inputs=[app_state],
-                outputs=[app_state, feedback_text, context_screen_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
+                outputs=[app_state, feedback_text, context_screen_html, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
                 show_progress="full",
             )
 
         hidden_back_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_start_button.click(_handle_start_consultation, inputs=[app_state], outputs=[app_state, feedback_text, recording_html, recording_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         recording_tick.tick(_update_recording_timer, inputs=[app_state], outputs=[recording_html], show_progress="hidden")
-        end_consultation_btn.click(_start_processing, inputs=[app_state, consultation_audio], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+        hidden_end_btn.click(_start_processing, inputs=[app_state, consultation_audio], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         processing_tick.tick(_poll_processing_progress, inputs=[app_state], outputs=[app_state, feedback_text, processing_html, processing_tick, section_one_text, section_two_text, section_three_text, section_four_text, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_cancel_button.click(_cancel_processing, inputs=[app_state], outputs=[app_state, feedback_text, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_regenerate_button.click(_regenerate_document, inputs=[app_state], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
-        sign_off_btn.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+        hidden_sign_off_btn.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         hidden_copy_button.click(_copy_signed_document, inputs=[app_state], outputs=[app_state, feedback_text, copy_to_clipboard_text], show_progress="hidden")
         hidden_download_button.click(_prepare_signed_download, inputs=[app_state], outputs=[app_state, feedback_text, download_text_file], show_progress="hidden")
-        next_patient_btn.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        hidden_next_patient_btn.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
 
         gr.HTML("""<script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -840,7 +866,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setTimeout(function() {
         var bridgeIds = ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
-                     'hidden-start-consultation','hidden-back','hidden-cancel','hidden-regenerate','hidden-copy','hidden-download'];
+                     'hidden-start-consultation','hidden-back','hidden-cancel','hidden-regenerate','hidden-copy','hidden-download','hidden-end-consultation','hidden-sign-off','hidden-next-patient'];
         bridgeIds.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) {
