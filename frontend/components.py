@@ -201,33 +201,48 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
     100% {{ background-position: 0% 50%; }}
 }}
 .completed-patient-card:hover {{ opacity: 0.7 !important; box-shadow: 0 4px 14px rgba(0,0,0,0.08) !important; transform: translateY(-2px) scale(1.005) !important; }}
+@keyframes clarkeShimmerDrift1 {{
+  0% {{ transform: translate(0, 0) scale(1); opacity: 0.7; }}
+  50% {{ transform: translate(5%, 8%) scale(1.1); opacity: 1; }}
+  100% {{ transform: translate(0, 0) scale(1); opacity: 0.7; }}
+}}
+@keyframes clarkeShimmerDrift2 {{
+  0% {{ transform: translate(0, 0) scale(1); opacity: 0.6; }}
+  50% {{ transform: translate(-6%, -5%) scale(1.15); opacity: 1; }}
+  100% {{ transform: translate(0, 0) scale(1); opacity: 0.6; }}
+}}
+@keyframes clarkeShimmerDrift3 {{
+  0% {{ transform: translate(0, 0) scale(1); opacity: 0.5; }}
+  50% {{ transform: translate(4%, -6%) scale(1.08); opacity: 1; }}
+  100% {{ transform: translate(0, 0) scale(1); opacity: 0.5; }}
+}}
 </style>
-<div id="clarke-app-wrapper" style="min-height: 100vh; margin: 0; padding: 0; background: linear-gradient(135deg, #0A0E1A 0%, #1E3A8A 15%, #4A1942 25%, #8B2040 35%, #C4522A 45%, #D4AF37 55%, #E8C84A 65%, #F0E0A0 78%, #F8F6F1 92%, #F8F6F1 100%); background-size: 200% 200%; animation: clarkeGradientShift 15s ease-in-out infinite;">
-  <div style="padding:32px 48px 24px 48px;">
+<div id="clarke-app-wrapper" style="min-height: 100vh; margin: 0; padding: 0; background: #F8F6F1; position: relative; overflow: hidden;">
+  <!-- Golden sunlight shimmer layers -->
+  <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;overflow:hidden;">
+    <div style="position:absolute;top:-20%;left:-10%;width:60%;height:50%;background:radial-gradient(ellipse at center, rgba(255,193,7,0.06) 0%, rgba(255,193,7,0) 70%);animation:clarkeShimmerDrift1 12s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:30%;right:-15%;width:55%;height:45%;background:radial-gradient(ellipse at center, rgba(212,175,55,0.05) 0%, rgba(212,175,55,0) 70%);animation:clarkeShimmerDrift2 16s ease-in-out infinite;"></div>
+    <div style="position:absolute;bottom:-10%;left:20%;width:50%;height:40%;background:radial-gradient(ellipse at center, rgba(255,179,0,0.04) 0%, rgba(255,179,0,0) 70%);animation:clarkeShimmerDrift3 14s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:10%;left:40%;width:40%;height:35%;background:radial-gradient(ellipse at center, rgba(255,215,64,0.045) 0%, rgba(255,215,64,0) 65%);animation:clarkeShimmerDrift1 18s ease-in-out infinite reverse;"></div>
+  </div>
+  <div style="position:relative;z-index:1;padding:32px 48px 24px 48px;">
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-      <div style="display:inline-block; animation: clarkeLogoShimmer 3s ease-in-out infinite;">
-        <svg width="52" height="48" viewBox="0 0 52 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 4 L48 4 L50 8 L26 46 L2 8 Z" fill="#C68A00" />
-          <path d="M7 6 L45 6 L47 9 L26 43 L5 9 Z" fill="url(#clarkeLogo)" />
-          <defs>
-            <linearGradient id="clarkeLogo" x1="5" y1="6" x2="47" y2="43" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#FFE082"/>
-              <stop offset="25%" stop-color="#FFD54F"/>
-              <stop offset="50%" stop-color="#FFC107"/>
-              <stop offset="75%" stop-color="#FFB300"/>
-              <stop offset="100%" stop-color="#FF8F00"/>
-            </linearGradient>
-          </defs>
+      <div style="display:inline-block;">
+        <svg width="56" height="48" viewBox="0 0 56 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Superman-style: wide flat top, long angled sides, sharp bottom point -->
+          <path d="M2 2 L54 2 L52 6 L28 46 L4 6 Z" fill="#B8941F" />
+          <path d="M6 5 L50 5 L48 8 L28 42 L8 8 Z" fill="#D4AF37" />
+          <path d="M9 7.5 L47 7.5 L45.5 10 L28 39 L10.5 10 Z" fill="#D4AF37" />
         </svg>
       </div>
       <span style="font-family:'DM Serif Display',serif; font-size:32px; color:#D4AF37; font-weight:400;">Clarke</span>
     </div>
-    <div style="padding:14px 22px;background:rgba(255,255,255,0.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.18);border-radius:12px;border-left:4px solid #D4AF37;">
-      <span style="font-family:'DM Serif Display',serif;font-size:20px;color:#F8F6F1;">{escape(str(clinician.get('name', 'Dr. Sarah Chen')))}</span>
-      <span style="font-family:'Inter',sans-serif;font-size:14px;color:#F8F6F1;margin-left:12px;">{escape(str(clinician.get('specialty', 'General Practice')))} — {escape(str(clinic_payload.get('date', '13 February 2026')))}</span>
+    <div style="padding:14px 22px;background:rgba(212,175,55,0.06);backdrop-filter:blur(12px);border:1px solid rgba(212,175,55,0.15);border-radius:12px;border-left:4px solid #D4AF37;">
+      <span style="font-family:'DM Serif Display',serif;font-size:20px;color:#1A1A2E;">{escape(str(clinician.get('name', 'Dr. Sarah Chen')))}</span>
+      <span style="font-family:'Inter',sans-serif;font-size:14px;color:#555;margin-left:12px;">{escape(str(clinician.get('specialty', 'General Practice')))} — {escape(str(clinic_payload.get('date', '13 February 2026')))}</span>
     </div>
   </div>
-  <div id="clarke-content-area" style="background:#F8F6F1;margin:0;padding:32px 48px;min-height:70vh;">
+  <div id="clarke-content-area" style="position:relative;z-index:1;background:transparent;margin:0;padding:32px 48px;min-height:70vh;">
     {''.join(cards)}
   </div>
 </div>
