@@ -273,10 +273,11 @@ class EHRAgent:
                 if nhs_number:
                     break
 
-        birth_date_raw = str(patient.get("birthDate", ""))
+        birth_date_value = patient.get("birthDate", "")
+        birth_date_raw = str(birth_date_value).strip() if birth_date_value is not None else ""
         dob_display = birth_date_raw
         age: int | None = None
-        if birth_date_raw:
+        if birth_date_raw and birth_date_raw != 'None':
             try:
                 parsed_dob = date.fromisoformat(birth_date_raw)
                 dob_display = parsed_dob.strftime("%d/%m/%Y")

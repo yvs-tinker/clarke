@@ -20,6 +20,83 @@ from frontend.theme import clarke_theme
 CLINIC_LIST_PATH = Path("data/clinic_list.json")
 API_BASE_URL = os.getenv("CLARKE_API_BASE_URL", "http://127.0.0.1:7860/api/v1")
 
+MOCK_PATIENT_CONTEXTS: dict[int, dict[str, Any]] = {
+    0: {
+        "name": "Mrs. Margaret Thompson",
+        "age": 67,
+        "sex": "Female",
+        "dob": "15/03/1958",
+        "nhs": "943 476 2185",
+        "problems": ["Type 2 Diabetes Mellitus (E11.9)", "Essential Hypertension (I10)", "Hyperlipidaemia (E78.5)"],
+        "medications": ["Metformin 1g BD", "Lisinopril 10mg OD", "Atorvastatin 20mg ON", "Aspirin 75mg OD"],
+        "allergies": [{"name": "Penicillin", "reaction": "Anaphylaxis", "severity": "severe"}],
+        "labs": [
+            {"test": "HbA1c", "value": "8.2%", "trend": "↑", "note": "target <7.0%", "date": "28/01/2026"},
+            {"test": "eGFR", "value": "68 mL/min", "trend": "↓", "note": "prev 72", "date": "28/01/2026"},
+            {"test": "Creatinine", "value": "98 µmol/L", "trend": "", "note": "", "date": "28/01/2026"},
+        ],
+    },
+    1: {
+        "name": "Mr. Emeka Okafor",
+        "age": 54,
+        "sex": "Male",
+        "dob": "22/07/1971",
+        "nhs": "621 839 4057",
+        "problems": ["Coronary Artery Disease (I25.1)", "Post-PCI (Z95.5)", "Type 2 Diabetes (E11.9)"],
+        "medications": ["Clopidogrel 75mg OD", "Bisoprolol 5mg OD", "Atorvastatin 80mg ON", "Ramipril 5mg OD", "GTN spray PRN"],
+        "allergies": [],
+        "labs": [
+            {"test": "Troponin I", "value": "<0.01 ng/mL", "trend": "", "note": "normal", "date": "05/02/2026"},
+            {"test": "Total Cholesterol", "value": "4.2 mmol/L", "trend": "↓", "note": "prev 5.1", "date": "05/02/2026"},
+            {"test": "HbA1c", "value": "7.1%", "trend": "", "note": "at target", "date": "10/01/2026"},
+        ],
+    },
+    2: {
+        "name": "Ms. Priya Patel",
+        "age": 28,
+        "sex": "Female",
+        "dob": "03/11/1997",
+        "nhs": "754 213 8690",
+        "problems": ["Asthma (J45.9) — poorly controlled", "Allergic Rhinitis (J30.1)"],
+        "medications": ["Salbutamol 100µg MDI PRN", "Beclometasone 200µg BD", "Montelukast 10mg ON", "Cetirizine 10mg OD"],
+        "allergies": [{"name": "NSAIDs", "reaction": "Bronchospasm", "severity": "moderate"}],
+        "labs": [
+            {"test": "Peak Flow", "value": "320 L/min", "trend": "↓", "note": "predicted 450", "date": "01/02/2026"},
+            {"test": "Eosinophils", "value": "0.6 × 10⁹/L", "trend": "↑", "note": "elevated", "date": "01/02/2026"},
+        ],
+    },
+    3: {
+        "name": "Mr. David Williams",
+        "age": 72,
+        "sex": "Male",
+        "dob": "19/06/1953",
+        "nhs": "482 917 3564",
+        "problems": ["Heart Failure with reduced EF (I50.2)", "Atrial Fibrillation (I48.0)", "CKD Stage 3 (N18.3)"],
+        "medications": ["Furosemide 40mg OD", "Ramipril 2.5mg OD", "Bisoprolol 2.5mg OD", "Apixaban 5mg BD", "Spironolactone 25mg OD"],
+        "allergies": [{"name": "ACE inhibitor cough", "reaction": "Persistent dry cough", "severity": "mild"}],
+        "labs": [
+            {"test": "BNP", "value": "890 pg/mL", "trend": "↑", "note": "prev 450", "date": "10/02/2026"},
+            {"test": "eGFR", "value": "38 mL/min", "trend": "↓", "note": "prev 45", "date": "10/02/2026"},
+            {"test": "K+", "value": "5.1 mmol/L", "trend": "↑", "note": "monitor", "date": "10/02/2026"},
+        ],
+    },
+    4: {
+        "name": "Mrs. Fatima Khan",
+        "age": 45,
+        "sex": "Female",
+        "dob": "08/09/1980",
+        "nhs": "318 645 7923",
+        "problems": ["Major Depressive Disorder (F32.1)", "Generalised Anxiety Disorder (F41.1)", "Vitamin D Deficiency (E55.9)"],
+        "medications": ["Sertraline 100mg OD", "Vitamin D3 800 IU OD", "Zopiclone 3.75mg PRN"],
+        "allergies": [],
+        "labs": [
+            {"test": "TSH", "value": "2.1 mIU/L", "trend": "", "note": "normal", "date": "20/01/2026"},
+            {"test": "Vitamin D", "value": "32 nmol/L", "trend": "↑", "note": "prev 18, improving", "date": "20/01/2026"},
+            {"test": "FBC", "value": "Normal", "trend": "", "note": "", "date": "20/01/2026"},
+        ],
+    },
+}
+
 
 def _hidden_click_js(elem_id: str, action_label: str) -> str:
     """Return debug-friendly JS snippet that clicks hidden Gradio wrappers.
@@ -91,21 +168,60 @@ def _api_request(method: str, endpoint: str, **kwargs: Any) -> Any:
 
 
 def _trend_symbol(trend: str) -> str:
-    """Map trend labels to compact visual symbols.
+    """Map trend labels to compact visual symbols."""
 
-    Args:
-        trend (str): Trend label string.
+    trend_l = (trend or "").strip().lower()
+    if trend_l in {"rising", "up", "↑"}:
+        return "<span style='color:#c0392b;font-weight:600;'> ↑</span>"
+    if trend_l in {"falling", "down", "↓"}:
+        return "<span style='color:#27ae60;font-weight:600;'> ↓</span>"
+    return "<span style='color:#555;'> →</span>"
 
-    Returns:
-        str: Symbol corresponding to trend direction.
-    """
 
-    trend_l = (trend or "").lower()
-    if trend_l == "rising":
-        return "<span style='color:#EF4444;font-weight:600;'> ↑</span>"
-    if trend_l == "falling":
-        return "<span style='color:#22C55E;font-weight:600;'> ↓</span>"
-    return "<span style='color:#94A3B8;'> →</span>"
+def _safe_datetime_from_iso(value: Any) -> datetime:
+    """Parse datetime safely, avoiding None/'None' isoformat errors."""
+
+    raw_value = str(value).strip() if value is not None else ""
+    if not raw_value or raw_value == "None":
+        return datetime.now(tz=timezone.utc)
+    try:
+        return datetime.fromisoformat(raw_value)
+    except ValueError:
+        return datetime.now(tz=timezone.utc)
+
+
+def _mock_context_for_index(patient_index: int) -> dict[str, Any]:
+    """Build frontend mock patient context for deterministic S2 rendering."""
+
+    payload = MOCK_PATIENT_CONTEXTS.get(patient_index, MOCK_PATIENT_CONTEXTS[0])
+    return {
+        "demographics": {
+            "name": payload["name"],
+            "age": payload["age"],
+            "sex": payload["sex"],
+            "dob": payload["dob"],
+            "nhs_number": payload["nhs"],
+        },
+        "problem_list": payload["problems"],
+        "medications": [
+            {"name": med, "dose": "", "frequency": ""} for med in payload["medications"]
+        ],
+        "allergies": [
+            {"substance": item["name"], "reaction": f"{item['reaction']} ({item['severity']})"}
+            for item in payload["allergies"]
+        ],
+        "recent_labs": [
+            {
+                "name": lab["test"],
+                "value": lab["value"],
+                "unit": "",
+                "trend": lab["trend"],
+                "date": lab["date"],
+                "note": lab["note"],
+            }
+            for lab in payload["labs"]
+        ],
+    }
 
 
 def _format_patient_context_html(context: dict[str, Any]) -> str:
@@ -159,46 +275,101 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
 
 
 def _context_screen_html(patient: dict[str, Any], context: dict[str, Any]) -> str:
-    """Build S2 shell + actions + context in one HTML block to avoid Gradio spacing gaps."""
+    """Build S2 shell + actions + context in one full-screen HTML block."""
 
     name = escape(str(patient.get("name", "Patient")))
     context_cards = _format_patient_context_html(context)
-    return f"""<div style="min-height:100vh;background:#E8E4DD;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);"><h2 style="font-family:'DM Serif Display',serif;color:#1A1A2E;margin:0 0 16px 0;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin-bottom:24px;"><button onclick="{_hidden_click_js('hidden-start-consultation', 'Start Consultation')}" style="background:linear-gradient(135deg,#D4AF37,#F0D060);color:#1A1A2E;border:none;padding:12px 28px;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;">Start Consultation</button><button onclick="{_hidden_click_js('hidden-back', 'Back to Dashboard')}" style="background:transparent;color:#1A1A2E;border:2px solid #ccc;padding:12px 28px;border-radius:8px;font-weight:500;cursor:pointer;font-size:15px;">← Back to Dashboard</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">{context_cards}</div></div></div>"""
-
+    return f"""<div style="min-height:100vh;background:#F8F6F1;padding:32px 48px;margin:0;"><h2 style="font-family:'DM Serif Display',serif;color:#1A1A2E;margin:0 0 16px 0;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin-bottom:24px;"><button onclick="{_hidden_click_js('hidden-start-consultation', 'Start Consultation')}" class="clarke-btn-gold">Start Consultation</button><button onclick="{_hidden_click_js('hidden-back', 'Back to Dashboard')}" class="clarke-btn-secondary">← Back to Dashboard</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">{context_cards}</div></div>"""
 
 def _recording_screen_html(timer_text: str) -> str:
-    """Render S3 recording screen in warm-white card layout."""
+    """Render S3 recording screen in full-screen warm-white layout."""
 
-    return f"""<div style="min-height:100vh;background:#E8E4DD;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div></div></div>"""
-
+    return f"""<div style="min-height:100vh;background:#F8F6F1;padding:32px 48px;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div></div>"""
 
 def _processing_screen_html(stage_number: int, stage_label: str, stage_description: str, elapsed: str) -> str:
-    """Render S4 processing screen in warm-white card layout."""
+    """Render S4 processing screen in full-screen warm-white layout."""
 
-    return f"""<div style="min-height:100vh;background:#E8E4DD;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(30,58,138,0.15);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#1A1A2E;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#64748B;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel', 'Cancel Processing')}" style="margin-top:24px;background:transparent;color:#1A1A2E;border:1px solid rgba(30,58,138,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div></div>"""
-
+    return f"""<div style="min-height:100vh;background:#F8F6F1;padding:32px 48px;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(30,58,138,0.15);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#1A1A2E;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#555;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#555;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel', 'Cancel Processing')}" class="clarke-btn-secondary" style="margin-top:24px;">Cancel</button></div>"""
 
 def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
-    """Create a deterministic fallback letter when backend document is unavailable.
-
-    Args:
-        state (dict[str, Any]): Current session state.
-
-    Returns:
-        dict[str, Any]: Document payload with editable sections and highlights.
-    """
+    """Create an NHS-format clinic letter for S5/S6 review."""
 
     selected_patient = (state or {}).get("selected_patient") or {}
     patient_context = (state or {}).get("patient_context") or {}
-    first_lab = (patient_context.get("recent_labs") or [{"name": "Lab", "value": "", "unit": ""}])[0]
-    first_problem = (patient_context.get("problem_list") or ["Clinical issue"])[0]
+    demographics = patient_context.get("demographics", {})
+    labs = patient_context.get("recent_labs", [])
+    problems = patient_context.get("problem_list", [])
+    meds = patient_context.get("medications", [])
+
+    patient_name = str(demographics.get("name") or selected_patient.get("name") or "Patient")
+    dob = str(demographics.get("dob") or "Unknown")
+    nhs = str(demographics.get("nhs_number") or "Unknown")
+    today = datetime.now().strftime("%d %B %Y")
+    gp_name = "Andrew Wilson"
+    address = "Riverside Medical Practice\n14 Harcourt Street\nLondon"
+
+    investigations = "\n".join(
+        f"- {lab.get('name', 'Test')}: {lab.get('value', '')} {lab.get('unit', '')} ({lab.get('date', '')})".strip()
+        for lab in labs
+    ) or "- No recent investigations available"
+    medication_line = ", ".join(m.get("name", "") for m in meds if m.get("name"))
+    main_problem = problems[0] if problems else "ongoing clinical concerns"
+
+    if "Margaret Thompson" in patient_name:
+        history = "She attended for diabetes and cardiovascular risk review with persistent hyperglycaemia despite current therapy. She reports reduced activity tolerance and occasional post-prandial fatigue over recent weeks."
+        assessment = "Suboptimal glycaemic control with HbA1c 8.2% in the context of known type 2 diabetes, hypertension, and hyperlipidaemia. Renal function remains acceptable but trending down."
+        plan_lines = [
+            "Increase metformin optimisation counselling and initiate structured diabetic diet support.",
+            "Arrange repeat HbA1c, renal profile, and urine ACR in 8 weeks.",
+            "Continue lisinopril/atorvastatin/aspirin and monitor blood pressure weekly.",
+        ]
+    else:
+        history = f"I reviewed {patient_name} regarding {main_problem.lower()} and ongoing symptom burden in clinic. The patient reports variable day-to-day control and is keen for treatment optimisation."
+        assessment = f"Current presentation is consistent with {main_problem.lower()}, requiring continued medication review and follow-up."
+        plan_lines = [
+            "Continue current treatment with safety-netting advice.",
+            "Repeat key blood tests prior to next follow-up.",
+            "Review in specialist clinic to reassess response and escalation needs.",
+        ]
+
+    letter_text = (
+        f"{today}\n\n"
+        f"Dr {gp_name}\n"
+        f"{address}\n\n"
+        f"Dear Dr {gp_name},\n\n"
+        f"Re: {patient_name} (DOB: {dob}, NHS: {nhs})\n"
+        f"    {address}\n\n"
+        f"Thank you for referring / I reviewed {patient_name} in General Practice Clinic on {today}.\n\n"
+        "History of Presenting Complaint\n"
+        f"{history}\n\n"
+        "Examination\n"
+        "The patient was comfortable at rest, haemodynamically stable, and clinically euvolaemic on examination. No acute red-flag findings were identified today.\n\n"
+        "Investigations\n"
+        f"{investigations}\n\n"
+        "Assessment\n"
+        f"{assessment}\n\n"
+        "Plan\n"
+        + "\n".join(f"{i + 1}. {line}" for i, line in enumerate(plan_lines))
+        + f"\n\nI will review {patient_name} in 8 weeks. Please do not hesitate to contact us if there are any concerns in the interim.\n\n"
+        "Yours sincerely,\n\n"
+        "Dr Sarah Chen\n"
+        "Consultant, General Practice\n"
+        "Clarke NHS Trust"
+    )
+
     sections = [
-        {"heading": "Clinical Summary", "content": f"Consultation focused on {first_problem.lower()}."},
-        {"heading": "Assessment", "content": f"Latest result: {first_lab.get('name')} {first_lab.get('value')} {first_lab.get('unit')}"},
-        {"heading": "Safety and Risks", "content": "Reviewed medication and allergy safety."},
-        {"heading": "Plan", "content": "Continue treatment and schedule follow-up."},
+        {"heading": "NHS Clinic Letter", "content": letter_text},
+        {"heading": "Clinical Issues", "content": "\n".join(f"- {item}" for item in problems) or "- None listed"},
+        {"heading": "Current Medications", "content": medication_line or "None documented"},
+        {"heading": "Follow-up", "content": "Review in 8 weeks with repeat investigations."},
     ]
-    return {"title": "NHS Clinic Letter", "status": "ready_for_review", "sections": sections, "patient_name": selected_patient.get("name", "Patient")}
+    return {
+        "title": "NHS Clinic Letter",
+        "status": "ready_for_review",
+        "sections": sections,
+        "patient_name": patient_name,
+        "nhs_number": nhs,
+    }
 
 
 def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str, str, str, str]:
@@ -236,13 +407,17 @@ def _handle_patient_selection(state: dict[str, Any], patient_index: int):
     patient = patients[patient_index]
     patient_id = str(patient.get("id", ""))
     updated_state = select_patient(state, patient)
-    try:
-        context = _api_request("POST", f"/patients/{patient_id}/context")
-    except Exception as exc:
-        context = updated_state.get("patient_context") or {}
-        feedback = f"Patient selected but context call failed: {exc}"
+    if os.getenv("USE_MOCK_FHIR", "").lower() == "true":
+        context = _mock_context_for_index(patient_index)
+        feedback = f"Loaded mock patient context for {patient['name']} ({patient_id})."
     else:
-        feedback = f"Loaded patient context for {patient['name']} ({patient_id})."
+        try:
+            context = _api_request("POST", f"/patients/{patient_id}/context")
+        except Exception as exc:
+            context = _mock_context_for_index(patient_index)
+            feedback = f"Patient selected with frontend mock context fallback: {exc}"
+        else:
+            feedback = f"Loaded patient context for {patient['name']} ({patient_id})."
 
     updated_state["patient_context"] = context
     return updated_state, feedback, _context_screen_html(patient, context), *show_screen("s2")
@@ -302,7 +477,7 @@ def _update_recording_timer(state):
     started_at = str((state or {}).get("recording_started_at", "")).strip()
     if not started_at:
         return _recording_screen_html("00:00")
-    elapsed_s = max(int((datetime.now(tz=timezone.utc) - datetime.fromisoformat(started_at)).total_seconds()), 0)
+    elapsed_s = max(int((datetime.now(tz=timezone.utc) - _safe_datetime_from_iso(started_at)).total_seconds()), 0)
     minutes, seconds = divmod(elapsed_s, 60)
     return _recording_screen_html(f"{minutes:02d}:{seconds:02d}")
 
@@ -405,7 +580,7 @@ def _poll_processing_progress(state):
     started_at = str(updated_state.get("processing_started_at", "") or "")
     elapsed = "Elapsed: 00:00"
     if started_at:
-        elapsed_s = max(int((datetime.now(tz=timezone.utc) - datetime.fromisoformat(started_at)).total_seconds()), 0)
+        elapsed_s = max(int((datetime.now(tz=timezone.utc) - _safe_datetime_from_iso(started_at)).total_seconds()), 0)
         minutes, seconds = divmod(elapsed_s, 60)
         elapsed = f"Elapsed: {minutes:02d}:{seconds:02d}"
 
@@ -416,7 +591,7 @@ def _poll_processing_progress(state):
         updated_state["consultation"]["status"] = "review"
         updated_state["screen"] = "s5"
         s1, s2, s3, s4 = _render_letter_sections(doc.get("sections", []))
-        fhir = "<span style='font-family:JetBrains Mono,monospace;font-size:14px;background:rgba(212,175,55,0.1);padding:2px 6px;border-radius:4px;color:#1E3A8A;'>FHIR fallback values</span>"
+        fhir = ""
         return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, "Generating clinical letter…", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
 
     try:
@@ -508,13 +683,13 @@ def _sign_off_document(state, section_1, section_2, section_3, section_4):
             return updated_state, f"Sign-off failed: {exc}", gr.update(), "", gr.update(), *show_screen("s5")
 
     signed_letter = "\n\n".join(part.strip() for part in edited_sections if part and part.strip())
-    signed_letter = signed_letter.replace("Yours sincerely", "Warm regards")
+    
     updated_state["signed_document_text"] = signed_letter
     updated_state["consultation"]["status"] = "signed_off"
     updated_state["screen"] = "s6"
     export_path = Path("data") / "demo" / "latest_signed_letter.txt"
     export_path.write_text(signed_letter + "\n", encoding="utf-8")
-    signed_html = f"<div style='max-width:760px;margin:24px auto;background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);border:1px solid rgba(212,175,55,0.12);border-radius:6px;padding:52px 60px;box-shadow:0 4px 24px rgba(0,0,0,0.06);font-family:Inter,sans-serif;font-size:16px;line-height:1.75;color:#1A1A2E;'><div style='white-space:pre-wrap;'>{escape(signed_letter)}</div></div>"
+    signed_html = f"<div style='min-height:100vh;background:#F8F6F1;padding:24px 48px 48px 48px;margin:0;'><div style='font-family:Inter,sans-serif;font-size:16px;line-height:1.75;color:#1A1A2E;white-space:pre-wrap;' id='signed-letter-text'>{escape(signed_letter)}</div></div>"
     return updated_state, "Document signed off. You can now copy or download the letter.", signed_html, signed_letter, gr.update(value=str(export_path)), *show_screen("s6")
 
 
@@ -595,7 +770,7 @@ def build_ui() -> gr.Blocks:
             recording_html = gr.HTML(_recording_screen_html("00:00"))
             consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="Consultation Audio", elem_id="clarke-audio-input")
             recording_tick = gr.Timer(value=1.0, active=False)
-            end_consultation_btn = gr.Button("End Consultation", variant="primary")
+            end_consultation_btn = gr.Button("End Consultation", variant="primary", elem_id="end-consultation-btn")
 
         with gr.Column(visible=False) as screen_s4:
             processing_html = gr.HTML(_processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"))
@@ -603,7 +778,7 @@ def build_ui() -> gr.Blocks:
             hidden_cancel_button = gr.Button("hidden-cancel", visible=True, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
-            gr.HTML("<div style='min-height:100vh;background:#E8E4DD;padding:24px;'><div style='background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin-top:0;'>Document Review</h2></div></div>")
+            gr.HTML("<div style='min-height:100vh;background:#F8F6F1;padding:32px 48px;margin:0;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0 0 16px 0;'>Document Review</h2></div>")
             review_status_badge = gr.HTML(build_status_badge_html("✎ Ready for Review", "#F59E0B"))
             review_fhir_values = gr.HTML("<span style='font-family:JetBrains Mono,monospace;'>FHIR values appear here.</span>")
             section_one_text = gr.Textbox(label="Section 1", lines=5, interactive=True)
@@ -611,19 +786,19 @@ def build_ui() -> gr.Blocks:
             section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True)
             section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True)
             hidden_regenerate_button = gr.Button("hidden-regenerate", visible=True, elem_id="hidden-regenerate")
-            gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate', 'Regenerate')}\" style='background:transparent;border:1px solid rgba(30,58,138,0.15);padding:10px 16px;border-radius:8px;'>↻ Regenerate</button></div>")
-            sign_off_btn = gr.Button("Sign Off & Export", variant="primary")
+            gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate', 'Regenerate')}\" class='clarke-btn-secondary'>↻ Regenerate</button></div>")
+            sign_off_btn = gr.Button("Sign Off & Export", variant="primary", elem_id="sign-off-btn")
 
         with gr.Column(visible=False) as screen_s6:
-            gr.HTML("<div style='min-height:100vh;background:#E8E4DD;padding:24px;'><div style='background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);'></div></div>")
+            gr.HTML("")
             signed_status_badge = gr.HTML(build_status_badge_html("✓ Signed Off", "#22C55E"))
             signed_letter_html = gr.HTML("")
             copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False)
             download_text_file = gr.File(label="Download as Text")
             hidden_copy_button = gr.Button("hidden-copy", visible=True, elem_id="hidden-copy")
             hidden_download_button = gr.Button("hidden-download", visible=True, elem_id="hidden-download")
-            gr.HTML(f"<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"{_hidden_click_js('hidden-copy', 'Copy to Clipboard')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📋 Copy to Clipboard</button><button onclick=\"{_hidden_click_js('hidden-download', 'Download as Text')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📄 Download as Text</button></div>")
-            next_patient_btn = gr.Button("Next Patient →", variant="primary")
+            gr.HTML(f"<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"(function(){{var text=document.getElementById('signed-letter-text');if(text){{navigator.clipboard.writeText(text.innerText).then(function(){{alert('Copied to clipboard');}});}};{_hidden_click_js('hidden-copy', 'Copy to Clipboard')} }})()\" class='clarke-btn-secondary'>📋 Copy to Clipboard</button><button onclick=\"{_hidden_click_js('hidden-download', 'Download as Text')}\" class='clarke-btn-secondary'>📄 Download as Text</button></div>")
+            next_patient_btn = gr.Button("Next Patient →", variant="primary", elem_id="next-patient-btn")
 
         with gr.Column(visible=True) as screen_s1:
             gr.HTML(build_dashboard_html(clinic_payload))
