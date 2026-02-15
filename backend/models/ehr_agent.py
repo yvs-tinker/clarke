@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -273,11 +273,27 @@ class EHRAgent:
                 if nhs_number:
                     break
 
+        birth_date_raw = str(patient.get("birthDate", ""))
+        dob_display = birth_date_raw
+        age: int | None = None
+        if birth_date_raw:
+            try:
+                parsed_dob = date.fromisoformat(birth_date_raw)
+                dob_display = parsed_dob.strftime("%d/%m/%Y")
+                today = date.today()
+                age = today.year - parsed_dob.year - ((today.month, today.day) < (parsed_dob.month, parsed_dob.day))
+            except ValueError:
+                dob_display = birth_date_raw
+
+        nhs_clean = "".join(ch for ch in nhs_number if ch.isdigit())
+        if len(nhs_clean) == 10:
+            nhs_number = f"{nhs_clean[:3]}-{nhs_clean[3:6]}-{nhs_clean[6:]}"
+
         return {
             "name": full_name,
-            "dob": str(patient.get("birthDate", "")),
+            "dob": dob_display,
             "nhs_number": nhs_number,
-            "age": None,
+            "age": age,
             "sex": str(patient.get("gender", "")).capitalize(),
             "address": "",
         }
@@ -315,11 +331,25 @@ class EHRAgent:
 
         extracted: list[dict[str, Any]] = []
         for medication in medications:
+            dosage_text = ""
+            dosage_instructions = medication.get("dosageInstruction", [])
+            if dosage_instructions:
+                dosage_text = str(dosage_instructions[0].get("text", "")).strip()
+
+            dose = ""
+            frequency = ""
+            if dosage_text:
+                parts = dosage_text.rsplit(" ", maxsplit=1)
+                if len(parts) == 2:
+                    dose, frequency = parts[0], parts[1]
+                else:
+                    dose = dosage_text
+
             extracted.append(
                 {
                     "name": str(medication.get("medicationCodeableConcept", {}).get("text", "")).strip(),
-                    "dose": "",
-                    "frequency": "",
+                    "dose": dose,
+                    "frequency": frequency,
                     "fhir_id": str(medication.get("id", "")),
                 }
             )
@@ -389,6 +419,17 @@ class EHRAgent:
                 previous = previous_by_name[name]
                 lab.previous_value = previous.value
                 lab.previous_date = previous.date
+                try:
+                    current_val = float(lab.value)
+                    previous_val = float(previous.value)
+                    if current_val > previous_val:
+                        lab.trend = "rising"
+                    elif current_val < previous_val:
+                        lab.trend = "falling"
+                    else:
+                        lab.trend = "stable"
+                except (TypeError, ValueError):
+                    lab.trend = None
             previous_by_name[name] = lab
             labs.append(lab)
 

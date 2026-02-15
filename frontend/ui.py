@@ -163,19 +163,19 @@ def _context_screen_html(patient: dict[str, Any], context: dict[str, Any]) -> st
 
     name = escape(str(patient.get("name", "Patient")))
     context_cards = _format_patient_context_html(context)
-    return f"""<div style="min-height:100vh;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);"><h2 style="font-family:'DM Serif Display',serif;color:#1A1A2E;margin:0 0 16px 0;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin-bottom:24px;"><button onclick="{_hidden_click_js('hidden-start-consultation', 'Start Consultation')}" style="background:linear-gradient(135deg,#D4AF37,#F0D060);color:#1A1A2E;border:none;padding:12px 28px;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;">Start Consultation</button><button onclick="{_hidden_click_js('hidden-back', 'Back to Dashboard')}" style="background:transparent;color:#1A1A2E;border:2px solid #ccc;padding:12px 28px;border-radius:8px;font-weight:500;cursor:pointer;font-size:15px;">← Back to Dashboard</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">{context_cards}</div></div></div>"""
+    return f"""<div style="min-height:100vh;background:#E8E4DD;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);"><h2 style="font-family:'DM Serif Display',serif;color:#1A1A2E;margin:0 0 16px 0;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin-bottom:24px;"><button onclick="{_hidden_click_js('hidden-start-consultation', 'Start Consultation')}" style="background:linear-gradient(135deg,#D4AF37,#F0D060);color:#1A1A2E;border:none;padding:12px 28px;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;">Start Consultation</button><button onclick="{_hidden_click_js('hidden-back', 'Back to Dashboard')}" style="background:transparent;color:#1A1A2E;border:2px solid #ccc;padding:12px 28px;border-radius:8px;font-weight:500;cursor:pointer;font-size:15px;">← Back to Dashboard</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">{context_cards}</div></div></div>"""
 
 
 def _recording_screen_html(timer_text: str) -> str:
     """Render S3 recording screen in warm-white card layout."""
 
-    return f"""<div style="min-height:100vh;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div><button onclick="{_hidden_click_js('hidden-end-consultation', 'End Consultation')}" style="margin-top:24px;background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;">End Consultation</button></div></div>"""
+    return f"""<div style="min-height:100vh;background:#E8E4DD;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div></div></div>"""
 
 
 def _processing_screen_html(stage_number: int, stage_label: str, stage_description: str, elapsed: str) -> str:
     """Render S4 processing screen in warm-white card layout."""
 
-    return f"""<div style="min-height:100vh;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(30,58,138,0.15);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#1A1A2E;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#64748B;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel', 'Cancel Processing')}" style="margin-top:24px;background:transparent;color:#1A1A2E;border:1px solid rgba(30,58,138,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div></div>"""
+    return f"""<div style="min-height:100vh;background:#E8E4DD;padding:24px;"><div style="background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(30,58,138,0.15);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#1A1A2E;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#64748B;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel', 'Cancel Processing')}" style="margin-top:24px;background:transparent;color:#1A1A2E;border:1px solid rgba(30,58,138,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div></div>"""
 
 
 def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
@@ -339,12 +339,11 @@ def _ensure_mock_audio_file(audio_path: str | None) -> str | None:
     upload_dir = Path("data/uploads/mock")
     upload_dir.mkdir(parents=True, exist_ok=True)
     silent_path = upload_dir / "silent.wav"
-    if not silent_path.exists():
-        with wave.open(str(silent_path), "wb") as wav_file:
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(16000)
-            wav_file.writeframes(b"\x00\x00" * 16000)
+    with wave.open(str(silent_path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(16000)
+        wav_file.writeframes(b"\x00\x00" * (16000 * 6))
     return str(silent_path)
 
 
@@ -367,6 +366,15 @@ def _start_processing(state, audio_path):
     resolved_audio_path = _ensure_mock_audio_file(audio_path)
     if not resolved_audio_path:
         return updated_state, "Please capture audio before ending consultation.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
+
+    if os.getenv("MEDASR_MODEL_ID", "").lower() == "mock":
+        updated_state["captured_audio_path"] = resolved_audio_path
+        updated_state["processing_started_at"] = datetime.now(tz=timezone.utc).isoformat()
+        updated_state["consultation"] = updated_state.get("consultation") or {}
+        updated_state["consultation"]["id"] = ""
+        updated_state["consultation"]["status"] = "processing"
+        updated_state["screen"] = "s4"
+        return updated_state, "Consultation ended. Processing audio and generating document.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=True), *show_screen("s4")
 
     try:
         with Path(resolved_audio_path).open("rb") as stream:
@@ -585,9 +593,9 @@ def build_ui() -> gr.Blocks:
 
         with gr.Column(visible=False) as screen_s3:
             recording_html = gr.HTML(_recording_screen_html("00:00"))
-            consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="Consultation Audio")
+            consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="Consultation Audio", elem_id="clarke-audio-input")
             recording_tick = gr.Timer(value=1.0, active=False)
-            hidden_end_button = gr.Button("hidden-end-consultation", visible=True, elem_id="hidden-end-consultation")
+            end_consultation_btn = gr.Button("End Consultation", variant="primary")
 
         with gr.Column(visible=False) as screen_s4:
             processing_html = gr.HTML(_processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"))
@@ -595,7 +603,7 @@ def build_ui() -> gr.Blocks:
             hidden_cancel_button = gr.Button("hidden-cancel", visible=True, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
-            gr.HTML("<div style='min-height:100vh;padding:24px;'><div style='background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin-top:0;'>Document Review</h2></div></div>")
+            gr.HTML("<div style='min-height:100vh;background:#E8E4DD;padding:24px;'><div style='background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin-top:0;'>Document Review</h2></div></div>")
             review_status_badge = gr.HTML(build_status_badge_html("✎ Ready for Review", "#F59E0B"))
             review_fhir_values = gr.HTML("<span style='font-family:JetBrains Mono,monospace;'>FHIR values appear here.</span>")
             section_one_text = gr.Textbox(label="Section 1", lines=5, interactive=True)
@@ -603,19 +611,19 @@ def build_ui() -> gr.Blocks:
             section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True)
             section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True)
             hidden_regenerate_button = gr.Button("hidden-regenerate", visible=True, elem_id="hidden-regenerate")
-            hidden_signoff_button = gr.Button("hidden-sign-off", visible=True, elem_id="hidden-sign-off")
-            gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate', 'Regenerate')}\" style='background:transparent;border:1px solid rgba(30,58,138,0.15);padding:10px 16px;border-radius:8px;'>↻ Regenerate</button><button onclick=\"{_hidden_click_js('hidden-sign-off', 'Sign Off & Export')}\" style='background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);border:none;padding:10px 16px;border-radius:8px;'>Sign Off & Export</button></div>")
+            gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate', 'Regenerate')}\" style='background:transparent;border:1px solid rgba(30,58,138,0.15);padding:10px 16px;border-radius:8px;'>↻ Regenerate</button></div>")
+            sign_off_btn = gr.Button("Sign Off & Export", variant="primary")
 
         with gr.Column(visible=False) as screen_s6:
-            gr.HTML("<div style='min-height:100vh;padding:24px;'><div style='background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);'></div></div>")
+            gr.HTML("<div style='min-height:100vh;background:#E8E4DD;padding:24px;'><div style='background:#F8F6F1;border-radius:16px;padding:32px;min-height:calc(100vh - 48px);box-shadow:0 4px 24px rgba(0,0,0,0.08);'></div></div>")
             signed_status_badge = gr.HTML(build_status_badge_html("✓ Signed Off", "#22C55E"))
             signed_letter_html = gr.HTML("")
             copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False)
             download_text_file = gr.File(label="Download as Text")
             hidden_copy_button = gr.Button("hidden-copy", visible=True, elem_id="hidden-copy")
             hidden_download_button = gr.Button("hidden-download", visible=True, elem_id="hidden-download")
-            hidden_next_button = gr.Button("hidden-next-patient", visible=True, elem_id="hidden-next-patient")
-            gr.HTML(f"<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"{_hidden_click_js('hidden-copy', 'Copy to Clipboard')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📋 Copy to Clipboard</button><button onclick=\"{_hidden_click_js('hidden-download', 'Download as Text')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📄 Download as Text</button></div><div style='text-align:center;'><button onclick=\"{_hidden_click_js('hidden-next-patient', 'Next Patient')}\" style='margin-top:32px;background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);color:#0A0E1A;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;'>Next Patient →</button></div>")
+            gr.HTML(f"<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"{_hidden_click_js('hidden-copy', 'Copy to Clipboard')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📋 Copy to Clipboard</button><button onclick=\"{_hidden_click_js('hidden-download', 'Download as Text')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📄 Download as Text</button></div>")
+            next_patient_btn = gr.Button("Next Patient →", variant="primary")
 
         with gr.Column(visible=True) as screen_s1:
             gr.HTML(build_dashboard_html(clinic_payload))
@@ -634,20 +642,20 @@ def build_ui() -> gr.Blocks:
         hidden_back_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_start_button.click(_handle_start_consultation, inputs=[app_state], outputs=[app_state, feedback_text, recording_html, recording_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         recording_tick.tick(_update_recording_timer, inputs=[app_state], outputs=[recording_html], show_progress="hidden")
-        hidden_end_button.click(_start_processing, inputs=[app_state, consultation_audio], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+        end_consultation_btn.click(_start_processing, inputs=[app_state, consultation_audio], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         processing_tick.tick(_poll_processing_progress, inputs=[app_state], outputs=[app_state, feedback_text, processing_html, processing_tick, section_one_text, section_two_text, section_three_text, section_four_text, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_cancel_button.click(_cancel_processing, inputs=[app_state], outputs=[app_state, feedback_text, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_regenerate_button.click(_regenerate_document, inputs=[app_state], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
-        hidden_signoff_button.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+        sign_off_btn.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         hidden_copy_button.click(_copy_signed_document, inputs=[app_state], outputs=[app_state, feedback_text, copy_to_clipboard_text], show_progress="hidden")
         hidden_download_button.click(_prepare_signed_download, inputs=[app_state], outputs=[app_state, feedback_text, download_text_file], show_progress="hidden")
-        hidden_next_button.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        next_patient_btn.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
 
         gr.HTML("""<script>
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         var ids = ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
-                   'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient','hidden-back'];
+                   'hidden-start-consultation','hidden-back'];
         ids.forEach(function(id) {
             var el = document.getElementById(id);
             var clickable = el ? (el.tagName === 'BUTTON' || !!el.querySelector('button')) : false;
@@ -657,8 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setTimeout(function() {
         var bridgeIds = ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
-                     'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient',
-                     'hidden-back','hidden-cancel','hidden-regenerate','hidden-copy','hidden-download'];
+                     'hidden-start-consultation','hidden-back','hidden-cancel','hidden-regenerate','hidden-copy','hidden-download'];
         bridgeIds.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) {
@@ -673,6 +680,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        function hideAudioComponent() {
+            var audioEl = document.getElementById('clarke-audio-input') || document.querySelector('[data-testid="audio"]') || document.querySelector('.audio-container');
+            if (!audioEl) return;
+            var ap = audioEl;
+            for (var j = 0; j < 5 && ap; j++) {
+                ap.style.cssText = 'position:fixed!important;top:-9999px!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;overflow:hidden!important;pointer-events:none!important;';
+                ap = ap.parentElement;
+            }
+        }
+        hideAudioComponent();
+        setInterval(hideAudioComponent, 1000);
         console.log('Clarke: Bridge buttons hidden via off-screen positioning');
     }, 500);
 });
