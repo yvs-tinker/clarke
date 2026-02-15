@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from html import escape
 from typing import Any
 
@@ -147,7 +148,7 @@ def build_global_style_block() -> str:
     overflow: hidden !important;
   }
 </style>
-<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){function e(){document.documentElement.style.setProperty('background','#F8F6F1','important');var a=document.querySelector('gradio-app');if(a){a.style.setProperty('background','transparent','important');a.style.setProperty('padding','0','important');a.style.setProperty('margin','0','important');a.style.setProperty('overflow-x','hidden','important');}document.querySelectorAll('.gradio-container,[class*=gradio-container-]').forEach(function(c){c.style.setProperty('max-width','100vw','important');c.style.setProperty('padding','0','important');c.style.setProperty('margin','0','important');c.style.setProperty('background','transparent','important');});document.body.style.setProperty('margin','0','important');document.body.style.setProperty('padding','0','important');document.body.style.setProperty('background','transparent','important');var f=document.querySelector('footer');if(f)f.style.display='none';}e();[100,300,600,1200,2500,5000].forEach(function(t){setTimeout(e,t);});new MutationObserver(function(){e();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});console.log('Clarke: Layout enforcer active via img onload');})()" style="display:none;position:absolute;width:0;height:0;">
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){function e(){document.documentElement.style.setProperty('background','#F8F6F1','important');var a=document.querySelector('gradio-app');if(a){a.style.setProperty('background','transparent','important');a.style.setProperty('padding','0','important');a.style.setProperty('margin','0','important');a.style.setProperty('overflow-x','hidden','important');}document.querySelectorAll('.gradio-container,[class*=gradio-container-]').forEach(function(c){c.style.setProperty('max-width','100vw','important');c.style.setProperty('padding','0','important');c.style.setProperty('margin','0','important');c.style.setProperty('background','transparent','important');});document.body.style.setProperty('margin','0','important');document.body.style.setProperty('padding','0','important');document.body.style.setProperty('background','transparent','important');var f=document.querySelector('footer');if(f)f.style.display='none';}if(!document.getElementById('clarke-sunrise-glow')){var s=document.createElement('style');s.textContent='@keyframes clarkeWarmthPulse{0%{opacity:0.5;transform:scaleY(1) scaleX(1);}50%{opacity:1;transform:scaleY(1.25) scaleX(1.08);}100%{opacity:0.5;transform:scaleY(1) scaleX(1);}}';document.head.appendChild(s);var g=document.createElement('div');g.id='clarke-sunrise-glow';g.style.cssText='position:fixed;top:0;left:0;width:100vw;height:500px;pointer-events:none;z-index:0;background:radial-gradient(ellipse 130% 100% at 50% 0%, rgba(255,193,7,0.35) 0%, rgba(255,213,79,0.22) 20%, rgba(212,175,55,0.10) 45%, transparent 70%);animation:clarkeWarmthPulse 8s ease-in-out infinite;transform-origin:top center;';document.body.insertBefore(g,document.body.firstChild);console.log('Clarke: Sunrise glow injected');}e();[100,300,600,1200,2500,5000].forEach(function(t){setTimeout(e,t);});new MutationObserver(function(){e();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});console.log('Clarke: Layout enforcer active via img onload');})()" style="display:none;position:absolute;width:0;height:0;">
 """
 
 
@@ -162,6 +163,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
     """
 
     clinician = clinic_payload.get("clinician", {})
+    _today = date.today().strftime("%d %B %Y")
     completed_lookup = set(completed_patients or [])
     cards: list[str] = []
     for index, patient in enumerate(clinic_payload.get("patients", [])):
@@ -207,7 +209,6 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
   100% {{ opacity: 0.6; transform: scaleY(1) scaleX(1); }}
 }}
 </style>
-<div id="clarke-sunrise-glow" style="position:fixed;top:0;left:0;width:100vw;height:450px;pointer-events:none;z-index:0;background:radial-gradient(ellipse 120% 100% at 50% 0%, rgba(255,193,7,0.28) 0%, rgba(255,213,79,0.18) 20%, rgba(212,175,55,0.08) 45%, transparent 70%);animation:clarkeWarmth 10s ease-in-out infinite;transform-origin:top center;"></div>
 <div id="clarke-app-wrapper" style="min-height:100vh;margin:0;padding:0;background:transparent;position:relative;">
   <div style="position:relative;z-index:1;padding:32px 48px 24px 48px;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
@@ -232,7 +233,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
     </div>
     <div style="padding:14px 22px;background:rgba(212,175,55,0.06);backdrop-filter:blur(12px);border:1px solid rgba(212,175,55,0.15);border-radius:12px;border-left:4px solid #D4AF37;">
       <span style="font-family:'DM Serif Display',serif;font-size:20px;color:#1A1A2E;">{escape(str(clinician.get('name', 'Dr. Sarah Chen')))}</span>
-      <span style="font-family:'Inter',sans-serif;font-size:14px;color:#555;margin-left:12px;">{escape(str(clinician.get('specialty', 'General Practice')))} — {escape(str(clinic_payload.get('date', '13 February 2026')))}</span>
+      <span style="font-family:'Inter',sans-serif;font-size:14px;color:#555;margin-left:12px;">{escape(str(clinician.get('specialty', 'General Practice')))} — {escape(_today)}</span>
     </div>
   </div>
   <div id="clarke-content-area" style="position:relative;z-index:1;background:transparent;margin:0;padding:32px 48px;min-height:70vh;">
