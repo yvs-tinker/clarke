@@ -20,6 +20,22 @@ CLINIC_LIST_PATH = Path("data/clinic_list.json")
 API_BASE_URL = os.getenv("CLARKE_API_BASE_URL", "http://127.0.0.1:7860/api/v1")
 
 
+def _hidden_click_js(elem_id: str) -> str:
+    """Return resilient JS snippet that clicks hidden Gradio button wrappers.
+
+    Args:
+        elem_id (str): DOM id assigned via the hidden button `elem_id`.
+
+    Returns:
+        str: Inline JavaScript for HTML onclick handlers.
+    """
+
+    return (
+        f"var el=document.getElementById('{elem_id}');"
+        "if(el){var btn=el.querySelector('button')||el;btn.click();}"
+    )
+
+
 def load_clinic_list(path: Path = CLINIC_LIST_PATH) -> dict[str, Any]:
     """Load clinic list data for dashboard rendering.
 
@@ -119,7 +135,7 @@ def _context_screen_html(patient: dict[str, Any]) -> str:
     """
 
     name = escape(str(patient.get("name", "Patient")))
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;animation:fadeSlideIn 0.4s ease forwards;"><h2 style="font-family:'DM Serif Display',serif;font-size:28px;color:#1A1A2E;margin-bottom:10px;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin:20px 0;"><button onclick="document.querySelector('#hidden-btn-start button, #hidden-btn-start').click();" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;position:relative;overflow:hidden;">Start Consultation<div style="position:absolute;top:0;left:-100%;width:50%;height:100%;background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);animation:btnShine 3s ease-in-out infinite;"></div></button><button onclick="document.querySelector('#hidden-btn-back button, #hidden-btn-back').click();" style="background:transparent;color:#1E3A8A;font-family:Inter,sans-serif;font-size:15px;font-weight:600;padding:12px 28px;border:2px solid rgba(30,58,138,0.2);border-radius:10px;">← Back to Dashboard</button></div></div>"""
+    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;animation:fadeSlideIn 0.4s ease forwards;"><h2 style="font-family:'DM Serif Display',serif;font-size:28px;color:#1A1A2E;margin-bottom:10px;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin:20px 0;"><button onclick="{_hidden_click_js('hidden-start')}" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;position:relative;overflow:hidden;">Start Consultation<div style="position:absolute;top:0;left:-100%;width:50%;height:100%;background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);animation:btnShine 3s ease-in-out infinite;"></div></button><button onclick="{_hidden_click_js('hidden-back')}" style="background:transparent;color:#1E3A8A;font-family:Inter,sans-serif;font-size:15px;font-weight:600;padding:12px 28px;border:2px solid rgba(30,58,138,0.2);border-radius:10px;">← Back to Dashboard</button></div></div>"""
 
 
 def _recording_screen_html(timer_text: str) -> str:
@@ -132,7 +148,7 @@ def _recording_screen_html(timer_text: str) -> str:
         str: Recording summary HTML.
     """
 
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;"><div style="text-align:center;padding:48px 0;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div></div><div style="margin-top:24px;"><button onclick="document.querySelector('#hidden-btn-end button, #hidden-btn-end').click();" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;">End Consultation</button></div></div>"""
+    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;"><div style="text-align:center;padding:48px 0;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div></div><div style="margin-top:24px;"><button onclick="{_hidden_click_js('hidden-end')}" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;">End Consultation</button></div></div>"""
 
 
 def _processing_screen_html(stage_number: int, stage_label: str, stage_description: str, elapsed: str) -> str:
@@ -148,7 +164,7 @@ def _processing_screen_html(stage_number: int, stage_label: str, stage_descripti
         str: Processing screen HTML.
     """
 
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#0A0E1A 0%, #111827 30%, #1E3A8A 50%, #111827 70%, #0A0E1A 100%);background-size:100% 300%;animation:gradientFlow 10s ease-in-out infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(255,255,255,0.1);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#F8FAFC;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#94A3B8;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="document.querySelector('#hidden-btn-cancel button, #hidden-btn-cancel').click();" style="margin-top:24px;background:transparent;color:#F8FAFC;border:1px solid rgba(255,255,255,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div>"""
+    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#0A0E1A 0%, #111827 30%, #1E3A8A 50%, #111827 70%, #0A0E1A 100%);background-size:100% 300%;animation:gradientFlow 10s ease-in-out infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(255,255,255,0.1);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#F8FAFC;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#94A3B8;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel')}" style="margin-top:24px;background:transparent;color:#F8FAFC;border:1px solid rgba(255,255,255,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div>"""
 
 
 def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
@@ -457,6 +473,43 @@ def _sign_off_document(state, section_1, section_2, section_3, section_4):
     return updated_state, "Document signed off. You can now copy or download the letter.", signed_html, signed_letter, gr.update(value=str(export_path)), *show_screen("s6")
 
 
+
+def _copy_signed_document(state):
+    """Refresh copy textbox payload for signed letter actions.
+
+    Args:
+        state (dict[str, Any]): Current UI state.
+
+    Returns:
+        tuple[dict[str, Any], str, str]: State, status message, and copy text payload.
+    """
+
+    updated_state = dict(state or initial_consultation_state())
+    signed_text = str(updated_state.get("signed_document_text") or "")
+    if not signed_text:
+        return updated_state, "No signed letter available to copy yet.", ""
+    return updated_state, "Letter content refreshed for copy.", signed_text
+
+
+def _prepare_signed_download(state):
+    """Refresh downloadable signed-letter text artifact.
+
+    Args:
+        state (dict[str, Any]): Current UI state.
+
+    Returns:
+        tuple[dict[str, Any], str, Any]: State, status message, and file update.
+    """
+
+    updated_state = dict(state or initial_consultation_state())
+    signed_text = str(updated_state.get("signed_document_text") or "")
+    if not signed_text:
+        return updated_state, "No signed letter available to download yet.", gr.update(value=None)
+
+    export_path = Path("data") / "demo" / "latest_signed_letter.txt"
+    export_path.write_text(signed_text + "\n", encoding="utf-8")
+    return updated_state, "Download file refreshed.", gr.update(value=str(export_path))
+
 def _next_patient(state):
     """Reset consultation workflow and return to dashboard after sign-off.
 
@@ -486,24 +539,24 @@ def build_ui() -> gr.Blocks:
     with gr.Blocks(theme=clarke_theme, css=Path("frontend/assets/style.css").read_text(encoding="utf-8"), title="Clarke") as demo:
         app_state = gr.State(initial_consultation_state())
         gr.HTML(build_global_style_block())
-        feedback_text = gr.Markdown("Select a patient card to open context.")
+        feedback_text = gr.Markdown("", visible=False)
 
         with gr.Column(visible=False) as screen_s2:
             context_shell_html = gr.HTML(_context_screen_html({}))
             patient_context_panel = gr.HTML("<div></div>")
-            hidden_start_button = gr.Button("", visible=False, elem_id="hidden-btn-start")
-            hidden_back_button = gr.Button("", visible=False, elem_id="hidden-btn-back")
+            hidden_start_button = gr.Button("", visible=False, elem_id="hidden-start")
+            hidden_back_button = gr.Button("", visible=False, elem_id="hidden-back")
 
         with gr.Column(visible=False) as screen_s3:
             recording_html = gr.HTML(_recording_screen_html("00:00"))
             consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="Consultation Audio")
             recording_tick = gr.Timer(value=1.0, active=False)
-            hidden_end_button = gr.Button("", visible=False, elem_id="hidden-btn-end")
+            hidden_end_button = gr.Button("", visible=False, elem_id="hidden-end")
 
         with gr.Column(visible=False) as screen_s4:
             processing_html = gr.HTML(_processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"))
             processing_tick = gr.Timer(value=1.0, active=False)
-            hidden_cancel_button = gr.Button("", visible=False, elem_id="hidden-btn-cancel")
+            hidden_cancel_button = gr.Button("", visible=False, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
             gr.HTML("<div style='min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;'>Document Review</h2></div>")
@@ -513,9 +566,9 @@ def build_ui() -> gr.Blocks:
             section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True)
             section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True)
             section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True)
-            hidden_regenerate_button = gr.Button("Regenerate Entire Letter", visible=False, elem_id="hidden-btn-regenerate")
-            hidden_signoff_button = gr.Button("", visible=False, elem_id="hidden-btn-signoff")
-            gr.HTML("<div style='display:flex;gap:12px;'><button onclick=\"document.querySelector('#hidden-btn-regenerate button, #hidden-btn-regenerate').click();\" style='background:transparent;border:1px solid rgba(30,58,138,0.15);padding:10px 16px;border-radius:8px;'>↻ Regenerate</button><button onclick=\"document.querySelector('#hidden-btn-signoff button, #hidden-btn-signoff').click();\" style='background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);border:none;padding:10px 16px;border-radius:8px;'>Sign Off</button></div>")
+            hidden_regenerate_button = gr.Button("Regenerate Entire Letter", visible=False, elem_id="hidden-regenerate")
+            hidden_signoff_button = gr.Button("", visible=False, elem_id="hidden-signoff")
+            gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate')}\" style='background:transparent;border:1px solid rgba(30,58,138,0.15);padding:10px 16px;border-radius:8px;'>↻ Regenerate</button><button onclick=\"{_hidden_click_js('hidden-signoff')}\" style='background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);border:none;padding:10px 16px;border-radius:8px;'>Sign Off & Export</button></div>")
 
         with gr.Column(visible=False) as screen_s6:
             gr.HTML("<div style='min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;'></div>")
@@ -523,14 +576,16 @@ def build_ui() -> gr.Blocks:
             signed_letter_html = gr.HTML("")
             copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False)
             download_text_file = gr.File(label="Download as Text")
-            hidden_next_button = gr.Button("", visible=False, elem_id="hidden-btn-next")
-            gr.HTML("<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📋 Copy to Clipboard</button><button style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📄 Download as Text</button></div><div style='text-align:center;'><button onclick=\"document.querySelector('#hidden-btn-next button, #hidden-btn-next').click();\" style='margin-top:32px;background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);color:#0A0E1A;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;'>Next Patient →</button></div>")
+            hidden_copy_button = gr.Button("", visible=False, elem_id="hidden-copy")
+            hidden_download_button = gr.Button("", visible=False, elem_id="hidden-download")
+            hidden_next_button = gr.Button("", visible=False, elem_id="hidden-next")
+            gr.HTML(f"<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"{_hidden_click_js('hidden-copy')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📋 Copy to Clipboard</button><button onclick=\"{_hidden_click_js('hidden-download')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📄 Download as Text</button></div><div style='text-align:center;'><button onclick=\"{_hidden_click_js('hidden-next')}\" style='margin-top:32px;background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);color:#0A0E1A;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;'>Next Patient →</button></div>")
 
         with gr.Column(visible=True) as screen_s1:
             gr.HTML(build_dashboard_html(clinic_payload))
             for patient in clinic_payload.get("patients", []):
                 patient_id = str(patient.get("id", ""))
-                hidden_patient_button = gr.Button("", visible=False, elem_id=f"hidden-btn-{patient_id}")
+                hidden_patient_button = gr.Button("", visible=False, elem_id=f"hidden-select-{patient_id}")
                 hidden_patient_button.click(_handle_patient_selection, inputs=[app_state, gr.State(patient_id)], outputs=[app_state, feedback_text, patient_context_panel, context_shell_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
 
         hidden_back_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
@@ -541,6 +596,8 @@ def build_ui() -> gr.Blocks:
         hidden_cancel_button.click(_cancel_processing, inputs=[app_state], outputs=[app_state, feedback_text, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_regenerate_button.click(_regenerate_document, inputs=[app_state], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         hidden_signoff_button.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+        hidden_copy_button.click(_copy_signed_document, inputs=[app_state], outputs=[app_state, feedback_text, copy_to_clipboard_text], show_progress="hidden")
+        hidden_download_button.click(_prepare_signed_download, inputs=[app_state], outputs=[app_state, feedback_text, download_text_file], show_progress="hidden")
         hidden_next_button.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
 
     return demo
