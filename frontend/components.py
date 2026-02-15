@@ -147,7 +147,7 @@ def build_global_style_block() -> str:
     overflow: hidden !important;
   }
 </style>
-<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){function e(){var a=document.querySelector('gradio-app');if(a){a.style.setProperty('background','#F8F6F1','important');a.style.setProperty('padding','0','important');a.style.setProperty('margin','0','important');a.style.setProperty('overflow-x','hidden','important');}document.querySelectorAll('.gradio-container,[class*=gradio-container-]').forEach(function(c){c.style.setProperty('max-width','100vw','important');c.style.setProperty('padding','0','important');c.style.setProperty('margin','0','important');});document.body.style.setProperty('margin','0','important');document.body.style.setProperty('padding','0','important');document.body.style.setProperty('background','#F8F6F1','important');var f=document.querySelector('footer');if(f)f.style.display='none';}e();[100,300,600,1200,2500,5000].forEach(function(t){setTimeout(e,t);});new MutationObserver(function(){e();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});console.log('Clarke: Layout enforcer active via img onload');})()" style="display:none;position:absolute;width:0;height:0;">
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){function e(){document.documentElement.style.setProperty('background','#F8F6F1','important');var a=document.querySelector('gradio-app');if(a){a.style.setProperty('background','transparent','important');a.style.setProperty('padding','0','important');a.style.setProperty('margin','0','important');a.style.setProperty('overflow-x','hidden','important');}document.querySelectorAll('.gradio-container,[class*=gradio-container-]').forEach(function(c){c.style.setProperty('max-width','100vw','important');c.style.setProperty('padding','0','important');c.style.setProperty('margin','0','important');c.style.setProperty('background','transparent','important');});document.body.style.setProperty('margin','0','important');document.body.style.setProperty('padding','0','important');document.body.style.setProperty('background','transparent','important');var f=document.querySelector('footer');if(f)f.style.display='none';}e();[100,300,600,1200,2500,5000].forEach(function(t){setTimeout(e,t);});new MutationObserver(function(){e();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});console.log('Clarke: Layout enforcer active via img onload');})()" style="display:none;position:absolute;width:0;height:0;">
 """
 
 
@@ -202,13 +202,13 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
 }}
 .completed-patient-card:hover {{ opacity: 0.7 !important; box-shadow: 0 4px 14px rgba(0,0,0,0.08) !important; transform: translateY(-2px) scale(1.005) !important; }}
 @keyframes clarkeWarmth {{
-  0% {{ opacity: 0.65; transform: scaleY(1) scaleX(1); }}
-  50% {{ opacity: 1; transform: scaleY(1.18) scaleX(1.05); }}
-  100% {{ opacity: 0.65; transform: scaleY(1) scaleX(1); }}
+  0% {{ opacity: 0.6; transform: scaleY(1) scaleX(1); }}
+  50% {{ opacity: 1; transform: scaleY(1.2) scaleX(1.05); }}
+  100% {{ opacity: 0.6; transform: scaleY(1) scaleX(1); }}
 }}
 </style>
-<div id="clarke-sunrise-glow" style="position:fixed;top:0;left:0;width:100vw;height:400px;pointer-events:none;z-index:0;background:radial-gradient(ellipse 90% 110% at 50% -10%, rgba(255,193,7,0.22) 0%, rgba(255,213,79,0.14) 25%, rgba(212,175,55,0.06) 50%, transparent 75%);animation:clarkeWarmth 10s ease-in-out infinite;transform-origin:top center;"></div>
-<div id="clarke-app-wrapper" style="min-height:100vh;margin:0;padding:0;background:#F8F6F1;position:relative;">
+<div id="clarke-sunrise-glow" style="position:fixed;top:0;left:0;width:100vw;height:450px;pointer-events:none;z-index:0;background:radial-gradient(ellipse 120% 100% at 50% 0%, rgba(255,193,7,0.28) 0%, rgba(255,213,79,0.18) 20%, rgba(212,175,55,0.08) 45%, transparent 70%);animation:clarkeWarmth 10s ease-in-out infinite;transform-origin:top center;"></div>
+<div id="clarke-app-wrapper" style="min-height:100vh;margin:0;padding:0;background:transparent;position:relative;">
   <div style="position:relative;z-index:1;padding:32px 48px 24px 48px;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <div style="display:flex; align-items:center; gap:12px;">
