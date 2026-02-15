@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden !important;
+  background: #E8E4DD !important;
+}
+
+.gradio-container,
+.gradio-container > .main,
+.gradio-container > .main > .wrap,
+.gradio-container .contain,
+.gradio-column {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  background: transparent !important;
+}
+
+#component-0 { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+footer { display: none !important; }
+
+@keyframes clarkeGradientFlow {
+  0% { background-position: 50% 0%; }
+  25% { background-position: 52% 2%; }
+  50% { background-position: 48% 4%; }
+  75% { background-position: 51% 1%; }
+  100% { background-position: 50% 0%; }
+}
+
+@keyframes recordPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.6); }
+  50% { box-shadow: 0 0 0 24px rgba(212, 175, 55, 0); }
+}
+
+@keyframes progressSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes progressGlow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}

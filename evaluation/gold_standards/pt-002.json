@@ -1,0 +1,19 @@
+{
+  "patient_id": "pt-002",
+  "gold_facts": [
+    "name: Mr Emeka Okafor",
+    "dob: 1971-11-22",
+    "sex: Male",
+    "problem: Angina pectoris",
+    "problem: Hypertensive disorder",
+    "medication: Aspirin",
+    "medication: Atorvastatin",
+    "allergy: Ibuprofen",
+    "allergy severity: Ibuprofen=low",
+    "lab: Troponin I=8 ng/L",
+    "lab: Systolic BP=148 mm[Hg]",
+    "lab: Diastolic BP=92 mm[Hg]",
+    "report type: Coronary angiography report",
+    "report summary: Normal coronary arteries with no obstructive disease."
+  ]
+}
