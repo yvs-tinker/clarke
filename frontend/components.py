@@ -144,36 +144,6 @@ def build_global_style_block() -> str:
     overflow: hidden !important;
   }
 </style>
-<script>
-(function() {
-    function stripGradioPadding() {
-        var selectors = ['.gradio-container','.gradio-container > .main','.gradio-container > .main > .wrap','.contain','#component-0','.gradio-column'];
-        selectors.forEach(function(sel) {
-            document.querySelectorAll(sel).forEach(function(el) {
-                el.style.setProperty('max-width', '100%', 'important');
-                el.style.setProperty('width', '100%', 'important');
-                el.style.setProperty('padding', '0', 'important');
-                el.style.setProperty('margin', '0', 'important');
-                el.style.setProperty('gap', '0', 'important');
-                el.style.setProperty('background', 'transparent', 'important');
-            });
-        });
-        document.body.style.setProperty('margin', '0', 'important');
-        document.body.style.setProperty('padding', '0', 'important');
-        document.body.style.setProperty('overflow-x', 'hidden', 'important');
-        var footer = document.querySelector('footer');
-        if (footer) footer.style.setProperty('display', 'none', 'important');
-    }
-    stripGradioPadding();
-    setTimeout(stripGradioPadding, 100);
-    setTimeout(stripGradioPadding, 500);
-    setTimeout(stripGradioPadding, 1000);
-    setTimeout(stripGradioPadding, 2000);
-    var observer = new MutationObserver(function() { stripGradioPadding(); });
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
-    console.log('Clarke: MutationObserver installed for full-screen layout');
-})();
-</script>
 """
 
 
@@ -231,7 +201,24 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
 <div id="clarke-app-wrapper" style="min-height: 100vh; margin: 0; padding: 0; background: linear-gradient(135deg, #0A0E1A 0%, #1E3A8A 15%, #4A1942 25%, #8B2040 35%, #C4522A 45%, #D4AF37 55%, #E8C84A 65%, #F0E0A0 78%, #F8F6F1 92%, #F8F6F1 100%); background-size: 200% 200%; animation: clarkeGradientShift 15s ease-in-out infinite;">
   <div style="padding:32px 48px 24px 48px;">
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 4L6 14V26C6 36.5 13.8 46.2 24 48C34.2 46.2 42 36.5 42 26V14L24 4Z" fill="#D4AF37"/><path d="M24 4L6 14V26C6 36.5 13.8 46.2 24 48C34.2 46.2 42 36.5 42 26V14L24 4Z" fill="url(#goldSheen)" opacity="0.3"/><defs><linearGradient id="goldSheen" x1="6" y1="4" x2="42" y2="48"><stop offset="0%" stop-color="#F0D060"/><stop offset="100%" stop-color="#D4AF37"/></linearGradient></defs></svg>
+      <div style="display:inline-block; animation: clarkeLogoShimmer 3s ease-in-out infinite;">
+        <svg width="52" height="48" viewBox="0 0 52 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 4 L48 4 L50 8 L26 46 L2 8 Z" fill="url(#goldGrad)" stroke="#B8941F" stroke-width="1.5"/>
+          <path d="M8 8 L44 8 L46 11 L26 42 L6 11 Z" fill="url(#goldInner)" />
+          <defs>
+            <linearGradient id="goldGrad" x1="0" y1="0" x2="52" y2="48">
+              <stop offset="0%" stop-color="#F0D060"/>
+              <stop offset="50%" stop-color="#D4AF37"/>
+              <stop offset="100%" stop-color="#B8941F"/>
+            </linearGradient>
+            <linearGradient id="goldInner" x1="0" y1="0" x2="52" y2="48">
+              <stop offset="0%" stop-color="#D4AF37"/>
+              <stop offset="50%" stop-color="#F0D060"/>
+              <stop offset="100%" stop-color="#D4AF37"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
       <span style="font-family:'DM Serif Display',serif; font-size:32px; color:#D4AF37; font-weight:400;">Clarke</span>
     </div>
     <div style="padding:14px 22px;background:rgba(255,255,255,0.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.18);border-radius:12px;border-left:4px solid #D4AF37;">
