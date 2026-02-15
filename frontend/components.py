@@ -64,11 +64,7 @@ def build_global_style_block() -> str:
   @keyframes cardShimmer {0% { left: -100%; }60% { left: 150%; }100% { left: 150%; }}
 
   html, body { margin:0 !important; padding:0 !important; overflow-x:hidden !important; }
-  body {
-    background: linear-gradient(180deg, #0A0E1A 0%, #1E3A8A 12%, #6B2040 25%, #C4522A 38%, #D4AF37 48%, #E8C84A 55%, #F0E0A0 65%, #F8F6F1 78%, #F8F6F1 100%) !important;
-    background-attachment: fixed !important;
-    min-height: 100vh !important;
-  }
+  body { min-height: 100vh !important; background: transparent !important; }
   .gradio-container { max-width:100% !important; width:100% !important; padding:0 !important; margin:0 !important; background:transparent !important; }
   .gradio-container > .main { max-width:100% !important; padding:0 !important; gap:0 !important; }
   .gradio-container > .main > .wrap { max-width:100% !important; padding:0 !important; gap:0 !important; }
@@ -76,7 +72,7 @@ def build_global_style_block() -> str:
   #component-0 { max-width:100% !important; padding:0 !important; gap:0 !important; }
   footer { display: none !important; }
   #hidden-select-0, #hidden-select-1, #hidden-select-2, #hidden-select-3, #hidden-select-4,
-  #hidden-start-consultation, #hidden-end-consultation, #hidden-sign-off, #hidden-next-patient,
+  #hidden-start-consultation,
   #hidden-back, #hidden-cancel, #hidden-regenerate, #hidden-copy, #hidden-download {
     display:block !important;
     position:fixed !important;
@@ -88,8 +84,7 @@ def build_global_style_block() -> str:
     overflow:hidden !important;
     pointer-events:none !important;
   }
-  [id^="hidden-select-"], [id="hidden-start-consultation"], [id="hidden-end-consultation"],
-  [id="hidden-sign-off"], [id="hidden-next-patient"], [id="hidden-back"],
+  [id^="hidden-select-"], [id="hidden-start-consultation"], [id="hidden-back"],
   [id="hidden-cancel"], [id="hidden-regenerate"], [id="hidden-copy"], [id="hidden-download"] {
     position:fixed !important;
     top:-9999px !important;
@@ -97,6 +92,15 @@ def build_global_style_block() -> str:
     width:1px !important;
     height:1px !important;
     opacity:0 !important;
+  }
+  #clarke-audio-input, [data-testid="audio"] {
+    position:fixed !important;
+    top:-9999px !important;
+    left:-9999px !important;
+    width:1px !important;
+    height:1px !important;
+    opacity:0 !important;
+    overflow:hidden !important;
   }
   * {cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='11' cy='11' r='4' fill='%23D4AF37' opacity='0.9'/%3E%3Ccircle cx='11' cy='11' r='10' fill='none' stroke='%23D4AF37' stroke-width='1.5' opacity='0.3'/%3E%3C/svg%3E") 11 11, auto;}
   button, a, [role="button"] {cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='11' cy='11' r='5' fill='%23D4AF37' opacity='1'/%3E%3Ccircle cx='11' cy='11' r='10' fill='none' stroke='%23D4AF37' stroke-width='2' opacity='0.5'/%3E%3C/svg%3E") 11 11, pointer;}
@@ -167,7 +171,22 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
         cards.append(card)
 
     return f"""
-<div id="clarke-app-wrapper" style="min-height:100vh; padding:0; margin:0;">
+<div id="clarke-app-wrapper" style="
+  min-height: 100vh;
+  background: linear-gradient(180deg,
+    #0A0E1A 0%,
+    #1E3A8A 8%,
+    #6B2040 18%,
+    #C4522A 28%,
+    #D4AF37 38%,
+    #E8C84A 48%,
+    #F0E0A0 60%,
+    #F8F6F1 75%,
+    #F8F6F1 100%
+  );
+  padding: 0;
+  margin: 0;
+">
   <div style="background:transparent; padding:32px 48px 24px 48px;">
     <div style="display: flex; align-items: center; margin-bottom: 20px; position: relative; z-index: 2;">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 52" style="width: 44px; height: 48px; margin-right: 14px; filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.4));">
