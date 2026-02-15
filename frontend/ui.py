@@ -20,19 +20,30 @@ CLINIC_LIST_PATH = Path("data/clinic_list.json")
 API_BASE_URL = os.getenv("CLARKE_API_BASE_URL", "http://127.0.0.1:7860/api/v1")
 
 
-def _hidden_click_js(elem_id: str) -> str:
-    """Return resilient JS snippet that clicks hidden Gradio button wrappers.
+def _hidden_click_js(elem_id: str, action_label: str) -> str:
+    """Return debug-friendly JS snippet that clicks hidden Gradio wrappers.
 
     Args:
         elem_id (str): DOM id assigned via the hidden button `elem_id`.
+        action_label (str): Human-readable action label for console diagnostics.
 
     Returns:
         str: Inline JavaScript for HTML onclick handlers.
     """
 
     return (
-        f"var el=document.getElementById('{elem_id}');"
-        "if(el){var btn=el.querySelector('button')||el;btn.click();}"
+        "(function(){"
+        f"console.log('Clarke: {action_label} button clicked');"
+        f"var wrapper=document.getElementById('{elem_id}');"
+        "console.log('Clarke: Found wrapper:', wrapper);"
+        "if(wrapper){"
+        "var btn=wrapper.querySelector('button');"
+        "console.log('Clarke: Found inner button:', btn);"
+        "if(btn){btn.click();console.log('Clarke: Inner button clicked successfully');}"
+        f"else{{console.error('Clarke: No button element found inside #{elem_id}');}}"
+        "}"
+        f"else{{console.error('Clarke: Wrapper #{elem_id} not found in DOM');}}"
+        "})()"
     )
 
 
@@ -135,7 +146,7 @@ def _context_screen_html(patient: dict[str, Any]) -> str:
     """
 
     name = escape(str(patient.get("name", "Patient")))
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;animation:fadeSlideIn 0.4s ease forwards;"><h2 style="font-family:'DM Serif Display',serif;font-size:28px;color:#1A1A2E;margin-bottom:10px;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin:20px 0;"><button onclick="{_hidden_click_js('hidden-start')}" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;position:relative;overflow:hidden;">Start Consultation<div style="position:absolute;top:0;left:-100%;width:50%;height:100%;background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);animation:btnShine 3s ease-in-out infinite;"></div></button><button onclick="{_hidden_click_js('hidden-back')}" style="background:transparent;color:#1E3A8A;font-family:Inter,sans-serif;font-size:15px;font-weight:600;padding:12px 28px;border:2px solid rgba(30,58,138,0.2);border-radius:10px;">← Back to Dashboard</button></div></div>"""
+    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;animation:fadeSlideIn 0.4s ease forwards;"><h2 style="font-family:'DM Serif Display',serif;font-size:28px;color:#1A1A2E;margin-bottom:10px;">Patient Context — {name}</h2><div style="display:flex;gap:12px;margin:20px 0;"><button onclick="{_hidden_click_js('hidden-start-consultation', 'Start Consultation')}" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;position:relative;overflow:hidden;">Start Consultation<div style="position:absolute;top:0;left:-100%;width:50%;height:100%;background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);animation:btnShine 3s ease-in-out infinite;"></div></button><button onclick="{_hidden_click_js('hidden-back', 'Back to Dashboard')}" style="background:transparent;color:#1E3A8A;font-family:Inter,sans-serif;font-size:15px;font-weight:600;padding:12px 28px;border:2px solid rgba(30,58,138,0.2);border-radius:10px;">← Back to Dashboard</button></div></div>"""
 
 
 def _recording_screen_html(timer_text: str) -> str:
@@ -148,7 +159,7 @@ def _recording_screen_html(timer_text: str) -> str:
         str: Recording summary HTML.
     """
 
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;"><div style="text-align:center;padding:48px 0;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div></div><div style="margin-top:24px;"><button onclick="{_hidden_click_js('hidden-end')}" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;">End Consultation</button></div></div>"""
+    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;"><div style="text-align:center;padding:48px 0;"><div style="display:inline-block;width:24px;height:24px;background:#D4AF37;border-radius:50%;animation:recordPulse 2s ease-in-out infinite;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#D4AF37;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Recording</div><div style="font-family:'JetBrains Mono',monospace;font-size:56px;color:#1A1A2E;letter-spacing:0.05em;">{escape(timer_text)}</div></div><div style="margin-top:24px;"><button onclick="{_hidden_click_js('hidden-end-consultation', 'End Consultation')}" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);color:#FFF;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;">End Consultation</button></div></div>"""
 
 
 def _processing_screen_html(stage_number: int, stage_label: str, stage_description: str, elapsed: str) -> str:
@@ -164,7 +175,7 @@ def _processing_screen_html(stage_number: int, stage_label: str, stage_descripti
         str: Processing screen HTML.
     """
 
-    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#0A0E1A 0%, #111827 30%, #1E3A8A 50%, #111827 70%, #0A0E1A 100%);background-size:100% 300%;animation:gradientFlow 10s ease-in-out infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(255,255,255,0.1);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#F8FAFC;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#94A3B8;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel')}" style="margin-top:24px;background:transparent;color:#F8FAFC;border:1px solid rgba(255,255,255,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div>"""
+    return f"""<div style="min-height:100vh;background:linear-gradient(170deg,#0A0E1A 0%, #111827 30%, #1E3A8A 50%, #111827 70%, #0A0E1A 100%);background-size:100% 300%;animation:gradientFlow 10s ease-in-out infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="position:relative;width:140px;height:140px;margin-bottom:40px;"><div style="position:absolute;top:0;left:0;width:140px;height:140px;border:3px solid rgba(255,255,255,0.1);border-top:3px solid #D4AF37;border-radius:50%;animation:progressSpin 1.5s linear infinite;"></div><div style="position:absolute;top:10px;left:10px;width:120px;height:120px;border:2px solid rgba(212,175,55,0.15);border-radius:50%;animation:progressGlow 2s ease-in-out infinite;"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'DM Serif Display',serif;font-size:36px;color:#D4AF37;">{stage_number}/3</div></div><div style="font-family:Inter,sans-serif;font-size:18px;color:#F8FAFC;font-weight:500;margin-bottom:8px;">{escape(stage_label)}</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#94A3B8;">{escape(stage_description)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#64748B;margin-top:24px;">{escape(elapsed)}</div><button onclick="{_hidden_click_js('hidden-cancel', 'Cancel Processing')}" style="margin-top:24px;background:transparent;color:#F8FAFC;border:1px solid rgba(255,255,255,0.2);padding:8px 16px;border-radius:8px;">Cancel</button></div>"""
 
 
 def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
@@ -206,22 +217,24 @@ def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str,
     return tuple(f"{s.get('heading', '')}\n{s.get('content', '').strip()}".strip() for s in resolved[:4])
 
 
-def _handle_patient_selection(state, patient_id):
-    """Update state and call backend context endpoint when user selects a patient.
+def _handle_patient_selection(state: dict[str, Any], patient_index: int):
+    """Update state and call backend context endpoint when a patient index is selected.
 
     Args:
         state (dict[str, Any]): Current UI session state.
-        patient_id (str): Selected patient identifier.
+        patient_index (int): Selected patient index from the dashboard.
 
     Returns:
         tuple[...]: Updated state, feedback, context HTML, context shell HTML, and visibility updates.
     """
 
     clinic_payload = load_clinic_list()
-    patient = next((row for row in clinic_payload.get("patients", []) if row.get("id") == patient_id), None)
-    if patient is None:
-        return state, "Patient selection failed: patient not found.", "", _context_screen_html({}), *show_screen("s1")
+    patients = clinic_payload.get("patients", [])
+    if patient_index < 0 or patient_index >= len(patients):
+        return state, "Patient selection failed: patient index out of range.", "", _context_screen_html({}), *show_screen("s1")
 
+    patient = patients[patient_index]
+    patient_id = str(patient.get("id", ""))
     updated_state = select_patient(state, patient)
     try:
         context = _api_request("POST", f"/patients/{patient_id}/context")
@@ -229,7 +242,7 @@ def _handle_patient_selection(state, patient_id):
         context = updated_state.get("patient_context") or {}
         feedback = f"Patient selected but context call failed: {exc}"
     else:
-        feedback = f"Loaded patient context for {patient['name']} ({patient['id']})."
+        feedback = f"Loaded patient context for {patient['name']} ({patient_id})."
 
     updated_state["patient_context"] = context
     return updated_state, feedback, _format_patient_context_html(context), _context_screen_html(patient), *show_screen("s2")
@@ -544,19 +557,19 @@ def build_ui() -> gr.Blocks:
         with gr.Column(visible=False) as screen_s2:
             context_shell_html = gr.HTML(_context_screen_html({}))
             patient_context_panel = gr.HTML("<div></div>")
-            hidden_start_button = gr.Button("", visible=False, elem_id="hidden-start")
-            hidden_back_button = gr.Button("", visible=False, elem_id="hidden-back")
+            hidden_start_button = gr.Button("hidden-start-consultation", visible=True, elem_id="hidden-start-consultation")
+            hidden_back_button = gr.Button("hidden-back", visible=True, elem_id="hidden-back")
 
         with gr.Column(visible=False) as screen_s3:
             recording_html = gr.HTML(_recording_screen_html("00:00"))
             consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="Consultation Audio")
             recording_tick = gr.Timer(value=1.0, active=False)
-            hidden_end_button = gr.Button("", visible=False, elem_id="hidden-end")
+            hidden_end_button = gr.Button("hidden-end-consultation", visible=True, elem_id="hidden-end-consultation")
 
         with gr.Column(visible=False) as screen_s4:
             processing_html = gr.HTML(_processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"))
             processing_tick = gr.Timer(value=1.0, active=False)
-            hidden_cancel_button = gr.Button("", visible=False, elem_id="hidden-cancel")
+            hidden_cancel_button = gr.Button("hidden-cancel", visible=True, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
             gr.HTML("<div style='min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;'>Document Review</h2></div>")
@@ -566,9 +579,9 @@ def build_ui() -> gr.Blocks:
             section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True)
             section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True)
             section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True)
-            hidden_regenerate_button = gr.Button("Regenerate Entire Letter", visible=False, elem_id="hidden-regenerate")
-            hidden_signoff_button = gr.Button("", visible=False, elem_id="hidden-signoff")
-            gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate')}\" style='background:transparent;border:1px solid rgba(30,58,138,0.15);padding:10px 16px;border-radius:8px;'>↻ Regenerate</button><button onclick=\"{_hidden_click_js('hidden-signoff')}\" style='background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);border:none;padding:10px 16px;border-radius:8px;'>Sign Off & Export</button></div>")
+            hidden_regenerate_button = gr.Button("hidden-regenerate", visible=True, elem_id="hidden-regenerate")
+            hidden_signoff_button = gr.Button("hidden-sign-off", visible=True, elem_id="hidden-sign-off")
+            gr.HTML(f"<div style='display:flex;gap:12px;'><button onclick=\"{_hidden_click_js('hidden-regenerate', 'Regenerate')}\" style='background:transparent;border:1px solid rgba(30,58,138,0.15);padding:10px 16px;border-radius:8px;'>↻ Regenerate</button><button onclick=\"{_hidden_click_js('hidden-sign-off', 'Sign Off & Export')}\" style='background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);border:none;padding:10px 16px;border-radius:8px;'>Sign Off & Export</button></div>")
 
         with gr.Column(visible=False) as screen_s6:
             gr.HTML("<div style='min-height:100vh;background:linear-gradient(170deg,#F5F3EE 0%, #EDE9E0 30%, #E8E4F0 60%, #F0EBE3 100%);padding:24px 40px;'></div>")
@@ -576,17 +589,24 @@ def build_ui() -> gr.Blocks:
             signed_letter_html = gr.HTML("")
             copy_to_clipboard_text = gr.Textbox(label="Copy to Clipboard", interactive=False)
             download_text_file = gr.File(label="Download as Text")
-            hidden_copy_button = gr.Button("", visible=False, elem_id="hidden-copy")
-            hidden_download_button = gr.Button("", visible=False, elem_id="hidden-download")
-            hidden_next_button = gr.Button("", visible=False, elem_id="hidden-next")
-            gr.HTML(f"<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"{_hidden_click_js('hidden-copy')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📋 Copy to Clipboard</button><button onclick=\"{_hidden_click_js('hidden-download')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📄 Download as Text</button></div><div style='text-align:center;'><button onclick=\"{_hidden_click_js('hidden-next')}\" style='margin-top:32px;background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);color:#0A0E1A;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;'>Next Patient →</button></div>")
+            hidden_copy_button = gr.Button("hidden-copy", visible=True, elem_id="hidden-copy")
+            hidden_download_button = gr.Button("hidden-download", visible=True, elem_id="hidden-download")
+            hidden_next_button = gr.Button("hidden-next-patient", visible=True, elem_id="hidden-next-patient")
+            gr.HTML(f"<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"{_hidden_click_js('hidden-copy', 'Copy to Clipboard')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📋 Copy to Clipboard</button><button onclick=\"{_hidden_click_js('hidden-download', 'Download as Text')}\" style='background:rgba(30,58,138,0.06);color:#1E3A8A;border:1px solid rgba(30,58,138,0.15);padding:10px 22px;border-radius:8px;'>📄 Download as Text</button></div><div style='text-align:center;'><button onclick=\"{_hidden_click_js('hidden-next-patient', 'Next Patient')}\" style='margin-top:32px;background:linear-gradient(135deg,#D4AF37 0%,#F0D060 100%);color:#0A0E1A;font-family:Inter,sans-serif;font-size:16px;font-weight:600;padding:14px 36px;border:none;border-radius:12px;'>Next Patient →</button></div>")
 
         with gr.Column(visible=True) as screen_s1:
             gr.HTML(build_dashboard_html(clinic_payload))
-            for patient in clinic_payload.get("patients", []):
-                patient_id = str(patient.get("id", ""))
-                hidden_patient_button = gr.Button("", visible=False, elem_id=f"hidden-select-{patient_id}")
-                hidden_patient_button.click(_handle_patient_selection, inputs=[app_state, gr.State(patient_id)], outputs=[app_state, feedback_text, patient_context_panel, context_shell_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
+            hidden_patient_buttons: list[gr.Button] = []
+            for i in range(5):
+                hidden_patient_buttons.append(gr.Button(f"hidden-select-{i}", elem_id=f"hidden-select-{i}", visible=True))
+
+        for i, hidden_btn in enumerate(hidden_patient_buttons):
+            hidden_btn.click(
+                fn=lambda state, idx=i: _handle_patient_selection(state, idx),
+                inputs=[app_state],
+                outputs=[app_state, feedback_text, patient_context_panel, context_shell_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
+                show_progress="full",
+            )
 
         hidden_back_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_start_button.click(_handle_start_consultation, inputs=[app_state], outputs=[app_state, feedback_text, recording_html, recording_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
@@ -599,5 +619,19 @@ def build_ui() -> gr.Blocks:
         hidden_copy_button.click(_copy_signed_document, inputs=[app_state], outputs=[app_state, feedback_text, copy_to_clipboard_text], show_progress="hidden")
         hidden_download_button.click(_prepare_signed_download, inputs=[app_state], outputs=[app_state, feedback_text, download_text_file], show_progress="hidden")
         hidden_next_button.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+
+        gr.HTML("""<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var ids = ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
+                   'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient'];
+        ids.forEach(function(id) {
+            var el = document.getElementById(id);
+            var btn = el ? el.querySelector('button') : null;
+            console.log('Clarke DOM check: ' + id + ' wrapper=' + !!el + ' button=' + !!btn);
+        });
+    }, 2000);
+});
+</script>""")
 
     return demo

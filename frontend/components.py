@@ -6,19 +6,28 @@ from html import escape
 from typing import Any
 
 
-def _hidden_click_js(elem_id: str) -> str:
-    """Return resilient JS snippet to click a hidden Gradio button.
+def _open_patient_click_js(index: int) -> str:
+    """Return debug-friendly JS snippet for dashboard patient button clicks.
 
     Args:
-        elem_id (str): DOM id attached to the hidden Gradio component wrapper.
+        index (int): Dashboard patient-card index.
 
     Returns:
-        str: Inline JS expression used in HTML onclick attributes.
+        str: Inline JS IIFE for HTML onclick attributes.
     """
-
     return (
-        f"var el=document.getElementById('{elem_id}');"
-        "if(el){var btn=el.querySelector('button')||el;btn.click();}"
+        "(function(){"
+        f"console.log('Clarke: Open Patient button clicked for index {index}');"
+        f"var wrapper=document.getElementById('hidden-select-{index}');"
+        "console.log('Clarke: Found wrapper:', wrapper);"
+        "if(wrapper){"
+        "var btn=wrapper.querySelector('button');"
+        "console.log('Clarke: Found inner button:', btn);"
+        "if(btn){btn.click();console.log('Clarke: Inner button clicked successfully');}"
+        f"else{{console.error('Clarke: No button element found inside #hidden-select-{index}');}}"
+        "}"
+        f"else{{console.error('Clarke: Wrapper #hidden-select-{index} not found in DOM');}}"
+        "})()"
     )
 
 
@@ -76,10 +85,9 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
     clinician = clinic_payload.get("clinician", {})
     cards: list[str] = []
     for index, patient in enumerate(clinic_payload.get("patients", [])):
-        patient_id = escape(str(patient.get("id", "")))
-        click_js = _hidden_click_js(f"hidden-select-{patient_id}")
+        click_js = _open_patient_click_js(index)
         card = f"""
-<div style="
+<div class="patient-card" style="
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(212, 175, 55, 0.12);
   border-radius: 16px;
@@ -92,10 +100,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
   animation: fadeSlideIn 0.5s ease forwards;
   animation-delay: {index * 0.1}s;
   opacity: 0;
-"
-  onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 40px rgba(0,0,0,0.08)'; this.style.borderColor='rgba(212,175,55,0.3)';"
-  onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 12px rgba(0,0,0,0.04)'; this.style.borderColor='rgba(212,175,55,0.12)';"
->
+">
   <div style="position: absolute; left: 0; top: 0; width: 3px; height: 100%; background: linear-gradient(180deg, #D4AF37, #F0D060); border-radius: 2px;"></div>
   <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
     <div>
@@ -104,7 +109,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
       <div style="font-family: 'Inter', sans-serif; font-size: 14px; color: #64748B; margin-bottom: 2px;">{escape(str(patient.get('age', '')))} · {escape(str(patient.get('sex', '')))}</div>
       <div style="font-family: 'Inter', sans-serif; font-size: 14px; color: #94A3B8; font-style: italic;">{escape(str(patient.get('summary', '')))}</div>
     </div>
-    <button
+    <button class="open-patient-btn"
       style="
         background: linear-gradient(135deg, #D4AF37 0%, #F0D060 100%);
         color: #0A0E1A;
@@ -120,10 +125,6 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
         box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
       "
       onclick="{click_js}"
-      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(212,175,55,0.35)';"
-      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(212,175,55,0.2)';"
-      onmousedown="this.style.boxShadow='0 0 25px rgba(212,175,55,0.5)';"
-      onmouseup="this.style.boxShadow='0 8px 25px rgba(212,175,55,0.35)';"
     >
       Open Patient
       <div style="position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%); animation: btnShine 3s ease-in-out infinite;"></div>
@@ -134,7 +135,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
         cards.append(card)
 
     return f"""
-<div style="min-height: 100vh; background: #F8F6F1; position: relative; overflow: hidden;">
+<div id="clarke-app-wrapper" style="position: relative; overflow: hidden;">
   <div style="position: relative; padding: 28px 40px 60px 40px; background: linear-gradient(170deg, #04070F 0%, #0A0E1A 12%, #132A78 26%, #530E0E 36%, #B91C1C 44%, #F97316 52%, #F8FAFC 62%, #93C5FD 72%, #1E3A8A 84%, #0A0E1A 100%); background-size: 100% 300%; animation: gradientFlow 12s ease-in-out infinite;">
     <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 100px; background: linear-gradient(to bottom, transparent, #F8F6F1); pointer-events: none;"></div>
     <div style="display: flex; align-items: center; margin-bottom: 20px; position: relative; z-index: 2;">
@@ -155,7 +156,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any]) -> str:
       <span style="font-family: 'Inter', sans-serif; font-size: 14px; color: #94A3B8; margin-left: 12px;">{escape(str(clinician.get('specialty', 'General Practice')))} — {escape(str(clinic_payload.get('date', '13 February 2026')))}</span>
     </div>
   </div>
-  <div style="padding: 32px 40px 48px 40px;">
+  <div id="clarke-content-area" style="padding: 32px 40px 48px 40px;">
     {''.join(cards)}
   </div>
 </div>
