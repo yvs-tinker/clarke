@@ -202,13 +202,14 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
 }}
 .completed-patient-card:hover {{ opacity: 0.7 !important; box-shadow: 0 4px 14px rgba(0,0,0,0.08) !important; transform: translateY(-2px) scale(1.005) !important; }}
 @keyframes clarkeWarmth {{
-  0% {{ background-position: 50% 0%; }}
-  50% {{ background-position: 50% 40%; }}
-  100% {{ background-position: 50% 0%; }}
+  0% {{ opacity: 0.7; transform: scaleY(1); }}
+  50% {{ opacity: 1; transform: scaleY(1.15); }}
+  100% {{ opacity: 0.7; transform: scaleY(1); }}
 }}
 </style>
-<div id="clarke-app-wrapper" style="min-height:100vh;margin:0;padding:0;background:linear-gradient(180deg, rgba(255,193,7,0.18) 0%, rgba(255,213,79,0.12) 12%, rgba(212,175,55,0.06) 28%, rgba(248,246,241,1) 50%, rgba(248,246,241,1) 100%);background-size:100% 250%;animation:clarkeWarmth 10s ease-in-out infinite;overflow:hidden;">
-  <div style="padding:32px 48px 24px 48px;">
+<div id="clarke-app-wrapper" style="min-height:100vh;margin:0;padding:0;background:#F8F6F1;overflow:hidden;position:relative;">
+  <div style="position:absolute;top:0;left:0;right:0;height:420px;pointer-events:none;background:radial-gradient(ellipse 80% 100% at 50% 0%, rgba(255,193,7,0.20) 0%, rgba(255,213,79,0.12) 30%, rgba(212,175,55,0.04) 60%, transparent 100%);animation:clarkeWarmth 10s ease-in-out infinite;"></div>
+  <div style="position:relative;z-index:1;padding:32px 48px 24px 48px;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <div style="display:flex; align-items:center; gap:12px;">
         <div style="display:inline-block;">
@@ -234,7 +235,7 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
       <span style="font-family:'Inter',sans-serif;font-size:14px;color:#555;margin-left:12px;">{escape(str(clinician.get('specialty', 'General Practice')))} — {escape(str(clinic_payload.get('date', '13 February 2026')))}</span>
     </div>
   </div>
-  <div id="clarke-content-area" style="background:transparent;margin:0;padding:32px 48px;min-height:70vh;">
+  <div id="clarke-content-area" style="position:relative;z-index:1;background:transparent;margin:0;padding:32px 48px;min-height:70vh;">
     {''.join(cards)}
   </div>
 </div>
