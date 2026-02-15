@@ -51,6 +51,11 @@ def build_global_style_block() -> str:
   @keyframes recordPulse {0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.6); }50% { box-shadow: 0 0 0 24px rgba(212, 175, 55, 0); }}
   @keyframes progressSpin {0% { transform: rotate(0deg); }100% { transform: rotate(360deg); }}
   @keyframes progressGlow {0%, 100% { opacity: 0.6; }50% { opacity: 1; }}
+  @keyframes clarkeLogoShimmer {
+    0% { filter: brightness(1) drop-shadow(0 0 3px rgba(212,175,55,0.3)); }
+    50% { filter: brightness(1.5) drop-shadow(0 0 12px rgba(255,193,7,0.7)); }
+    100% { filter: brightness(1) drop-shadow(0 0 3px rgba(212,175,55,0.3)); }
+  }
 
   html, body { margin: 0 !important; padding: 0 !important; overflow-x: hidden !important; }
 
@@ -65,7 +70,6 @@ def build_global_style_block() -> str:
     height: 1px !important;
     opacity: 0 !important;
     overflow: hidden !important;
-    pointer-events: none !important;
   }
 
   .patient-card {
@@ -89,7 +93,6 @@ def build_global_style_block() -> str:
     height: 100% !important;
     background: linear-gradient(90deg, transparent, rgba(212,175,55,0.1), transparent) !important;
     transition: left 0.6s ease !important;
-    pointer-events: none !important;
     border-radius: inherit !important;
   }
   .patient-card:hover::after { left: 100% !important; }
@@ -144,6 +147,7 @@ def build_global_style_block() -> str:
     overflow: hidden !important;
   }
 </style>
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){function e(){var a=document.querySelector('gradio-app');if(a){a.style.setProperty('background','#F8F6F1','important');a.style.setProperty('padding','0','important');a.style.setProperty('margin','0','important');a.style.setProperty('overflow-x','hidden','important');}document.querySelectorAll('.gradio-container,[class*=gradio-container-]').forEach(function(c){c.style.setProperty('max-width','100vw','important');c.style.setProperty('padding','0','important');c.style.setProperty('margin','0','important');});document.body.style.setProperty('margin','0','important');document.body.style.setProperty('padding','0','important');document.body.style.setProperty('background','#F8F6F1','important');var f=document.querySelector('footer');if(f)f.style.display='none';}e();[100,300,600,1200,2500,5000].forEach(function(t){setTimeout(e,t);});new MutationObserver(function(){e();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});console.log('Clarke: Layout enforcer active via img onload');})()" style="display:none;position:absolute;width:0;height:0;">
 """
 
 
@@ -203,14 +207,15 @@ def build_dashboard_html(clinic_payload: dict[str, Any], completed_patients: lis
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
       <div style="display:inline-block; animation: clarkeLogoShimmer 3s ease-in-out infinite;">
         <svg width="52" height="48" viewBox="0 0 52 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 4 L48 4 L50 8 L26 46 L2 8 Z" fill="#B8941F" />
+          <path d="M4 4 L48 4 L50 8 L26 46 L2 8 Z" fill="#C68A00" />
           <path d="M7 6 L45 6 L47 9 L26 43 L5 9 Z" fill="url(#clarkeLogo)" />
           <defs>
             <linearGradient id="clarkeLogo" x1="5" y1="6" x2="47" y2="43" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#F5E27A"/>
-              <stop offset="30%" stop-color="#D4AF37"/>
-              <stop offset="60%" stop-color="#F0D060"/>
-              <stop offset="100%" stop-color="#C49A2A"/>
+              <stop offset="0%" stop-color="#FFE082"/>
+              <stop offset="25%" stop-color="#FFD54F"/>
+              <stop offset="50%" stop-color="#FFC107"/>
+              <stop offset="75%" stop-color="#FFB300"/>
+              <stop offset="100%" stop-color="#FF8F00"/>
             </linearGradient>
           </defs>
         </svg>
