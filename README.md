@@ -5,7 +5,6 @@ colorFrom: blue
 colorTo: gold
 sdk: docker
 app_port: 7860
-hardware: a100-large
 ---
 
 # Clarke
