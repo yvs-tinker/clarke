@@ -20,80 +20,81 @@ from frontend.theme import clarke_theme
 CLINIC_LIST_PATH = Path("data/clinic_list.json")
 API_BASE_URL = os.getenv("CLARKE_API_BASE_URL", "http://127.0.0.1:7860/api/v1")
 
-CLARKE_JS = """
-function() {
-    if (!document.getElementById('clarke-keyframes')) {
-        var style = document.createElement('style');
-        style.id = 'clarke-keyframes';
-        style.textContent = '@keyframes clarkeGradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }\\n@keyframes clarkeLogoShimmer { 0% { filter: brightness(1); } 50% { filter: brightness(1.3); } 100% { filter: brightness(1); } }';
-        document.head.appendChild(style);
-    }
-
-    function stripGradioPadding() {
+CLARKE_HEAD = """
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@keyframes clarkeGradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes clarkeLogoShimmer {
+    0% { filter: brightness(1) drop-shadow(0 0 2px rgba(212,175,55,0.3)); }
+    50% { filter: brightness(1.4) drop-shadow(0 0 8px rgba(212,175,55,0.6)); }
+    100% { filter: brightness(1) drop-shadow(0 0 2px rgba(212,175,55,0.3)); }
+}
+.gradio-container, [class*="gradio-container-"] {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+}
+footer { display: none !important; }
+</style>
+<script>
+(function() {
+    function installClarkeHeadScript() {
+    function enforceLayout() {
         var app = document.querySelector('gradio-app');
         if (app) {
-            app.style.setProperty('background', 'linear-gradient(135deg, #0A0E1A 0%, #1E3A8A 15%, #4A1942 25%, #8B2040 35%, #C4522A 45%, #D4AF37 55%, #E8C84A 65%, #F0E0A0 78%, #F8F6F1 92%, #F8F6F1 100%)', 'important');
-            app.style.setProperty('background-size', '200% 200%', 'important');
-            app.style.setProperty('animation', 'clarkeGradientShift 15s ease-in-out infinite', 'important');
             app.style.setProperty('padding', '0', 'important');
             app.style.setProperty('margin', '0', 'important');
             app.style.setProperty('overflow-x', 'hidden', 'important');
         }
-
         document.querySelectorAll('.gradio-container, [class*="gradio-container-"]').forEach(function(el) {
             el.style.setProperty('max-width', '100%', 'important');
-            el.style.setProperty('width', '100%', 'important');
-            el.style.setProperty('min-height', '100vh', 'important');
             el.style.setProperty('padding', '0', 'important');
             el.style.setProperty('margin', '0', 'important');
-            el.style.setProperty('background', 'transparent', 'important');
         });
-
-        document.querySelectorAll('.main, .wrap, .contain, [class*="column"], [class*="gap"]').forEach(function(el) {
-            el.style.setProperty('max-width', '100%', 'important');
-            el.style.setProperty('padding', '0', 'important');
-            el.style.setProperty('gap', '0', 'important');
-            el.style.setProperty('margin', '0', 'important');
-        });
-
-        document.body.style.setProperty('margin', '0', 'important');
-        document.body.style.setProperty('padding', '0', 'important');
-        document.body.style.setProperty('overflow-x', 'hidden', 'important');
-        document.body.style.setProperty('background', '#F8F6F1', 'important');
-
-        var footer = document.querySelector('footer');
-        if (footer) footer.style.setProperty('display', 'none', 'important');
+        var f = document.querySelector('footer');
+        if (f) f.style.display = 'none';
     }
 
-    stripGradioPadding();
-    [100, 300, 500, 1000, 2000, 3000, 5000].forEach(function(ms) {
-        setTimeout(stripGradioPadding, ms);
+    enforceLayout();
+    [100, 500, 1000, 2000, 5000].forEach(function(ms) {
+        setTimeout(enforceLayout, ms);
     });
 
-    var observer = new MutationObserver(function() { stripGradioPadding(); });
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
-    console.log('Clarke: MutationObserver installed for full-screen layout');
+    new MutationObserver(enforceLayout).observe(document.body, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ['style','class']
+    });
 
     setTimeout(function() {
-        var ids = ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
-                   'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient','hidden-back',
-                   'hidden-review-letter','hidden-cancel','hidden-regenerate','hidden-copy','hidden-download'];
-        ids.forEach(function(id) {
+        ['hidden-select-0','hidden-select-1','hidden-select-2','hidden-select-3','hidden-select-4',
+         'hidden-start-consultation','hidden-end-consultation','hidden-sign-off','hidden-next-patient',
+         'hidden-back','hidden-review-letter'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) {
-                el.style.cssText = 'position:fixed!important;top:-9999px!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;';
-                var p = el.parentElement;
-                for (var i = 0; i < 3 && p && p.tagName === 'DIV'; i++) {
-                    if (p.children.length <= 2) {
-                        p.style.cssText = 'position:fixed!important;top:-9999px!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;overflow:hidden!important;';
-                    }
-                    p = p.parentElement;
+                var node = el;
+                for (var i = 0; i < 4; i++) {
+                    node.style.cssText = 'position:fixed!important;top:-9999px!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;overflow:hidden!important;';
+                    node = node.parentElement;
+                    if (!node || node.tagName === 'FORM') break;
                 }
             }
         });
         console.log('Clarke: Bridge buttons hidden');
-    }, 500);
-}
+    }, 800);
+
+    console.log('Clarke: Layout enforcer installed via head script');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', installClarkeHeadScript);
+    } else {
+        installClarkeHeadScript();
+    }
+})();
+</script>
 """
 
 MOCK_PATIENT_CONTEXTS: dict[int, dict[str, Any]] = {
@@ -855,7 +856,7 @@ def build_ui() -> gr.Blocks:
 
     clinic_payload = load_clinic_list()
 
-    with gr.Blocks(theme=clarke_theme, css=Path("frontend/assets/style.css").read_text(encoding="utf-8"), title="Clarke", js=CLARKE_JS) as demo:
+    with gr.Blocks(theme=clarke_theme, css=Path("frontend/assets/style.css").read_text(encoding="utf-8"), title="Clarke", head=CLARKE_HEAD) as demo:
         app_state = gr.State(initial_consultation_state())
         gr.HTML(build_global_style_block())
         feedback_text = gr.Markdown("", visible=False)
@@ -898,7 +899,7 @@ def build_ui() -> gr.Blocks:
             download_text_file = gr.File(label="Download as Text")
             hidden_copy_button = gr.Button("hidden-copy", visible=True, elem_id="hidden-copy")
             hidden_download_button = gr.Button("hidden-download", visible=True, elem_id="hidden-download")
-            gr.HTML("""<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"(function(){var letterEl=document.getElementById('signed-letter-text');if(!letterEl){var textboxes=document.querySelectorAll('textarea');var text='';textboxes.forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});if(!text){alert('No letter text found');return;}navigator.clipboard.writeText(text).then(function(){alert('Copied to clipboard!');}).catch(function(){var ta=document.createElement('textarea');ta.value=text.trim();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Copied to clipboard!');});return;}navigator.clipboard.writeText(letterEl.innerText).then(function(){alert('Copied to clipboard!');}).catch(function(){var ta=document.createElement('textarea');ta.value=(letterEl.innerText||'').trim();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Copied to clipboard!');});})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📋 Copy to Clipboard</button><button onclick=\"(function(){var letterEl=document.getElementById('signed-letter-text');var text=letterEl?letterEl.innerText:'';if(!text){var textboxes=document.querySelectorAll('textarea');textboxes.forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}var blob=new Blob([text],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='clinic_letter.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);console.log('Clarke: Letter downloaded');})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📄 Download as Text</button></div>""")
+            gr.HTML("""<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"(function(){var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){document.querySelectorAll('textarea').forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}try{navigator.clipboard.writeText(text.trim()).then(function(){alert('Copied to clipboard!');});}catch(e){var ta=document.createElement('textarea');ta.value=text.trim();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Copied to clipboard!');}})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📋 Copy to Clipboard</button><button onclick=\"(function(){var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){document.querySelectorAll('textarea').forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}var blob=new Blob([text.trim()],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='clinic_letter.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📄 Download as Text</button></div>""")
             gr.HTML("""<div style='position:sticky; bottom:0; left:0; right:0; z-index:100;'><button onclick=\"(function(){var el=document.getElementById('hidden-next-patient');if(!el){console.error('Clarke: hidden-next-patient not found');return;}if(el.tagName==='BUTTON'){el.click();}else{var b=el.querySelector('button');if(b)b.click();}console.log('Clarke: Next Patient clicked');})()\" style='display:block; width:100%; padding:18px 0; border:none; cursor:pointer; background:linear-gradient(135deg, #D4AF37 0%, #F0D060 100%); color:#1A1A2E; font-family:'Inter',sans-serif; font-weight:700; font-size:16px; letter-spacing:0.5px; transition:all 0.3s ease; box-shadow:0 -4px 16px rgba(212,175,55,0.3);' onmouseover=\"this.style.background='linear-gradient(135deg,#E8C84A,#F5E070)';this.style.boxShadow='0 -4px 24px rgba(212,175,55,0.5)';this.style.transform='translateY(-1px)'\" onmouseout=\"this.style.background='linear-gradient(135deg,#D4AF37,#F0D060)';this.style.boxShadow='0 -4px 16px rgba(212,175,55,0.3)';this.style.transform='translateY(0)'\">Next Patient →</button></div>""")
             hidden_next_patient_btn = gr.Button("hidden-next-patient", visible=True, elem_id="hidden-next-patient")
 
