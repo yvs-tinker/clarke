@@ -1,7 +1,102 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 100%; min-height: 100%; font-family: 'Inter', sans-serif; }
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+.gradio-container {
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+}
+
+.gradio-container > .main,
+.gradio-container > div {
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+}
+
+#clarke-app-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0A0E1A 0%, #1E3A8A 15%, #8B2252 30%, #D4652A 45%, #D4AF37 55%, #F0D060 65%, #F8F6F1 80%, #F8F6F1 100%);
+  background-size: 100% 120%;
+  background-attachment: fixed;
+  animation: gradientShift 12s ease-in-out infinite;
+  padding: 0;
+}
+
+#clarke-content-area {
+  background: #F8F6F1;
+  border-radius: 0 0 16px 16px;
+  margin: 0 24px 24px 24px;
+  padding: 32px 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  min-height: 60vh;
+}
+
+.patient-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.patient-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(212, 175, 55, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #D4AF37 !important;
+}
+
+.patient-card:active {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+}
+
+.patient-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(212,175,55,0.08), transparent);
+  transition: left 0.5s ease;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.patient-card:hover::after {
+  left: 100%;
+}
+
+.open-patient-btn:hover {
+  background: linear-gradient(135deg, #D4AF37 0%, #F0D060 100%) !important;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.5) !important;
+  transform: scale(1.05);
+}
+
+#hidden-select-0, #hidden-select-1, #hidden-select-2, #hidden-select-3, #hidden-select-4,
+#hidden-start-consultation, #hidden-end-consultation, #hidden-sign-off, #hidden-next-patient,
+#hidden-back, #hidden-cancel, #hidden-regenerate, #hidden-copy, #hidden-download {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
 
 @keyframes gradientFlow {
   0% { background-position: 50% 0%; }
@@ -9,4 +104,9 @@ html, body { width: 100%; min-height: 100%; font-family: 'Inter', sans-serif; }
   50% { background-position: 50% 50%; }
   75% { background-position: 100% 50%; }
   100% { background-position: 50% 0%; }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 50% 0%; }
+  50% { background-position: 50% 5%; }
 }
