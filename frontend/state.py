@@ -31,6 +31,9 @@ def initial_consultation_state() -> dict[str, Any]:
         "processing_step": 0,
         "processing_steps": [],
         "recording_started_at": None,
+        "current_patient_index": 0,
+        "completed_patients": [],
+        "signed_letters": {},
     }
 
 
