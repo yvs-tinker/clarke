@@ -230,6 +230,18 @@ def build_global_style_block() -> str:
   #clarke-doc-type input[type="radio"] {
     accent-color: #D4AF37 !important;
   }
+  #clarke-doc-type *:not(label):not(input):not(span) {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+  #clarke-doc-type > div[class*="form"],
+  #clarke-doc-type > div[class*="svelte"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
 
   /* Make Gradio progress bar gold instead of red */
   .progress-bar, .progress-bar > .progress-bar-wrap, .progress-bar > .progress-bar-wrap > .progress-bar-fill {
