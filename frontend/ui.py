@@ -1041,7 +1041,8 @@ def build_ui() -> gr.Blocks:
         app_state = gr.State(initial_consultation_state())
         gr.HTML(build_global_style_block())
         gr.HTML("""<style>
-            #clarke-doc-type {
+            #clarke-doc-type,
+            #clarke-doc-type.block {
                 margin: 0 48px 16px 48px !important;
                 border: 1px solid rgba(212, 175, 55, 0.2) !important;
                 border-radius: 12px !important;
@@ -1052,7 +1053,9 @@ def build_ui() -> gr.Blocks:
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
                 padding: 14px 20px !important;
             }
-            #clarke-doc-type > label > span {
+            #clarke-doc-type > label > span,
+            #clarke-doc-type .label-wrap span,
+            #clarke-doc-type > span[data-testid="block-title"] {
                 font-family: 'DM Serif Display', serif !important;
                 font-size: 16px !important;
                 color: #D4AF37 !important;
@@ -1060,6 +1063,8 @@ def build_ui() -> gr.Blocks:
             #clarke-doc-type .wrap {
                 gap: 12px !important;
                 background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
                 padding: 8px 0 0 0 !important;
                 border-top: 1px solid rgba(212, 175, 55, 0.12) !important;
                 margin-top: 8px !important;
@@ -1087,6 +1092,15 @@ def build_ui() -> gr.Blocks:
             }
             #clarke-doc-type .wrap input[type="radio"] {
                 accent-color: #D4AF37 !important;
+            }
+            #clarke-doc-type > div:first-child,
+            #clarke-doc-type fieldset,
+            #clarke-doc-type .container,
+            #clarke-doc-type .form,
+            #clarke-doc-type > div {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
             }
         </style>""")
         feedback_text = gr.Markdown("", visible=False)
