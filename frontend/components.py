@@ -62,6 +62,57 @@ def build_global_style_block() -> str:
 
   html, body { margin: 0 !important; padding: 0 !important; overflow-x: hidden !important; }
 
+  /* Letter Preferences Accordion */
+  #clarke-letter-prefs {
+    margin: 0 48px 24px 48px !important;
+    border: 1px solid rgba(212, 175, 55, 0.2) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(8px) !important;
+    overflow: hidden !important;
+  }
+  #clarke-letter-prefs > .label-wrap {
+    padding: 14px 20px !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+  }
+  #clarke-letter-prefs > .label-wrap > span {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 16px !important;
+    color: #D4AF37 !important;
+  }
+  #clarke-letter-prefs > .label-wrap:hover {
+    background: rgba(212, 175, 55, 0.04) !important;
+  }
+  #clarke-letter-prefs .wrap {
+    padding: 4px 20px 16px 20px !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.12) !important;
+  }
+  #clarke-letter-prefs input[type="text"],
+  #clarke-letter-prefs textarea {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 14px !important;
+    border: 1px solid rgba(212, 175, 55, 0.2) !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    color: #1A1A2E !important;
+    padding: 10px 14px !important;
+    transition: all 0.3s ease !important;
+  }
+  #clarke-letter-prefs input[type="text"]:focus,
+  #clarke-letter-prefs textarea:focus {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15) !important;
+    outline: none !important;
+  }
+  #clarke-letter-prefs label span {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #555 !important;
+  }
+
   /* Make Gradio progress bar gold instead of red */
   .progress-bar, .progress-bar > .progress-bar-wrap, .progress-bar > .progress-bar-wrap > .progress-bar-fill {
     background: linear-gradient(135deg, #D4AF37, #F0D060) !important;

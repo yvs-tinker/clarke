@@ -34,6 +34,15 @@ def initial_consultation_state() -> dict[str, Any]:
         "current_patient_index": 0,
         "completed_patients": [],
         "signed_letters": {},
+        "letter_prefs": {
+            "clinician_name": "Dr Sarah Chen",
+            "clinician_title": "Consultant, General Practice",
+            "hospital": "Clarke NHS Trust",
+            "department": "General Practice Department",
+            "gp_name": "Dr Andrew Wilson",
+            "gp_address": "Riverside Medical Practice\n14 Harcourt Street\nLondon",
+            "signoff_phrase": "Warm regards",
+        },
     }
 
 
