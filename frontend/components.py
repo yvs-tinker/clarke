@@ -42,6 +42,9 @@ def build_global_style_block() -> str:
     return """
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<style>
   @keyframes clarkeGradientShift {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
