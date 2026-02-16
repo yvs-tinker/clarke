@@ -1040,69 +1040,6 @@ def build_ui() -> gr.Blocks:
     with gr.Blocks(theme=clarke_theme, css=Path("frontend/assets/style.css").read_text(encoding="utf-8"), title="Clarke", head=CLARKE_HEAD) as demo:
         app_state = gr.State(initial_consultation_state())
         gr.HTML(build_global_style_block())
-        gr.HTML("""<style>
-            #clarke-doc-type,
-            #clarke-doc-type.block {
-                margin: 0 48px 16px 48px !important;
-                border: 1px solid rgba(212, 175, 55, 0.2) !important;
-                border-radius: 12px !important;
-                background: rgba(255, 255, 255, 0.6) !important;
-                backdrop-filter: blur(8px) !important;
-                -webkit-backdrop-filter: blur(8px) !important;
-                overflow: hidden !important;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
-                padding: 14px 20px !important;
-            }
-            #clarke-doc-type > label > span,
-            #clarke-doc-type .label-wrap span,
-            #clarke-doc-type > span[data-testid="block-title"] {
-                font-family: 'DM Serif Display', serif !important;
-                font-size: 16px !important;
-                color: #D4AF37 !important;
-            }
-            #clarke-doc-type .wrap {
-                gap: 12px !important;
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-                padding: 8px 0 0 0 !important;
-                border-top: 1px solid rgba(212, 175, 55, 0.12) !important;
-                margin-top: 8px !important;
-            }
-            #clarke-doc-type .wrap label {
-                font-family: 'Inter', sans-serif !important;
-                font-size: 14px !important;
-                border: 1px solid rgba(212, 175, 55, 0.25) !important;
-                border-radius: 8px !important;
-                padding: 10px 20px !important;
-                cursor: pointer !important;
-                transition: all 0.3s ease !important;
-                background: rgba(255, 255, 255, 0.6) !important;
-                color: #555 !important;
-            }
-            #clarke-doc-type .wrap label.selected {
-                background: rgba(212, 175, 55, 0.12) !important;
-                border-color: #D4AF37 !important;
-                color: #1A1A2E !important;
-                font-weight: 600 !important;
-            }
-            #clarke-doc-type .wrap label:hover {
-                background: rgba(212, 175, 55, 0.06) !important;
-                border-color: rgba(212, 175, 55, 0.4) !important;
-            }
-            #clarke-doc-type .wrap input[type="radio"] {
-                accent-color: #D4AF37 !important;
-            }
-            #clarke-doc-type > div:first-child,
-            #clarke-doc-type fieldset,
-            #clarke-doc-type .container,
-            #clarke-doc-type .form,
-            #clarke-doc-type > div {
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-            }
-        </style>""")
         feedback_text = gr.Markdown("", visible=False)
 
         with gr.Column(visible=False) as screen_s2:

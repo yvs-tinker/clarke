@@ -161,6 +161,76 @@ def build_global_style_block() -> str:
     color: #555 !important;
   }
 
+  /* Document Type Radio — matches Letter Preferences */
+  fieldset#clarke-doc-type,
+  #clarke-doc-type {
+    --block-border-width: 0px !important;
+    --block-border-color: transparent !important;
+    --border-color-primary: transparent !important;
+    --block-background-fill: transparent !important;
+    --block-shadow: none !important;
+    --block-radius: 12px !important;
+    margin: 0 48px 16px 48px !important;
+    border: 1px solid rgba(212, 175, 55, 0.2) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  fieldset#clarke-doc-type > div,
+  #clarke-doc-type > div,
+  #clarke-doc-type .form {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  #clarke-doc-type > span[data-testid="block-info"] {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 16px !important;
+    color: #D4AF37 !important;
+    padding: 14px 20px 8px 20px !important;
+    display: block !important;
+  }
+  #clarke-doc-type > div.wrap {
+    padding: 4px 20px 16px 20px !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.12) !important;
+    background: transparent !important;
+    gap: 12px !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+  }
+  fieldset#clarke-doc-type label,
+  #clarke-doc-type label {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 14px !important;
+    border: 1px solid rgba(212, 175, 55, 0.25) !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    color: #555 !important;
+  }
+  #clarke-doc-type label.selected {
+    background: rgba(212, 175, 55, 0.12) !important;
+    border-color: #D4AF37 !important;
+    color: #1A1A2E !important;
+    font-weight: 600 !important;
+  }
+  #clarke-doc-type label:hover {
+    background: rgba(212, 175, 55, 0.06) !important;
+    border-color: rgba(212, 175, 55, 0.4) !important;
+  }
+  #clarke-doc-type input[type="radio"] {
+    accent-color: #D4AF37 !important;
+  }
+
   /* Make Gradio progress bar gold instead of red */
   .progress-bar, .progress-bar > .progress-bar-wrap, .progress-bar > .progress-bar-wrap > .progress-bar-fill {
     background: linear-gradient(135deg, #D4AF37, #F0D060) !important;
