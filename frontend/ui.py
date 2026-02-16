@@ -351,6 +351,64 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
     )
 
 
+def _letter_prefs_persistence_js() -> str:
+    """Return an HTML snippet that persists letter preference values via JavaScript."""
+    return """<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){
+        if(window.clarkePrefsInitDone)return;
+        window.clarkePrefsInitDone=true;
+        window.clarkeLetterPrefs={};
+        function getInputs(){
+            var acc=document.getElementById('clarke-letter-prefs');
+            if(!acc)return[];
+            return Array.prototype.slice.call(acc.querySelectorAll('input[type=text],textarea'));
+        }
+        function saveAll(){
+            var inputs=getInputs();
+            for(var i=0;i<inputs.length;i++){
+                window.clarkeLetterPrefs[i]=inputs[i].value;
+            }
+        }
+        function restoreAll(){
+            var inputs=getInputs();
+            if(inputs.length===0)return;
+            var changed=false;
+            for(var i=0;i<inputs.length;i++){
+                var saved=window.clarkeLetterPrefs[i];
+                if(saved!==undefined&&saved!==inputs[i].value){
+                    var proto=inputs[i].tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype;
+                    var setter=Object.getOwnPropertyDescriptor(proto,'value');
+                    if(setter&&setter.set){setter.set.call(inputs[i],saved);}
+                    else{inputs[i].value=saved;}
+                    inputs[i].dispatchEvent(new Event('input',{bubbles:true}));
+                    inputs[i].dispatchEvent(new Event('change',{bubbles:true}));
+                    changed=true;
+                }
+            }
+            if(changed)console.log('Clarke: Restored letter prefs');
+        }
+        function attachListeners(){
+            var inputs=getInputs();
+            inputs.forEach(function(inp){
+                if(!inp.dataset.clarkeTracked){
+                    inp.dataset.clarkeTracked='1';
+                    inp.addEventListener('input',function(){saveAll();});
+                    inp.addEventListener('change',function(){saveAll();});
+                }
+            });
+        }
+        function check(){
+            var inputs=getInputs();
+            if(inputs.length>0){
+                attachListeners();
+                if(Object.keys(window.clarkeLetterPrefs).length>0){restoreAll();}
+            }
+        }
+        new MutationObserver(function(){check();}).observe(document.body,{childList:true,subtree:true});
+        setInterval(check,2000);
+        console.log('Clarke: Letter prefs persistence active');
+    })()" style="display:none;position:absolute;width:0;height:0;">"""
+
+
 def _context_screen_html(patient: dict[str, Any], context: dict[str, Any]) -> str:
     """Build S2 shell + actions + context in one full-screen HTML block."""
 
@@ -884,13 +942,13 @@ def _next_patient(state, p_cn, p_ct, p_ho, p_de, p_gp, p_so, p_ga):
         "",
         dashboard,
         *show_screen("s1"),
-        gr.update(value=p_cn or "Dr Sarah Chen"),
-        gr.update(value=p_ct or "Consultant, General Practice"),
-        gr.update(value=p_ho or "Clarke NHS Trust"),
-        gr.update(value=p_de or "General Practice Department"),
-        gr.update(value=p_gp or "Dr Andrew Wilson"),
-        gr.update(value=p_so or "Warm regards"),
-        gr.update(value=p_ga or "Riverside Medical Practice\n14 Harcourt Street\nLondon"),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+        gr.update(),
     )
 
 
@@ -967,6 +1025,7 @@ def build_ui() -> gr.Blocks:
                     pref_gp_name = gr.Textbox(label="Addressee Name", value="Dr Andrew Wilson", interactive=True, scale=1)
                     pref_signoff = gr.Textbox(label="Sign-off Phrase", value="Warm regards", interactive=True, scale=1)
                 pref_gp_address = gr.Textbox(label="Addressee Address", value="Riverside Medical Practice\n14 Harcourt Street\nLondon", lines=3, interactive=True)
+            gr.HTML(_letter_prefs_persistence_js())
             hidden_patient_buttons: list[gr.Button] = []
             for i in range(5):
                 hidden_patient_buttons.append(gr.Button(f"hidden-select-{i}", elem_id=f"hidden-select-{i}", visible=True))
