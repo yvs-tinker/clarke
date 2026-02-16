@@ -1043,10 +1043,14 @@ def build_ui() -> gr.Blocks:
         gr.HTML("""<style>
             #clarke-doc-type {
                 margin: 0 48px 16px 48px !important;
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-                padding: 0 !important;
+                border: 1px solid rgba(212, 175, 55, 0.2) !important;
+                border-radius: 12px !important;
+                background: rgba(255, 255, 255, 0.6) !important;
+                backdrop-filter: blur(8px) !important;
+                -webkit-backdrop-filter: blur(8px) !important;
+                overflow: hidden !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+                padding: 14px 20px !important;
             }
             #clarke-doc-type > label > span {
                 font-family: 'DM Serif Display', serif !important;
@@ -1056,7 +1060,9 @@ def build_ui() -> gr.Blocks:
             #clarke-doc-type .wrap {
                 gap: 12px !important;
                 background: transparent !important;
-                padding: 8px 0 !important;
+                padding: 8px 0 0 0 !important;
+                border-top: 1px solid rgba(212, 175, 55, 0.12) !important;
+                margin-top: 8px !important;
             }
             #clarke-doc-type .wrap label {
                 font-family: 'Inter', sans-serif !important;
@@ -1073,6 +1079,7 @@ def build_ui() -> gr.Blocks:
                 background: rgba(212, 175, 55, 0.12) !important;
                 border-color: #D4AF37 !important;
                 color: #1A1A2E !important;
+                font-weight: 600 !important;
             }
             #clarke-doc-type .wrap label:hover {
                 background: rgba(212, 175, 55, 0.06) !important;
@@ -1102,7 +1109,7 @@ def build_ui() -> gr.Blocks:
             hidden_cancel_button = gr.Button("hidden-cancel", visible=True, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
-            gr.HTML("<h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0 0 0 0;padding:24px 48px 8px 48px;'>Document Review</h2>")
+            gr.HTML("<h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0;padding:8px 0 0 0;'>Document Review</h2>")
             review_status_badge = gr.HTML(build_status_badge_html("✎ Ready for Review", "#F59E0B"))
             review_fhir_values = gr.HTML("<span style='font-family:JetBrains Mono,monospace;'>FHIR values appear here.</span>")
             section_one_text = gr.Textbox(label="Document", lines=20, interactive=True)
@@ -1131,7 +1138,7 @@ def build_ui() -> gr.Blocks:
             doc_type_radio = gr.Radio(
                 choices=["Clinic Letter", "Ward Round Note"],
                 value="Clinic Letter",
-                label="Document Type",
+                label="📋  Document Type",
                 interactive=True,
                 elem_id="clarke-doc-type",
             )
