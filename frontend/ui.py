@@ -382,8 +382,13 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
     dob = str(demographics.get("dob") or "Unknown")
     nhs = str(demographics.get("nhs_number") or "Unknown")
     today = datetime.now().strftime("%d %B %Y")
-    gp_name = "Andrew Wilson"
-    address = "Riverside Medical Practice\n14 Harcourt Street\nLondon"
+    prefs = (state or {}).get("letter_prefs", {})
+    gp_name = prefs.get("gp_name", "Dr Andrew Wilson").replace("Dr ", "", 1)
+    address = prefs.get("gp_address", "Riverside Medical Practice\n14 Harcourt Street\nLondon")
+    clinician_display = prefs.get("clinician_name", "Dr Sarah Chen")
+    clinician_title = prefs.get("clinician_title", "Consultant, General Practice")
+    hospital_name = prefs.get("hospital", "Clarke NHS Trust")
+    signoff_phrase = prefs.get("signoff_phrase", "Warm regards")
 
     investigations = "\n".join(
         f"- {lab.get('name', 'Test')}: {lab.get('value', '')} {lab.get('unit', '')} ({lab.get('date', '')})".strip()
@@ -416,7 +421,7 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
         f"Dear Dr {gp_name},\n\n"
         f"Re: {patient_name} (DOB: {dob}, NHS: {nhs})\n"
         f"    {address}\n\n"
-        f"Thank you for referring / I reviewed {patient_name} in General Practice Clinic on {today}.\n\n"
+        f"Thank you for referring / I reviewed {patient_name} in {clinician_title.split(',')[-1].strip() if ',' in clinician_title else clinician_title} Clinic on {today}.\n\n"
         "History of Presenting Complaint\n"
         f"{history}\n\n"
         "Examination\n"
@@ -428,10 +433,10 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
         "Plan\n"
         + "\n".join(f"{i + 1}. {line}" for i, line in enumerate(plan_lines))
         + f"\n\nI will review {patient_name} in 8 weeks. Please do not hesitate to contact us if there are any concerns in the interim.\n\n"
-        "Warm regards,\n\n"
-        "Dr Sarah Chen\n"
-        "Consultant, General Practice\n"
-        "Clarke NHS Trust"
+        f"{signoff_phrase},\n\n"
+        f"{clinician_display}\n"
+        f"{clinician_title}\n"
+        f"{hospital_name}"
     )
 
     sections = [
@@ -470,7 +475,7 @@ def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str,
     return (combined, "", "", "")
 
 
-def _handle_patient_selection(state: dict[str, Any], patient_index: int):
+def _handle_patient_selection(state: dict[str, Any], patient_index: int, clinician_name: str = "Dr Sarah Chen", clinician_title: str = "Consultant, General Practice", hospital: str = "Clarke NHS Trust", department: str = "General Practice Department", gp_name: str = "Dr Andrew Wilson", signoff_phrase: str = "Warm regards", gp_address: str = "Riverside Medical Practice\n14 Harcourt Street\nLondon"):
     """Update state and call backend context endpoint when a patient index is selected.
 
     Args:
@@ -489,6 +494,15 @@ def _handle_patient_selection(state: dict[str, Any], patient_index: int):
     patient = patients[patient_index]
     updated_state = select_patient(state, patient)
     updated_state['current_patient_index'] = patient_index
+    updated_state["letter_prefs"] = {
+        "clinician_name": clinician_name or "Dr Sarah Chen",
+        "clinician_title": clinician_title or "Consultant, General Practice",
+        "hospital": hospital or "Clarke NHS Trust",
+        "department": department or "General Practice Department",
+        "gp_name": gp_name or "Dr Andrew Wilson",
+        "gp_address": gp_address or "Riverside Medical Practice\n14 Harcourt Street\nLondon",
+        "signoff_phrase": signoff_phrase or "Warm regards",
+    }
     patient_id = str(patient.get("id", ""))
     if os.getenv("USE_MOCK_FHIR", "").lower() == "true":
         context = _mock_context_for_index(patient_index)
@@ -850,6 +864,7 @@ def _next_patient(state):
     refreshed_state = initial_consultation_state()
     refreshed_state['completed_patients'] = updated_state['completed_patients']
     refreshed_state['signed_letters'] = dict(updated_state.get('signed_letters', {}))
+    refreshed_state['letter_prefs'] = dict(updated_state.get('letter_prefs', {}))
     return refreshed_state, "Ready for next patient. Please select a patient card.", "", "", "", "", "", "", dashboard, *show_screen("s1")
 
 
@@ -914,14 +929,26 @@ def build_ui() -> gr.Blocks:
 
         with gr.Column(visible=True) as screen_s1:
             dashboard_html = gr.HTML(build_dashboard_html(clinic_payload))
+            with gr.Accordion("⚙  Letter Preferences", open=False, elem_id="clarke-letter-prefs"):
+                gr.HTML("<p style='font-family:Inter,sans-serif;font-size:13px;color:#888;margin:0 0 12px 0;font-style:italic;'>Customise the generated clinic letter template. Changes apply to all subsequent letters this session.</p>")
+                with gr.Row():
+                    pref_clinician_name = gr.Textbox(label="Clinician Name", value="Dr Sarah Chen", interactive=True, scale=1)
+                    pref_clinician_title = gr.Textbox(label="Title / Role", value="Consultant, General Practice", interactive=True, scale=1)
+                with gr.Row():
+                    pref_hospital = gr.Textbox(label="Hospital / Trust", value="Clarke NHS Trust", interactive=True, scale=1)
+                    pref_department = gr.Textbox(label="Department", value="General Practice Department", interactive=True, scale=1)
+                with gr.Row():
+                    pref_gp_name = gr.Textbox(label="GP Name", value="Dr Andrew Wilson", interactive=True, scale=1)
+                    pref_signoff = gr.Textbox(label="Sign-off Phrase", value="Warm regards", interactive=True, scale=1)
+                pref_gp_address = gr.Textbox(label="GP Practice Address", value="Riverside Medical Practice\n14 Harcourt Street\nLondon", lines=3, interactive=True)
             hidden_patient_buttons: list[gr.Button] = []
             for i in range(5):
                 hidden_patient_buttons.append(gr.Button(f"hidden-select-{i}", elem_id=f"hidden-select-{i}", visible=True))
 
         for i, hidden_btn in enumerate(hidden_patient_buttons):
             hidden_btn.click(
-                fn=lambda state, idx=i: _handle_patient_selection(state, idx),
-                inputs=[app_state],
+                fn=lambda state, cn, ct, ho, de, gp, so, ga, idx=i: _handle_patient_selection(state, idx, cn, ct, ho, de, gp, so, ga),
+                inputs=[app_state, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address],
                 outputs=[app_state, feedback_text, context_screen_html, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
                 show_progress="full",
             )
