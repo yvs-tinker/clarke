@@ -844,7 +844,7 @@ def _prepare_signed_download(state):
     export_path.write_text(signed_text + "\n", encoding="utf-8")
     return updated_state, "Download file refreshed.", gr.update(value=str(export_path))
 
-def _next_patient(state):
+def _next_patient(state, p_cn, p_ct, p_ho, p_de, p_gp, p_so, p_ga):
     """Reset consultation workflow and return to dashboard after sign-off.
 
     Args:
@@ -864,8 +864,15 @@ def _next_patient(state):
     refreshed_state = initial_consultation_state()
     refreshed_state['completed_patients'] = updated_state['completed_patients']
     refreshed_state['signed_letters'] = dict(updated_state.get('signed_letters', {}))
-    refreshed_state['letter_prefs'] = dict(updated_state.get('letter_prefs', {}))
-    prefs = refreshed_state['letter_prefs']
+    refreshed_state['letter_prefs'] = {
+        "clinician_name": p_cn or "Dr Sarah Chen",
+        "clinician_title": p_ct or "Consultant, General Practice",
+        "hospital": p_ho or "Clarke NHS Trust",
+        "department": p_de or "General Practice Department",
+        "gp_name": p_gp or "Dr Andrew Wilson",
+        "signoff_phrase": p_so or "Warm regards",
+        "gp_address": p_ga or "Riverside Medical Practice\n14 Harcourt Street\nLondon",
+    }
     return (
         refreshed_state,
         "Ready for next patient. Please select a patient card.",
@@ -877,13 +884,13 @@ def _next_patient(state):
         "",
         dashboard,
         *show_screen("s1"),
-        gr.update(value=prefs.get("clinician_name", "Dr Sarah Chen")),
-        gr.update(value=prefs.get("clinician_title", "Consultant, General Practice")),
-        gr.update(value=prefs.get("hospital", "Clarke NHS Trust")),
-        gr.update(value=prefs.get("department", "General Practice Department")),
-        gr.update(value=prefs.get("gp_name", "Dr Andrew Wilson")),
-        gr.update(value=prefs.get("signoff_phrase", "Warm regards")),
-        gr.update(value=prefs.get("gp_address", "Riverside Medical Practice\n14 Harcourt Street\nLondon")),
+        gr.update(value=p_cn or "Dr Sarah Chen"),
+        gr.update(value=p_ct or "Consultant, General Practice"),
+        gr.update(value=p_ho or "Clarke NHS Trust"),
+        gr.update(value=p_de or "General Practice Department"),
+        gr.update(value=p_gp or "Dr Andrew Wilson"),
+        gr.update(value=p_so or "Warm regards"),
+        gr.update(value=p_ga or "Riverside Medical Practice\n14 Harcourt Street\nLondon"),
     )
 
 
@@ -982,6 +989,6 @@ def build_ui() -> gr.Blocks:
         hidden_sign_off_btn.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         hidden_copy_button.click(_copy_signed_document, inputs=[app_state], outputs=[app_state, feedback_text, copy_to_clipboard_text], show_progress="hidden")
         hidden_download_button.click(_prepare_signed_download, inputs=[app_state], outputs=[app_state, feedback_text, download_text_file], show_progress="hidden")
-        hidden_next_patient_btn.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address], show_progress="hidden")
+        hidden_next_patient_btn.click(_next_patient, inputs=[app_state, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address], show_progress="hidden")
 
     return demo
