@@ -801,9 +801,7 @@ def _start_processing(state, audio_path):
         return updated_state, "Consultation ended. Processing audio and generating document.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=True), *show_screen("s4")
 
     try:
-        with Path(resolved_audio_path).open("rb") as stream:
-            _api_request("POST", f"/consultations/{consultation_id}/audio", files={"audio_file": (Path(resolved_audio_path).name, stream, "audio/wav")}, data={"is_final": "true"}, timeout=120.0)
-        _api_request("POST", f"/consultations/{consultation_id}/end", timeout=180.0)
+        _api_request("POST", f"/consultations/{consultation_id}/end", json={"audio_path": resolved_audio_path}, timeout=300.0)
     except Exception as exc:
         return updated_state, f"Failed to end consultation: {exc}", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
