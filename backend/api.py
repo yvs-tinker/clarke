@@ -302,7 +302,7 @@ def upload_audio(
     if extension not in {".wav", ".webm"}:
         raise HTTPException(status_code=400, detail="Only WAV or WebM audio uploads are supported")
 
-    uploads_root = Path("data/uploads") / consultation_id
+    uploads_root = Path("/tmp/uploads") / consultation_id
     raw_path = uploads_root / f"raw{extension}"
     original_stem = Path(audio_file.filename or "audio").stem or "audio"
     wav_path = uploads_root / f"{original_stem}_16k.wav"
