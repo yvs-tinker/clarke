@@ -65,6 +65,54 @@ def build_global_style_block() -> str:
   /* Letter Preferences Accordion */
   #clarke-letter-prefs {
     margin: 0 48px 24px 48px !important;
+    border: 1px solid rgba(212, 175, 55, 0.25) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  }
+  #clarke-letter-prefs > .label-wrap {
+    padding: 14px 20px !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: none !important;
+    cursor: pointer !important;
+  }
+  #clarke-letter-prefs > .label-wrap span {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 16px !important;
+    color: #D4AF37 !important;
+  }
+  #clarke-letter-prefs > .label-wrap:hover {
+    background: rgba(212, 175, 55, 0.04) !important;
+  }
+  #clarke-letter-prefs input[type="text"],
+  #clarke-letter-prefs textarea {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 14px !important;
+    border: 1px solid rgba(212, 175, 55, 0.2) !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    color: #1A1A2E !important;
+    padding: 10px 14px !important;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+  }
+  #clarke-letter-prefs input[type="text"]:focus,
+  #clarke-letter-prefs textarea:focus {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12) !important;
+    outline: none !important;
+  }
+  #clarke-letter-prefs label span {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #555 !important;
+  }
+
+  /* Letter Preferences Accordion */
+  #clarke-letter-prefs {
+    margin: 0 48px 24px 48px !important;
     border: 1px solid rgba(212, 175, 55, 0.2) !important;
     border-radius: 12px !important;
     background: rgba(255, 255, 255, 0.6) !important;

@@ -865,7 +865,26 @@ def _next_patient(state):
     refreshed_state['completed_patients'] = updated_state['completed_patients']
     refreshed_state['signed_letters'] = dict(updated_state.get('signed_letters', {}))
     refreshed_state['letter_prefs'] = dict(updated_state.get('letter_prefs', {}))
-    return refreshed_state, "Ready for next patient. Please select a patient card.", "", "", "", "", "", "", dashboard, *show_screen("s1")
+    prefs = refreshed_state['letter_prefs']
+    return (
+        refreshed_state,
+        "Ready for next patient. Please select a patient card.",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        dashboard,
+        *show_screen("s1"),
+        gr.update(value=prefs.get("clinician_name", "Dr Sarah Chen")),
+        gr.update(value=prefs.get("clinician_title", "Consultant, General Practice")),
+        gr.update(value=prefs.get("hospital", "Clarke NHS Trust")),
+        gr.update(value=prefs.get("department", "General Practice Department")),
+        gr.update(value=prefs.get("gp_name", "Dr Andrew Wilson")),
+        gr.update(value=prefs.get("signoff_phrase", "Warm regards")),
+        gr.update(value=prefs.get("gp_address", "Riverside Medical Practice\n14 Harcourt Street\nLondon")),
+    )
 
 
 def build_ui() -> gr.Blocks:
@@ -930,7 +949,7 @@ def build_ui() -> gr.Blocks:
         with gr.Column(visible=True) as screen_s1:
             dashboard_html = gr.HTML(build_dashboard_html(clinic_payload))
             with gr.Accordion("⚙  Letter Preferences", open=False, elem_id="clarke-letter-prefs"):
-                gr.HTML("<p style='font-family:Inter,sans-serif;font-size:13px;color:#888;margin:0 0 12px 0;font-style:italic;'>Customise the generated clinic letter template. Changes apply to all subsequent letters this session.</p>")
+                gr.HTML("<p style='font-family:Inter,sans-serif;font-size:13px;color:#888;margin:0 0 12px 0;font-style:italic;'>Customise the generated clinic letter template. Changes persist for all patients in this clinic list.</p>")
                 with gr.Row():
                     pref_clinician_name = gr.Textbox(label="Clinician Name", value="Dr Sarah Chen", interactive=True, scale=1)
                     pref_clinician_title = gr.Textbox(label="Title / Role", value="Consultant, General Practice", interactive=True, scale=1)
@@ -938,9 +957,9 @@ def build_ui() -> gr.Blocks:
                     pref_hospital = gr.Textbox(label="Hospital / Trust", value="Clarke NHS Trust", interactive=True, scale=1)
                     pref_department = gr.Textbox(label="Department", value="General Practice Department", interactive=True, scale=1)
                 with gr.Row():
-                    pref_gp_name = gr.Textbox(label="GP Name", value="Dr Andrew Wilson", interactive=True, scale=1)
+                    pref_gp_name = gr.Textbox(label="Addressee Name", value="Dr Andrew Wilson", interactive=True, scale=1)
                     pref_signoff = gr.Textbox(label="Sign-off Phrase", value="Warm regards", interactive=True, scale=1)
-                pref_gp_address = gr.Textbox(label="GP Practice Address", value="Riverside Medical Practice\n14 Harcourt Street\nLondon", lines=3, interactive=True)
+                pref_gp_address = gr.Textbox(label="Addressee Address", value="Riverside Medical Practice\n14 Harcourt Street\nLondon", lines=3, interactive=True)
             hidden_patient_buttons: list[gr.Button] = []
             for i in range(5):
                 hidden_patient_buttons.append(gr.Button(f"hidden-select-{i}", elem_id=f"hidden-select-{i}", visible=True))
@@ -963,6 +982,6 @@ def build_ui() -> gr.Blocks:
         hidden_sign_off_btn.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         hidden_copy_button.click(_copy_signed_document, inputs=[app_state], outputs=[app_state, feedback_text, copy_to_clipboard_text], show_progress="hidden")
         hidden_download_button.click(_prepare_signed_download, inputs=[app_state], outputs=[app_state, feedback_text, download_text_file], show_progress="hidden")
-        hidden_next_patient_btn.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        hidden_next_patient_btn.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address], show_progress="hidden")
 
     return demo
