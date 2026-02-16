@@ -335,7 +335,7 @@ def upload_audio(
 
 
 @app.post("/api/v1/consultations/{consultation_id}/end", status_code=202)
-def end_consultation(consultation_id: str) -> dict[str, Any]:
+def end_consultation(consultation_id: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
     """End a consultation and execute full processing pipeline.
 
     Args:
@@ -344,6 +344,17 @@ def end_consultation(consultation_id: str) -> dict[str, Any]:
     Returns:
         dict[str, Any]: Pipeline kickoff and status metadata.
     """
+
+    try:
+        consultation = orchestrator.get_consultation(consultation_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    # Accept audio path directly from frontend for demo/server-side audio files
+    if body and body.get("audio_path"):
+        audio_path = body["audio_path"]
+        if Path(audio_path).exists():
+            consultation.audio_file_path = audio_path
 
     try:
         consultation = orchestrator.end_consultation(consultation_id)
