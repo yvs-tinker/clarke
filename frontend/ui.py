@@ -472,6 +472,8 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
             "Review in specialist clinic to reassess response and escalation needs.",
         ]
 
+    clinical_issues_text = "\n".join(f"- {item}" for item in problems) if problems else "- None listed"
+
     letter_text = (
         f"{today}\n\n"
         f"Dr {gp_name}\n"
@@ -486,6 +488,10 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
         "The patient was comfortable at rest, haemodynamically stable, and clinically euvolaemic on examination. No acute red-flag findings were identified today.\n\n"
         "Investigations\n"
         f"{investigations}\n\n"
+        "Clinical Issues\n"
+        f"{clinical_issues_text}\n\n"
+        "Current Medications\n"
+        f"{medication_line or 'None documented'}\n\n"
         "Assessment\n"
         f"{assessment}\n\n"
         "Plan\n"
@@ -524,6 +530,8 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
                 "Estimated discharge: pending clinical improvement.",
             ]
 
+        clinical_issues_ward = "\n".join(f"- {item}" for item in problems) if problems else "- None listed"
+
         ward_note_text = (
             f"WARD ROUND NOTE — {today} at {now_time}\n"
             f"{'=' * 50}\n\n"
@@ -542,6 +550,8 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
             f"{investigations}\n\n"
             "Current Medications\n"
             f"{medication_line or 'As per drug chart'}\n\n"
+            "Clinical Issues\n"
+            f"{clinical_issues_ward}\n\n"
             "Assessment\n"
             f"{assessment}\n\n"
             "Plan\n"
@@ -552,9 +562,6 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
 
         sections = [
             {"heading": "Ward Round Note", "content": ward_note_text},
-            {"heading": "Clinical Issues", "content": "\n".join(f"- {item}" for item in problems) or "- None listed"},
-            {"heading": "Current Medications", "content": medication_line or "None documented"},
-            {"heading": "Follow-up", "content": "Review on next ward round."},
         ]
         return {
             "title": "Ward Round Note",
@@ -566,9 +573,6 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
 
     sections = [
         {"heading": "NHS Clinic Letter", "content": letter_text},
-        {"heading": "Clinical Issues", "content": "\n".join(f"- {item}" for item in problems) or "- None listed"},
-        {"heading": "Current Medications", "content": medication_line or "None documented"},
-        {"heading": "Follow-up", "content": "Review in 8 weeks with repeat investigations."},
     ]
     return {
         "title": "NHS Clinic Letter",
@@ -1037,25 +1041,45 @@ def build_ui() -> gr.Blocks:
         app_state = gr.State(initial_consultation_state())
         gr.HTML(build_global_style_block())
         gr.HTML("""<style>
-            #clarke-doc-type { margin: 0 48px 16px 48px !important; }
-            #clarke-doc-type .wrap { gap: 12px !important; }
-            #clarke-doc-type label span {
+            #clarke-doc-type {
+                margin: 0 48px 16px 48px !important;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            #clarke-doc-type > label > span {
                 font-family: 'DM Serif Display', serif !important;
                 font-size: 16px !important;
                 color: #D4AF37 !important;
             }
-            #clarke-doc-type input[type="radio"]:checked + label {
-                background: rgba(212, 175, 55, 0.12) !important;
-                border-color: #D4AF37 !important;
+            #clarke-doc-type .wrap {
+                gap: 12px !important;
+                background: transparent !important;
+                padding: 8px 0 !important;
             }
             #clarke-doc-type .wrap label {
                 font-family: 'Inter', sans-serif !important;
                 font-size: 14px !important;
-                border: 1px solid rgba(212, 175, 55, 0.2) !important;
+                border: 1px solid rgba(212, 175, 55, 0.25) !important;
                 border-radius: 8px !important;
                 padding: 10px 20px !important;
                 cursor: pointer !important;
                 transition: all 0.3s ease !important;
+                background: rgba(255, 255, 255, 0.6) !important;
+                color: #555 !important;
+            }
+            #clarke-doc-type .wrap label.selected {
+                background: rgba(212, 175, 55, 0.12) !important;
+                border-color: #D4AF37 !important;
+                color: #1A1A2E !important;
+            }
+            #clarke-doc-type .wrap label:hover {
+                background: rgba(212, 175, 55, 0.06) !important;
+                border-color: rgba(212, 175, 55, 0.4) !important;
+            }
+            #clarke-doc-type .wrap input[type="radio"] {
+                accent-color: #D4AF37 !important;
             }
         </style>""")
         feedback_text = gr.Markdown("", visible=False)
@@ -1078,10 +1102,10 @@ def build_ui() -> gr.Blocks:
             hidden_cancel_button = gr.Button("hidden-cancel", visible=True, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
-            gr.HTML("<div style='background:#F8F6F1;padding:32px 48px 0 48px;margin:0;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0 0 16px 0;'>Document Review</h2></div>")
+            gr.HTML("<h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0 0 0 0;padding:24px 48px 8px 48px;'>Document Review</h2>")
             review_status_badge = gr.HTML(build_status_badge_html("✎ Ready for Review", "#F59E0B"))
             review_fhir_values = gr.HTML("<span style='font-family:JetBrains Mono,monospace;'>FHIR values appear here.</span>")
-            section_one_text = gr.Textbox(label="NHS Clinic Letter", lines=20, interactive=True)
+            section_one_text = gr.Textbox(label="Document", lines=20, interactive=True)
             section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True, visible=False)
             section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True, visible=False)
             section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True, visible=False)
