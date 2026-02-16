@@ -34,6 +34,7 @@ def initial_consultation_state() -> dict[str, Any]:
         "current_patient_index": 0,
         "completed_patients": [],
         "signed_letters": {},
+        "doc_type": "Clinic Letter",
         "letter_prefs": {
             "clinician_name": "Dr Sarah Chen",
             "clinician_title": "Consultant, General Practice",

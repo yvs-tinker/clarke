@@ -497,6 +497,73 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
         f"{hospital_name}"
     )
 
+    doc_type = (state or {}).get("doc_type", "Clinic Letter")
+
+    if doc_type == "Ward Round Note":
+        now_time = datetime.now().strftime("%H:%M")
+
+        if "Margaret Thompson" in patient_name:
+            overnight = "Remained stable overnight. Blood glucose levels ranged 8.4-14.2 mmol/L. No hypoglycaemic episodes. Nursing staff report adequate oral intake."
+            current_status = "Alert and oriented. Reports mild fatigue but no chest pain, dyspnoea, or new symptoms. Tolerating diet well."
+            exam_findings = "Obs: BP 142/88, HR 78 regular, SpO2 97% RA, Temp 36.8. CVS: HS I+II+0, no peripheral oedema. Resp: Clear bilaterally. Abdo: Soft, non-tender."
+            today_plan = [
+                "Optimise glycaemic control — consider increasing gliclazide to 80mg BD.",
+                "Chase repeat HbA1c and renal profile results from this morning.",
+                "Dietitian review requested for structured carbohydrate counselling.",
+                "Continue current medications including lisinopril 10mg OD and atorvastatin 40mg ON.",
+                "Aim for discharge tomorrow if glucose control improving — arrange diabetes nurse follow-up within 1 week.",
+            ]
+        else:
+            overnight = f"Stable overnight. No acute events reported by nursing staff. Observations within acceptable parameters for {main_problem.lower()}."
+            current_status = f"Patient reports feeling stable this morning. Ongoing management of {main_problem.lower()} continues."
+            exam_findings = "Obs: Within normal limits. Systems examination unremarkable. No new clinical findings."
+            today_plan = [
+                "Continue current management plan.",
+                "Review outstanding investigation results.",
+                "Reassess clinical progress and escalation needs.",
+                "Estimated discharge: pending clinical improvement.",
+            ]
+
+        ward_note_text = (
+            f"WARD ROUND NOTE — {today} at {now_time}\n"
+            f"{'=' * 50}\n\n"
+            f"Patient: {patient_name}\n"
+            f"DOB: {dob} | NHS: {nhs}\n"
+            f"Ward: General Medical | Bed: 12A\n"
+            f"Consultant: {clinician_display}\n\n"
+            f"Day {2} of admission | Primary Dx: {main_problem}\n\n"
+            "Overnight Events\n"
+            f"{overnight}\n\n"
+            "Current Status\n"
+            f"{current_status}\n\n"
+            "Examination Findings\n"
+            f"{exam_findings}\n\n"
+            "Investigations\n"
+            f"{investigations}\n\n"
+            "Current Medications\n"
+            f"{medication_line or 'As per drug chart'}\n\n"
+            "Assessment\n"
+            f"{assessment}\n\n"
+            "Plan\n"
+            + "\n".join(f"{i + 1}. {line}" for i, line in enumerate(today_plan))
+            + f"\n\n{clinician_display} | {clinician_title} | {hospital_name}\n"
+            f"Documented at {now_time} on {today}"
+        )
+
+        sections = [
+            {"heading": "Ward Round Note", "content": ward_note_text},
+            {"heading": "Clinical Issues", "content": "\n".join(f"- {item}" for item in problems) or "- None listed"},
+            {"heading": "Current Medications", "content": medication_line or "None documented"},
+            {"heading": "Follow-up", "content": "Review on next ward round."},
+        ]
+        return {
+            "title": "Ward Round Note",
+            "status": "ready_for_review",
+            "sections": sections,
+            "patient_name": patient_name,
+            "nhs_number": nhs,
+        }
+
     sections = [
         {"heading": "NHS Clinic Letter", "content": letter_text},
         {"heading": "Clinical Issues", "content": "\n".join(f"- {item}" for item in problems) or "- None listed"},
@@ -533,7 +600,7 @@ def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str,
     return (combined, "", "", "")
 
 
-def _handle_patient_selection(state: dict[str, Any], patient_index: int, clinician_name: str = "Dr Sarah Chen", clinician_title: str = "Consultant, General Practice", hospital: str = "Clarke NHS Trust", department: str = "General Practice Department", gp_name: str = "Dr Andrew Wilson", signoff_phrase: str = "Warm regards", gp_address: str = "Riverside Medical Practice\n14 Harcourt Street\nLondon"):
+def _handle_patient_selection(state: dict[str, Any], patient_index: int, clinician_name: str = "Dr Sarah Chen", clinician_title: str = "Consultant, General Practice", hospital: str = "Clarke NHS Trust", department: str = "General Practice Department", gp_name: str = "Dr Andrew Wilson", signoff_phrase: str = "Warm regards", gp_address: str = "Riverside Medical Practice\n14 Harcourt Street\nLondon", doc_type: str = "Clinic Letter"):
     """Update state and call backend context endpoint when a patient index is selected.
 
     Args:
@@ -561,6 +628,7 @@ def _handle_patient_selection(state: dict[str, Any], patient_index: int, clinici
         "gp_address": gp_address or "Riverside Medical Practice\n14 Harcourt Street\nLondon",
         "signoff_phrase": signoff_phrase or "Warm regards",
     }
+    updated_state["doc_type"] = doc_type or "Clinic Letter"
     patient_id = str(patient.get("id", ""))
     if os.getenv("USE_MOCK_FHIR", "").lower() == "true":
         context = _mock_context_for_index(patient_index)
@@ -902,7 +970,7 @@ def _prepare_signed_download(state):
     export_path.write_text(signed_text + "\n", encoding="utf-8")
     return updated_state, "Download file refreshed.", gr.update(value=str(export_path))
 
-def _next_patient(state, p_cn, p_ct, p_ho, p_de, p_gp, p_so, p_ga):
+def _next_patient(state, p_cn, p_ct, p_ho, p_de, p_gp, p_so, p_ga, p_dt):
     """Reset consultation workflow and return to dashboard after sign-off.
 
     Args:
@@ -922,6 +990,7 @@ def _next_patient(state, p_cn, p_ct, p_ho, p_de, p_gp, p_so, p_ga):
     refreshed_state = initial_consultation_state()
     refreshed_state['completed_patients'] = updated_state['completed_patients']
     refreshed_state['signed_letters'] = dict(updated_state.get('signed_letters', {}))
+    refreshed_state['doc_type'] = p_dt or updated_state.get('doc_type', 'Clinic Letter')
     refreshed_state['letter_prefs'] = {
         "clinician_name": p_cn or "Dr Sarah Chen",
         "clinician_title": p_ct or "Consultant, General Practice",
@@ -967,6 +1036,28 @@ def build_ui() -> gr.Blocks:
     with gr.Blocks(theme=clarke_theme, css=Path("frontend/assets/style.css").read_text(encoding="utf-8"), title="Clarke", head=CLARKE_HEAD) as demo:
         app_state = gr.State(initial_consultation_state())
         gr.HTML(build_global_style_block())
+        gr.HTML("""<style>
+            #clarke-doc-type { margin: 0 48px 16px 48px !important; }
+            #clarke-doc-type .wrap { gap: 12px !important; }
+            #clarke-doc-type label span {
+                font-family: 'DM Serif Display', serif !important;
+                font-size: 16px !important;
+                color: #D4AF37 !important;
+            }
+            #clarke-doc-type input[type="radio"]:checked + label {
+                background: rgba(212, 175, 55, 0.12) !important;
+                border-color: #D4AF37 !important;
+            }
+            #clarke-doc-type .wrap label {
+                font-family: 'Inter', sans-serif !important;
+                font-size: 14px !important;
+                border: 1px solid rgba(212, 175, 55, 0.2) !important;
+                border-radius: 8px !important;
+                padding: 10px 20px !important;
+                cursor: pointer !important;
+                transition: all 0.3s ease !important;
+            }
+        </style>""")
         feedback_text = gr.Markdown("", visible=False)
 
         with gr.Column(visible=False) as screen_s2:
@@ -987,7 +1078,7 @@ def build_ui() -> gr.Blocks:
             hidden_cancel_button = gr.Button("hidden-cancel", visible=True, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
-            gr.HTML("<div style='min-height:100vh;background:#F8F6F1;padding:32px 48px;margin:0;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0 0 16px 0;'>Document Review</h2></div>")
+            gr.HTML("<div style='background:#F8F6F1;padding:32px 48px 0 48px;margin:0;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0 0 16px 0;'>Document Review</h2></div>")
             review_status_badge = gr.HTML(build_status_badge_html("✎ Ready for Review", "#F59E0B"))
             review_fhir_values = gr.HTML("<span style='font-family:JetBrains Mono,monospace;'>FHIR values appear here.</span>")
             section_one_text = gr.Textbox(label="NHS Clinic Letter", lines=20, interactive=True)
@@ -1013,6 +1104,13 @@ def build_ui() -> gr.Blocks:
 
         with gr.Column(visible=True) as screen_s1:
             dashboard_html = gr.HTML(build_dashboard_html(clinic_payload))
+            doc_type_radio = gr.Radio(
+                choices=["Clinic Letter", "Ward Round Note"],
+                value="Clinic Letter",
+                label="Document Type",
+                interactive=True,
+                elem_id="clarke-doc-type",
+            )
             with gr.Accordion("⚙  Letter Preferences", open=False, elem_id="clarke-letter-prefs"):
                 gr.HTML("<p style='font-family:Inter,sans-serif;font-size:13px;color:#888;margin:0 0 12px 0;font-style:italic;'>Customise the generated clinic letter template. Changes persist for all patients in this clinic list.</p>")
                 with gr.Row():
@@ -1032,8 +1130,8 @@ def build_ui() -> gr.Blocks:
 
         for i, hidden_btn in enumerate(hidden_patient_buttons):
             hidden_btn.click(
-                fn=lambda state, cn, ct, ho, de, gp, so, ga, idx=i: _handle_patient_selection(state, idx, cn, ct, ho, de, gp, so, ga),
-                inputs=[app_state, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address],
+                fn=lambda state, cn, ct, ho, de, gp, so, ga, dt, idx=i: _handle_patient_selection(state, idx, cn, ct, ho, de, gp, so, ga, dt),
+                inputs=[app_state, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address, doc_type_radio],
                 outputs=[app_state, feedback_text, context_screen_html, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
                 show_progress="full",
             )
@@ -1048,6 +1146,6 @@ def build_ui() -> gr.Blocks:
         hidden_sign_off_btn.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         hidden_copy_button.click(_copy_signed_document, inputs=[app_state], outputs=[app_state, feedback_text, copy_to_clipboard_text], show_progress="hidden")
         hidden_download_button.click(_prepare_signed_download, inputs=[app_state], outputs=[app_state, feedback_text, download_text_file], show_progress="hidden")
-        hidden_next_patient_btn.click(_next_patient, inputs=[app_state, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address], show_progress="hidden")
+        hidden_next_patient_btn.click(_next_patient, inputs=[app_state, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address, doc_type_radio], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address], show_progress="hidden")
 
     return demo
