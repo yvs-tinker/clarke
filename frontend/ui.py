@@ -739,14 +739,26 @@ def _stage_from_pipeline(stage: str) -> tuple[int, str, str]:
 
 
 
-def _ensure_mock_audio_file(audio_path: str | None) -> str | None:
-    """Create a short silent WAV when running in mock mode and no audio was captured."""
+def _ensure_mock_audio_file(audio_path: str | None, state: dict | None = None) -> str | None:
+    """Return audio path, falling back to demo audio files for known patients."""
 
     if audio_path:
         return audio_path
-    if os.getenv("MEDASR_MODEL_ID", "").lower() != "mock":
-        return None
 
+    # Map patient indices to demo audio files
+    DEMO_AUDIO_MAP = {
+        0: "data/demo/mrs_thompson.wav",
+        1: "data/demo/mr_okafor.wav",
+        2: "data/demo/ms_patel.wav",
+    }
+
+    patient_index = (state or {}).get("current_patient_index")
+    if patient_index is not None and patient_index in DEMO_AUDIO_MAP:
+        demo_path = Path(DEMO_AUDIO_MAP[patient_index])
+        if demo_path.exists():
+            return str(demo_path)
+
+    # Fallback: generate a short silent WAV for patients without demo audio
     upload_dir = Path("data/uploads/mock")
     upload_dir.mkdir(parents=True, exist_ok=True)
     silent_path = upload_dir / "silent.wav"
@@ -775,7 +787,7 @@ def _start_processing(state, audio_path):
     if not consultation_id:
         return updated_state, "Consultation session is missing. Start consultation again.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
-    resolved_audio_path = _ensure_mock_audio_file(audio_path)
+    resolved_audio_path = _ensure_mock_audio_file(audio_path, state=updated_state)
     if not resolved_audio_path:
         return updated_state, "Please capture audio before ending consultation.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
