@@ -364,10 +364,10 @@ def end_consultation(consultation_id: str, body: dict[str, Any] | None = Body(No
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail={"error": "timeout", "message": str(exc)}) from exc
     except AudioError as exc:
-        logger.error("end_consultation audio error", consultation_id=consultation_id, error=str(exc))
+        logger.error(f"end_consultation audio error: {exc}", consultation_id=consultation_id)
         raise HTTPException(status_code=400, detail={"error": "audio_error", "message": str(exc)}) from exc
     except ModelExecutionError as exc:
-        logger.error("end_consultation model error", consultation_id=consultation_id, error=str(exc))
+        logger.error(f"end_consultation model error: {exc}", consultation_id=consultation_id)
         error_type = "audio_error" if "transcribed" in str(exc).lower() else "model_error"
         status_code = 400 if error_type == "audio_error" else 500
         raise HTTPException(status_code=status_code, detail={"error": error_type, "message": str(exc)}) from exc
