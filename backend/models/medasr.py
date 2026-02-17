@@ -126,7 +126,7 @@ class MedASRModel:
                 waveform,
                 chunk_length_s=20,
                 stride_length_s=(4, 2),
-                return_timestamps=True,
+                return_timestamps="word",
                 generate_kwargs={"language": "en", "task": "transcribe"},
             )
         except Exception as exc:
