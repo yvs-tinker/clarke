@@ -218,6 +218,8 @@ class PipelineOrchestrator:
                 consultation.transcript.text,
                 consultation.context,
                 consultation_id,
+                doc_type=consultation.doc_type,
+                letter_prefs=consultation.letter_prefs,
             ).model_copy(update={"consultation_id": consultation_id})
         else:
             raise ModelExecutionError("Transcript and patient context are required before document generation")
@@ -249,6 +251,8 @@ class PipelineOrchestrator:
         transcript_text: str,
         context: PatientContext,
         consultation_id: str,
+        doc_type: str = "Clinic Letter",
+        letter_prefs: dict | None = None,
     ) -> ClinicalDocument:
         """Generate a document with one OOM recovery retry.
 
@@ -263,7 +267,7 @@ class PipelineOrchestrator:
 
         max_tokens = int(self._doc_generator.settings.DOC_GEN_MAX_TOKENS)
         try:
-            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=max_tokens)
+            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=max_tokens, doc_type=doc_type, letter_prefs=letter_prefs)
         except TypeError as exc:
             if "max_new_tokens" not in str(exc):
                 raise
@@ -271,7 +275,7 @@ class PipelineOrchestrator:
                 "Document generator does not accept max_new_tokens override; falling back to default signature",
                 consultation_id=consultation_id,
             )
-            return self._doc_generator.generate_document(transcript_text, context)
+            return self._doc_generator.generate_document(transcript_text, context, doc_type=doc_type, letter_prefs=letter_prefs)
         except torch.cuda.OutOfMemoryError as exc:
             self._clear_cuda_cache()
             reduced_tokens = max(256, max_tokens // 2)
@@ -281,7 +285,7 @@ class PipelineOrchestrator:
                 previous_max_new_tokens=max_tokens,
                 retry_max_new_tokens=reduced_tokens,
             )
-            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=reduced_tokens)
+            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=reduced_tokens, doc_type=doc_type, letter_prefs=letter_prefs)
 
     def _build_transcript_only_context(self, consultation: Consultation, warning: str) -> PatientContext:
         """Build minimal patient context when EHR retrieval fails.

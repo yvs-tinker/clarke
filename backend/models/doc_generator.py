@@ -362,8 +362,8 @@ class DocumentGenerator:
         )
         # Collapse excessive blank lines left behind by removals
         text = re.sub(r"\n{3,}", "\n\n", text)
-        # Ensure blank line before sign-off
-        text = re.sub(r'(\S)\n(Warm regards|Kind regards|Yours sincerely|Yours faithfully)', r'\1\n\n\2', text)
+        # Ensure blank line before sign-off (handle optional trailing whitespace)
+        text = re.sub(r'(\S)[^\S\n]*\n[^\S\n]*(Warm regards|Kind regards|Yours sincerely|Yours faithfully)', r'\1\n\n\2', text)
         return text.strip()
 
     @staticmethod
