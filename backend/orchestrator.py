@@ -181,6 +181,8 @@ class PipelineOrchestrator:
         consultation.transcript = transcript.model_copy(update={"consultation_id": consultation_id})
         transcribe_s = round(time.perf_counter() - stage_start, 3)
         logger.info("Pipeline stage complete", consultation_id=consultation_id, stage="transcribe", duration_s=transcribe_s)
+        if torch is not None and torch.cuda.is_available():
+            torch.cuda.empty_cache()
         self._clear_cuda_cache()
 
         stage_start = time.perf_counter()
@@ -199,6 +201,8 @@ class PipelineOrchestrator:
                 consultation.context = self._build_transcript_only_context(consultation, warning)
         context_s = round(time.perf_counter() - stage_start, 3)
         logger.info("Pipeline stage complete", consultation_id=consultation_id, stage="retrieve_context", duration_s=context_s)
+        if torch is not None and torch.cuda.is_available():
+            torch.cuda.empty_cache()
         self._clear_cuda_cache()
 
         stage_start = time.perf_counter()
