@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import soundfile as sf
-import torchaudio
 try:
     from transformers import pipeline
 except ModuleNotFoundError:  # pragma: no cover - mock mode support
@@ -115,11 +114,11 @@ class MedASRModel:
             waveform = waveform.mean(axis=1)
         # Resample if needed
         if file_sr != 16000:
-            import torch
+            import numpy as np
+            from scipy.signal import resample
 
-            waveform_t = torch.from_numpy(waveform).unsqueeze(0)
-            waveform_t = torchaudio.functional.resample(waveform_t, file_sr, 16000)
-            waveform = waveform_t.squeeze(0).numpy()
+            num_samples = int(len(waveform) * 16000 / file_sr)
+            waveform = resample(waveform, num_samples).astype(np.float32)
         duration_s = float(len(waveform)) / 16000.0
 
         try:
