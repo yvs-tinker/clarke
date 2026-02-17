@@ -120,6 +120,10 @@ class EHRAgent:
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
             )
+            # Ensure embedding table covers full tokenizer vocabulary
+            if len(self._tokenizer) > self._model.get_input_embeddings().weight.shape[0]:
+                self._model.resize_token_embeddings(len(self._tokenizer))
+                logger.info("Resized 4B embeddings to match tokenizer", vocab_size=len(self._tokenizer))
             logger.info("Loaded EHR agent model", model_id=self.model_id)
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedGemma EHR model: {exc}") from exc
@@ -199,9 +203,7 @@ class EHRAgent:
             output_tokens = self._model.generate(
                 **inputs,
                 max_new_tokens=1024,
-                do_sample=True,
-                temperature=0.2,
-                top_p=0.9,
+                do_sample=False,
                 repetition_penalty=1.1,
             )
         except Exception as exc:
