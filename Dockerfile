@@ -16,4 +16,6 @@ COPY . .
 # Load FHIR data and start application
 RUN chmod +x scripts/start.sh
 EXPOSE 7860
+ENV NUMBA_CACHE_DIR=/tmp/numba_cache
+ENV NUMBA_DISABLE_JIT=1
 CMD ["scripts/start.sh"]
