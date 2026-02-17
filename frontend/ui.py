@@ -941,7 +941,7 @@ def _sign_off_document(state, section_1, section_2, section_3, section_4):
         updated_state["consultation"] = {"id": None, "status": "idle"}
     updated_state["consultation"]["status"] = "signed_off"
     updated_state["screen"] = "s6"
-    export_path = Path("data") / "demo" / "latest_signed_letter.txt"
+    export_path = Path("/tmp") / "latest_signed_letter.txt"
     export_path.write_text(signed_letter + "\n", encoding="utf-8")
     signed_html = f"<div style='min-height:100vh;background:#F8F6F1;padding:24px 48px 48px 48px;margin:0;'><div style='font-family:Inter,sans-serif;font-size:16px;line-height:1.75;color:#1A1A2E;white-space:pre-wrap;' id='signed-letter-text'>{escape(signed_letter)}</div></div>"
     return updated_state, "Document signed off. You can now copy or download the letter.", signed_html, signed_letter, gr.update(value=str(export_path)), *show_screen("s6")
@@ -980,7 +980,7 @@ def _prepare_signed_download(state):
     if not signed_text:
         return updated_state, "No signed letter available to download yet.", gr.update(value=None)
 
-    export_path = Path("data") / "demo" / "latest_signed_letter.txt"
+    export_path = Path("/tmp") / "latest_signed_letter.txt"
     export_path.write_text(signed_text + "\n", encoding="utf-8")
     return updated_state, "Download file refreshed.", gr.update(value=str(export_path))
 
