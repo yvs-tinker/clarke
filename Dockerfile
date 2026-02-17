@@ -18,4 +18,5 @@ RUN chmod +x scripts/start.sh
 EXPOSE 7860
 ENV NUMBA_CACHE_DIR=/tmp/numba_cache
 ENV NUMBA_DISABLE_JIT=1
+ENV HF_HOME=/tmp/hf_cache
 CMD ["scripts/start.sh"]
