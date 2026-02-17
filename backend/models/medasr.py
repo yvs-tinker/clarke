@@ -145,6 +145,7 @@ class MedASRModel:
                 model_input = inputs[key].to(self._device)
 
             with torch.no_grad():
+                model_input = model_input.float()
                 logits = self._pipeline(**{list(inputs.data.keys())[0]: model_input}).logits
 
             predicted_ids = torch.argmax(logits, dim=-1)
