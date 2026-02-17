@@ -335,7 +335,7 @@ def upload_audio(
 
 
 @app.post("/api/v1/consultations/{consultation_id}/end", status_code=202)
-def end_consultation(consultation_id: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+def end_consultation(consultation_id: str, body: dict[str, Any] | None = Body(None)) -> dict[str, Any]:
     """End a consultation and execute full processing pipeline.
 
     Args:
