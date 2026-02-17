@@ -204,9 +204,9 @@ class DocumentGenerator:
         template = env.get_template(template_name)
 
         # Extract patient details from context
-        patient_name = context.patient_name or "Unknown"
-        patient_dob = context.date_of_birth or "Unknown"
-        patient_nhs = context.nhs_number or "Unknown"
+        patient_name = context.demographics.get("name", "Unknown")
+        patient_dob = context.demographics.get("date_of_birth", "Unknown")
+        patient_nhs = context.demographics.get("nhs_number", "Unknown")
 
         context_json = json.dumps(context.model_dump(mode="json"), ensure_ascii=False, indent=2)
         return template.render(
