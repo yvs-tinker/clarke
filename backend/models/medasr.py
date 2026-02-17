@@ -142,7 +142,10 @@ class MedASRModel:
             predicted_ids = torch.argmax(logits, dim=-1)
             transcript_text = self._processor.batch_decode(predicted_ids)[0].strip()
         except Exception as exc:
-            raise ModelExecutionError(f"MedASR inference failed: {exc}") from exc
+            import traceback
+
+            tb = traceback.format_exc()
+            raise ModelExecutionError(f"MedASR inference failed: {exc}\nTraceback:\n{tb}") from exc
         return self._make_transcript(source, transcript_text, duration_s)
 
     def _make_transcript(self, audio_path: Path, text: str, duration_s: float) -> Transcript:
