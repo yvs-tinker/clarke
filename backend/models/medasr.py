@@ -5,7 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-import librosa
+import soundfile as sf
+import torchaudio
 try:
     from transformers import pipeline
 except ModuleNotFoundError:  # pragma: no cover - mock mode support
@@ -108,8 +109,18 @@ class MedASRModel:
             duration_s = self._duration(source)
             return self._make_transcript(source, text, duration_s)
 
-        waveform, _ = librosa.load(source, sr=16000, mono=True)
-        duration_s = float(librosa.get_duration(y=waveform, sr=16000))
+        waveform, file_sr = sf.read(source, dtype="float32", always_2d=False)
+        # Convert to mono if stereo
+        if waveform.ndim > 1:
+            waveform = waveform.mean(axis=1)
+        # Resample if needed
+        if file_sr != 16000:
+            import torch
+
+            waveform_t = torch.from_numpy(waveform).unsqueeze(0)
+            waveform_t = torchaudio.functional.resample(waveform_t, file_sr, 16000)
+            waveform = waveform_t.squeeze(0).numpy()
+        duration_s = float(len(waveform)) / 16000.0
 
         try:
             result = self._pipeline(
@@ -148,7 +159,7 @@ class MedASRModel:
 
     @staticmethod
     def _duration(audio_path: Path) -> float:
-        """Compute audio duration in seconds using librosa.
+        """Compute audio duration in seconds using soundfile.
 
         Args:
             audio_path (Path): Audio file path.
@@ -156,8 +167,8 @@ class MedASRModel:
         Returns:
             float: Duration in seconds.
         """
-        waveform, sample_rate = librosa.load(audio_path, sr=16000, mono=True)
-        return float(librosa.get_duration(y=waveform, sr=sample_rate))
+        info = sf.info(audio_path)
+        return float(info.frames) / float(info.samplerate)
 
     @staticmethod
     def _get_mock_text(audio_path: Path) -> str:
