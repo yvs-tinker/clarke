@@ -112,6 +112,18 @@ class EHRAgent:
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
             )
+            # Fix 20: Resize embedding table to match tokenizer vocab.
+            # MedGemma 1.5 4B is multimodal — tokenizer includes vision tokens
+            # that exceed the text model's embedding table size.  Without this
+            # resize, generate() produces token IDs that trigger a CUDA
+            # srcIndex < srcSelectDimSize assertion.
+            if len(self._tokenizer) != self._model.get_input_embeddings().weight.shape[0]:
+                logger.warning(
+                    "Tokenizer/embedding size mismatch — resizing",
+                    tokenizer_size=len(self._tokenizer),
+                    embedding_size=self._model.get_input_embeddings().weight.shape[0],
+                )
+                self._model.resize_token_embeddings(len(self._tokenizer))
             logger.info("Loaded EHR agent model", model_id=self.model_id)
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedGemma EHR model: {exc}") from exc
@@ -194,6 +206,19 @@ class EHRAgent:
                 do_sample=False,
                 repetition_penalty=1.1,
             )
+        except RuntimeError as exc:
+            # Fix 20B: If a CUDA error occurs, reset GPU state immediately
+            # to prevent corruption from propagating to the 27B model.
+            if "CUDA" in str(exc) or "device-side assert" in str(exc):
+                logger.error("CUDA error in 4B generation — resetting GPU state", error=str(exc))
+                import torch as _torch
+
+                _torch.cuda.empty_cache()
+                try:
+                    _torch.cuda.reset_peak_memory_stats()
+                except Exception:
+                    pass
+            raise ModelExecutionError(f"MedGemma EHR generation failed: {exc}") from exc
         except Exception as exc:
             raise ModelExecutionError(f"MedGemma EHR generation failed: {exc}") from exc
 
