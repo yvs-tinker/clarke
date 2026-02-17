@@ -146,7 +146,8 @@ class DocumentGenerator:
             raise ModelExecutionError(f"MedGemma 27B inference failed: {exc}") from exc
 
         decoded_output = self._tokenizer.decode(output_tokens[0], skip_special_tokens=True)
-        return self._strip_prompt_prefix(decoded_output, prompt)
+        stripped = self._strip_prompt_prefix(decoded_output, prompt)
+        return self._clean_model_output(stripped)
 
     def generate_document(
         self,
@@ -323,6 +324,31 @@ class DocumentGenerator:
         if decoded_output.startswith(prompt):
             return decoded_output[len(prompt) :].strip()
         return decoded_output.strip()
+
+    @staticmethod
+    def _clean_model_output(text: str) -> str:
+        """Remove model sequence tokens and replace clinical flags with human-readable notes.
+
+        Args:
+            text (str): Raw model output after prompt prefix stripping.
+
+        Returns:
+            str: Cleaned text safe for clinical document display.
+        """
+
+        # End-of-sequence tokens leak from decoder when skip_special_tokens misses them
+        text = text.replace("<|end|>", "").replace("<|endoftext|>", "")
+        text = text.replace("<|END|>", "").replace("<|ENDOFTEXT|>", "")
+        # Replace raw discrepancy tags with human-readable clinical note
+        text = re.sub(
+            r"\[DISCREPANCY\]",
+            "(Note: value differs from EHR, must verify)",
+            text,
+            flags=re.IGNORECASE,
+        )
+        # Collapse excessive blank lines left behind by removals
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
 
     @staticmethod
     def _mock_reference_letter() -> str:
