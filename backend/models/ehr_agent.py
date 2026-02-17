@@ -14,12 +14,11 @@ from pydantic import ValidationError
 
 try:
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from transformers import AutoModelForCausalLM, AutoTokenizer
 except ModuleNotFoundError:  # pragma: no cover - mock mode support
     torch = None
     AutoModelForCausalLM = None
     AutoTokenizer = None
-    BitsAndBytesConfig = None
 
 from backend.config import get_settings
 from backend.errors import ModelExecutionError, get_component_logger
@@ -88,10 +87,10 @@ class EHRAgent:
         self.is_mock_mode = self.model_id.lower() == "mock"
 
     def load_model(self) -> None:
-        """Load the MedGemma 4B model/tokenizer in 4-bit mode unless running in mock mode.
+        """Load the MedGemma 4B model/tokenizer unless running in mock mode.
 
         Args:
-            None: Uses configured model ID and quantisation settings.
+            None: Uses configured model ID and dtype settings.
 
         Returns:
             None: Populates tokenizer/model attributes for inference.
@@ -103,27 +102,16 @@ class EHRAgent:
         if self._model is not None and self._tokenizer is not None:
             return
 
-        if AutoModelForCausalLM is None or AutoTokenizer is None or BitsAndBytesConfig is None or torch is None:
+        if AutoModelForCausalLM is None or AutoTokenizer is None or torch is None:
             raise ModelExecutionError("transformers and torch are required for non-mock EHR mode")
 
         try:
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16,
-                bnb_4bit_use_double_quant=True,
-            )
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_id)
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
-                quantization_config=bnb_config,
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
             )
-            # Ensure embedding table covers full tokenizer vocabulary
-            if len(self._tokenizer) > self._model.get_input_embeddings().weight.shape[0]:
-                self._model.resize_token_embeddings(len(self._tokenizer))
-                logger.info("Resized 4B embeddings to match tokenizer", vocab_size=len(self._tokenizer))
             logger.info("Loaded EHR agent model", model_id=self.model_id)
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedGemma EHR model: {exc}") from exc
@@ -198,11 +186,6 @@ class EHRAgent:
         inputs = self._tokenizer(prompt, return_tensors="pt")
         if hasattr(self._model, "device"):
             inputs = {key: value.to(self._model.device) for key, value in inputs.items()}
-
-        # Clamp token IDs to embedding table size to prevent CUDA index errors
-        embed_size = self._model.get_input_embeddings().weight.shape[0]
-        if "input_ids" in inputs:
-            inputs["input_ids"] = inputs["input_ids"].clamp(max=embed_size - 1)
 
         try:
             output_tokens = self._model.generate(
