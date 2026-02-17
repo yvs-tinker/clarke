@@ -357,6 +357,12 @@ def end_consultation(consultation_id: str, body: dict[str, Any] | None = Body(No
         if Path(audio_path).exists():
             consultation.audio_file_path = audio_path
 
+    # Accept document type and letter preferences from frontend
+    if body and body.get("doc_type"):
+        consultation.doc_type = body["doc_type"]
+    if body and body.get("letter_prefs"):
+        consultation.letter_prefs = body["letter_prefs"]
+
     # Launch pipeline in background thread – avoids HF Spaces 60s gateway timeout
     def _run_pipeline_background() -> None:
         """Execute the orchestrator pipeline in a daemon thread.

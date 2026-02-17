@@ -128,6 +128,8 @@ class Consultation(BaseModel):
     started_at: Optional[str] = None
     ended_at: Optional[str] = None
     audio_file_path: Optional[str] = None
+    doc_type: str = Field(default="Clinic Letter", description="Document type: 'Clinic Letter' or 'Ward Round Note'")
+    letter_prefs: dict = Field(default_factory=dict, description="Letter preferences from frontend (clinician name, GP, etc.)")
 
 
 class PipelineProgress(BaseModel):
