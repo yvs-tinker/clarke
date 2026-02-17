@@ -6,10 +6,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import soundfile as sf
+import numpy as np
 try:
-    from transformers import pipeline
+    import torch
+    from transformers import AutoProcessor, AutoModelForCTC
 except ModuleNotFoundError:  # pragma: no cover - mock mode support
-    pipeline = None
+    torch = None
+    AutoProcessor = None
+    AutoModelForCTC = None
 
 from backend.config import get_settings
 from backend.errors import ModelExecutionError
@@ -39,6 +43,8 @@ class MedASRModel:
         self.settings = get_settings()
         self.model_manager = model_manager or ModelManager()
         self._pipeline = None
+        self._processor = None
+        self._device = "cpu"
 
     @property
     def is_mock_mode(self) -> bool:
@@ -53,13 +59,13 @@ class MedASRModel:
         return self.settings.MEDASR_MODEL_ID.lower() == "mock"
 
     def load_model(self) -> None:
-        """Load the MedASR transformer pipeline unless running in mock mode.
+        """Load the MedASR model and processor unless running in mock mode.
 
         Args:
             None: Uses settings for model id and device selection.
 
         Returns:
-            None: Caches loaded pipeline instance.
+            None: Caches loaded model and processor instances.
         """
         if self.is_mock_mode:
             self._pipeline = "mock"
@@ -69,7 +75,7 @@ class MedASRModel:
         if self._pipeline is not None:
             return
 
-        if pipeline is None:
+        if AutoModelForCTC is None:
             raise ModelExecutionError("transformers is required for non-mock MedASR mode")
 
         device = "cuda:0"
@@ -77,11 +83,12 @@ class MedASRModel:
             device = "cpu"
 
         try:
-            self._pipeline = pipeline(
-                "automatic-speech-recognition",
-                model=self.settings.MEDASR_MODEL_ID,
-                device=device,
-            )
+            self._processor = AutoProcessor.from_pretrained(self.settings.MEDASR_MODEL_ID)
+            model = AutoModelForCTC.from_pretrained(self.settings.MEDASR_MODEL_ID)
+            model = model.to(device)
+            model.eval()
+            self._device = device
+            self._pipeline = model  # store model here so is_mock_mode / None checks still work
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedASR model: {exc}") from exc
 
@@ -114,7 +121,6 @@ class MedASRModel:
             waveform = waveform.mean(axis=1)
         # Resample if needed
         if file_sr != 16000:
-            import numpy as np
             from scipy.signal import resample
 
             num_samples = int(len(waveform) * 16000 / file_sr)
@@ -122,21 +128,21 @@ class MedASRModel:
         duration_s = float(len(waveform)) / 16000.0
 
         try:
-            result = self._pipeline(
+            inputs = self._processor(
                 waveform,
-                chunk_length_s=20,
-                stride_length_s=(4, 2),
-                return_timestamps="char",
+                sampling_rate=16000,
+                return_tensors="pt",
+                padding=True,
             )
+            input_values = inputs.input_values.to(self._device)
+
+            with torch.no_grad():
+                logits = self._pipeline(input_values).logits
+
+            predicted_ids = torch.argmax(logits, dim=-1)
+            transcript_text = self._processor.batch_decode(predicted_ids)[0].strip()
         except Exception as exc:
             raise ModelExecutionError(f"MedASR inference failed: {exc}") from exc
-
-        if isinstance(result, str):
-            transcript_text = result.strip()
-        elif isinstance(result, dict):
-            transcript_text = str(result.get("text", "")).strip()
-        else:
-            transcript_text = str(result).strip()
         return self._make_transcript(source, transcript_text, duration_s)
 
     def _make_transcript(self, audio_path: Path, text: str, duration_s: float) -> Transcript:
