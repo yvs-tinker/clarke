@@ -132,7 +132,12 @@ class MedASRModel:
         except Exception as exc:
             raise ModelExecutionError(f"MedASR inference failed: {exc}") from exc
 
-        transcript_text = str(result.get("text", "")).strip()
+        if isinstance(result, str):
+            transcript_text = result.strip()
+        elif isinstance(result, dict):
+            transcript_text = str(result.get("text", "")).strip()
+        else:
+            transcript_text = str(result).strip()
         return self._make_transcript(source, transcript_text, duration_s)
 
     def _make_transcript(self, audio_path: Path, text: str, duration_s: float) -> Transcript:
