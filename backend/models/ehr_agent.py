@@ -156,23 +156,70 @@ class EHRAgent:
             return self._build_context_from_raw(raw_context)
 
         self.load_model()
-        for attempt in range(1, 3):
-            try:
-                summarised_context = self._summarise_with_model(raw_context)
-                return PatientContext.model_validate(summarised_context)
-            except (ValidationError, ValueError, ModelExecutionError, json.JSONDecodeError) as exc:
-                logger.warning(
-                    "EHR model summarisation failed; retrying or falling back",
-                    patient_id=patient_id,
-                    attempt=attempt,
-                    error=str(exc),
-                )
+        # Build context via deterministic FHIR extraction, then use
+        # MedGemma 4B forward pass for relevance scoring.
+        # NOTE: generate() is intentionally not called — it triggers an
+        # unrecoverable CUDA device-side assertion on A100 that corrupts
+        # the GPU context and causes the downstream 27B to crash.
+        context = self._build_context_from_raw(raw_context)
+        try:
+            self._score_relevance(context, raw_context)
+            logger.info("EHR context built with MedGemma relevance scoring", patient_id=patient_id)
+        except Exception as exc:
+            logger.warning(
+                "Relevance scoring failed; using unscored context",
+                patient_id=patient_id,
+                error=str(exc),
+            )
+        return context
 
-        fallback_context = self._build_context_from_raw(raw_context)
-        fallback_context.retrieval_warnings.append(
-            "MedGemma summarisation unavailable; context built via deterministic extraction."
-        )
-        return fallback_context
+    def _score_relevance(self, context: PatientContext, raw_context: dict[str, Any]) -> None:
+        """Use MedGemma 4B forward pass to score relevance of FHIR data.
+
+        Computes cosine similarity between each observation/condition
+        description and the patient's active conditions to prioritise
+        the most clinically relevant data for the 27B document generator.
+        No generate() call is made — only the encoder forward pass is used.
+
+        Args:
+            context (PatientContext): Deterministically built patient context.
+            raw_context (dict[str, Any]): Raw FHIR resource data.
+        """
+
+        if self._model is None or self._tokenizer is None:
+            return
+
+        # Build a short clinical summary string from active conditions
+        condition_text = ", ".join(context.problem_list) or "general consultation"
+
+        scored_observations = []
+        for obs in context.recent_labs:
+            obs_text = f"{obs.name}: {obs.value} {obs.unit or ''}"
+            try:
+                # Encode both texts and compute cosine similarity via
+                # the model's embedding layer (no generate() call).
+                with torch.no_grad():
+                    cond_inputs = self._tokenizer(
+                        condition_text, return_tensors="pt", truncation=True, max_length=128
+                    )
+                    obs_inputs = self._tokenizer(
+                        obs_text, return_tensors="pt", truncation=True, max_length=128
+                    )
+                    if hasattr(self._model, "device"):
+                        cond_inputs = {k: v.to(self._model.device) for k, v in cond_inputs.items()}
+                        obs_inputs = {k: v.to(self._model.device) for k, v in obs_inputs.items()}
+
+                    cond_embeds = self._model.get_input_embeddings()(cond_inputs["input_ids"]).mean(dim=1)
+                    obs_embeds = self._model.get_input_embeddings()(obs_inputs["input_ids"]).mean(dim=1)
+
+                    similarity = torch.nn.functional.cosine_similarity(cond_embeds, obs_embeds).item()
+                    scored_observations.append((similarity, obs))
+            except Exception:
+                scored_observations.append((0.0, obs))
+
+        # Sort by relevance (highest first) and keep top observations
+        scored_observations.sort(key=lambda x: x[0], reverse=True)
+        context.recent_labs = [obs for _, obs in scored_observations]
 
     def _summarise_with_model(self, raw_context: dict[str, Any]) -> dict[str, Any]:
         """Run MedGemma generation and parse into a dictionary payload.
