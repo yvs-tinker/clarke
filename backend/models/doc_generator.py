@@ -151,6 +151,8 @@ class DocumentGenerator:
         transcript: str,
         context: PatientContext,
         max_new_tokens: int | None = None,
+        doc_type: str = "Clinic Letter",
+        letter_prefs: dict | None = None,
     ) -> ClinicalDocument:
         """Render prompt, generate text with retry policy, and build ClinicalDocument.
 
@@ -163,7 +165,7 @@ class DocumentGenerator:
             ClinicalDocument: Parsed clinical letter representation with section objects.
         """
 
-        prompt = self._render_prompt(transcript, context)
+        prompt = self._render_prompt(transcript, context, doc_type=doc_type, letter_prefs=letter_prefs)
         generation_start = time.perf_counter()
 
         last_error: Exception | None = None
@@ -183,24 +185,39 @@ class DocumentGenerator:
 
         raise ModelExecutionError(f"Document generation failed after retry: {last_error}")
 
-    def _render_prompt(self, transcript: str, context: PatientContext) -> str:
+    def _render_prompt(self, transcript: str, context: PatientContext, doc_type: str = "Clinic Letter", letter_prefs: dict | None = None) -> str:
         """Render the document generation Jinja2 template with consultation inputs.
 
         Args:
             transcript (str): Consultation transcript text.
             context (PatientContext): Structured patient context data.
+            doc_type (str): Document type - "Clinic Letter" or "Ward Round Note".
+            letter_prefs (dict | None): Optional letter preferences from frontend.
 
         Returns:
             str: Rendered prompt string supplied to the language model.
         """
 
+        prefs = letter_prefs or {}
         env = Environment(loader=FileSystemLoader(PROMPTS_DIR))
-        template = env.get_template("document_generation.j2")
+        template_name = "ward_round_generation.j2" if doc_type == "Ward Round Note" else "document_generation.j2"
+        template = env.get_template(template_name)
+
+        # Extract patient details from context
+        patient_name = context.patient_name or "Unknown"
+        patient_dob = context.date_of_birth or "Unknown"
+        patient_nhs = context.nhs_number or "Unknown"
+
         context_json = json.dumps(context.model_dump(mode="json"), ensure_ascii=False, indent=2)
         return template.render(
             letter_date=datetime.now(tz=timezone.utc).strftime("%d %b %Y"),
-            clinician_name="Dr. Sarah Chen",
-            clinician_title="Consultant Diabetologist",
+            clinician_name=prefs.get("clinician_name", "Dr. Sarah Chen"),
+            clinician_title=prefs.get("clinician_title", "Consultant Diabetologist"),
+            gp_name=prefs.get("gp_name", "Dr Andrew Wilson"),
+            gp_address=prefs.get("gp_address", "Riverside Medical Practice"),
+            patient_name=patient_name,
+            patient_dob=patient_dob,
+            patient_nhs=patient_nhs,
             transcript=transcript,
             context_json=context_json,
         )
@@ -345,6 +362,8 @@ class DocumentGenerator:
         )
         # Collapse excessive blank lines left behind by removals
         text = re.sub(r"\n{3,}", "\n\n", text)
+        # Ensure blank line before sign-off
+        text = re.sub(r'(\S)\n(Warm regards|Kind regards|Yours sincerely|Yours faithfully)', r'\1\n\n\2', text)
         return text.strip()
 
     @staticmethod
