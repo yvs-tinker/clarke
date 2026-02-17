@@ -136,10 +136,7 @@ class DocumentGenerator:
             output_tokens = self._model.generate(
                 **inputs,
                 max_new_tokens=generation_max_tokens,
-                temperature=0.3,
-                top_p=0.9,
-                top_k=40,
-                do_sample=True,
+                do_sample=False,
                 repetition_penalty=1.1,
             )
         except Exception as exc:
