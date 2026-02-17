@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from shutil import copyfileobj
@@ -356,27 +357,27 @@ def end_consultation(consultation_id: str, body: dict[str, Any] | None = Body(No
         if Path(audio_path).exists():
             consultation.audio_file_path = audio_path
 
-    try:
-        consultation = orchestrator.end_consultation(consultation_id)
-        progress = orchestrator.get_progress(consultation_id)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except TimeoutError as exc:
-        raise HTTPException(status_code=504, detail={"error": "timeout", "message": str(exc)}) from exc
-    except AudioError as exc:
-        logger.error(f"end_consultation audio error: {exc}", consultation_id=consultation_id)
-        raise HTTPException(status_code=400, detail={"error": "audio_error", "message": str(exc)}) from exc
-    except ModelExecutionError as exc:
-        logger.error(f"end_consultation model error: {exc}", consultation_id=consultation_id)
-        error_type = "audio_error" if "transcribed" in str(exc).lower() else "model_error"
-        status_code = 400 if error_type == "audio_error" else 500
-        raise HTTPException(status_code=status_code, detail={"error": error_type, "message": str(exc)}) from exc
+    # Launch pipeline in background thread – avoids HF Spaces 60s gateway timeout
+    def _run_pipeline_background() -> None:
+        """Execute the orchestrator pipeline in a daemon thread.
+
+        Allows the /end endpoint to return 202 immediately while processing
+        continues. Frontend polls /progress for status updates.
+        """
+
+        try:
+            orchestrator.end_consultation(consultation_id)
+        except Exception as exc:
+            logger.error(f"Background pipeline error: {exc}", consultation_id=consultation_id)
+
+    thread = threading.Thread(target=_run_pipeline_background, daemon=True)
+    thread.start()
 
     return {
         "consultation_id": consultation.id,
-        "status": consultation.status.value,
-        "pipeline_stage": progress.stage.value,
-        "message": "Pipeline completed. Document is ready for review.",
+        "status": "processing",
+        "pipeline_stage": "transcribing",
+        "message": "Pipeline started in background. Poll /progress for updates.",
     }
 
 
