@@ -731,8 +731,8 @@ def _stage_from_pipeline(stage: str) -> tuple[int, str, str]:
     mapping = {
         "transcribing": (1, "Finalising transcript…", "MedASR processing audio"),
         "retrieving_context": (2, "Synthesising patient context…", "MedGemma 4B querying records"),
-        "generating_document": (3, "Generating clinical letter…", "MedGemma 27B composing document"),
-        "complete": (3, "Generating clinical letter…", "MedGemma 27B composing document"),
+        "generating_document": (3, "Generating document…", "MedGemma 27B composing document"),
+        "complete": (3, "Generating document…", "MedGemma 27B composing document"),
     }
     return mapping.get(stage, mapping["transcribing"])
 
@@ -839,7 +839,7 @@ def _poll_processing_progress(state):
         updated_state["screen"] = "s5"
         s1, s2, s3, s4 = _render_letter_sections(doc.get("sections", []))
         fhir = ""
-        return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, "Generating clinical letter…", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
+        return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, f"Generating {updated_state.get('doc_type', 'clinical letter').lower()}...", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
 
     try:
         progress = _api_request("GET", f"/consultations/{consultation_id}/progress")
@@ -861,7 +861,7 @@ def _poll_processing_progress(state):
             f"<span style='font-family:JetBrains Mono,monospace;font-size:14px;background:rgba(212,175,55,0.1);padding:2px 6px;border-radius:4px;color:#1E3A8A;'>Patient: {escape(str(document_payload.get('patient_name', 'N/A')))}</span>",
         ]
     )
-    return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, "Generating clinical letter…", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
+    return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, f"Generating {updated_state.get('doc_type', 'clinical letter').lower()}...", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
 
 
 def _regenerate_document(state):
