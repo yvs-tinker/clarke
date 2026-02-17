@@ -199,6 +199,11 @@ class EHRAgent:
         if hasattr(self._model, "device"):
             inputs = {key: value.to(self._model.device) for key, value in inputs.items()}
 
+        # Clamp token IDs to embedding table size to prevent CUDA index errors
+        embed_size = self._model.get_input_embeddings().weight.shape[0]
+        if "input_ids" in inputs:
+            inputs["input_ids"] = inputs["input_ids"].clamp(max=embed_size - 1)
+
         try:
             output_tokens = self._model.generate(
                 **inputs,
