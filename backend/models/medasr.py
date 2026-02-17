@@ -134,10 +134,18 @@ class MedASRModel:
                 return_tensors="pt",
                 padding=True,
             )
-            input_values = inputs.input_values.to(self._device)
+            # MedASR processor may return input_features or input_values
+            if hasattr(inputs, "input_features") and inputs.input_features is not None:
+                model_input = inputs.input_features.to(self._device)
+            elif hasattr(inputs, "input_values") and inputs.input_values is not None:
+                model_input = inputs.input_values.to(self._device)
+            else:
+                # Fallback: get first tensor from the batch encoding
+                key = list(inputs.data.keys())[0]
+                model_input = inputs[key].to(self._device)
 
             with torch.no_grad():
-                logits = self._pipeline(input_values).logits
+                logits = self._pipeline(**{list(inputs.data.keys())[0]: model_input}).logits
 
             predicted_ids = torch.argmax(logits, dim=-1)
             transcript_text = self._processor.batch_decode(predicted_ids)[0].strip()
