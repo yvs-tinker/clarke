@@ -126,8 +126,7 @@ class MedASRModel:
                 waveform,
                 chunk_length_s=20,
                 stride_length_s=(4, 2),
-                return_timestamps="word",
-                generate_kwargs={"language": "en", "task": "transcribe"},
+                return_timestamps=False,
             )
         except Exception as exc:
             raise ModelExecutionError(f"MedASR inference failed: {exc}") from exc
