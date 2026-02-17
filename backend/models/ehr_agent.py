@@ -134,7 +134,26 @@ class EHRAgent:
             PatientContext: Validated patient context instance for downstream pipeline use.
         """
 
-        raw_context = asyncio.run(get_full_patient_context(patient_id))
+        # FHIR retrieval may fail when no server is configured; build minimal
+        # context so MedGemma 4B summarisation can still execute downstream.
+        try:
+            raw_context = asyncio.run(get_full_patient_context(patient_id))
+        except Exception as exc:
+            logger.warning(
+                "FHIR retrieval failed; proceeding with empty context for model summarisation",
+                patient_id=patient_id,
+                error=str(exc),
+            )
+            raw_context = {
+                "patient_id": patient_id,
+                "patients": [],
+                "conditions": [],
+                "medications": [],
+                "observations": [],
+                "allergies": [],
+                "diagnostic_reports": [],
+                "encounters": [],
+            }
 
         if self.is_mock_mode:
             return self._build_context_from_raw(raw_context)
