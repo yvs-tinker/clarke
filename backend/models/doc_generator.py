@@ -20,6 +20,16 @@ except ModuleNotFoundError:  # pragma: no cover - mock mode support
     AutoTokenizer = None
     BitsAndBytesConfig = None
 
+if torch is not None and not hasattr(torch.nn.Module, "set_submodule"):
+    def _set_submodule(self, target, module):
+        atoms = target.split(".")
+        mod = self
+        for item in atoms[:-1]:
+            mod = getattr(mod, item)
+        setattr(mod, atoms[-1], module)
+
+    torch.nn.Module.set_submodule = _set_submodule
+
 from backend.config import get_settings
 from backend.errors import ModelExecutionError, get_component_logger
 from backend.schemas import ClinicalDocument, ConsultationStatus, DocumentSection, PatientContext
