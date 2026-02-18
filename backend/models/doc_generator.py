@@ -234,7 +234,7 @@ class DocumentGenerator:
         """
 
         section_pattern = re.compile(
-            r"^(?:\*\*|##\s*)?(History of presenting complaint|Examination findings|Investigation results|Assessment and plan|Current medications)[:\*\s]*$",
+            r"^(?:\*\*|##\s*)?(History of presenting complaint|Examination findings|Investigation results|Assessment and plan|Current medications|Overnight events|Current status and observations|Tasks / Actions|Tasks|Actions)[:\*\s]*$",
             flags=re.IGNORECASE,
         )
         sections: list[DocumentSection] = []
