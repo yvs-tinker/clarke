@@ -149,12 +149,24 @@ class MedASRModel:
                 logits = self._pipeline(**{list(inputs.data.keys())[0]: model_input}).logits
 
             predicted_ids = torch.argmax(logits, dim=-1)
-            raw_text = self._processor.batch_decode(predicted_ids)[0]
-            # CTC blank tokens may survive batch_decode as <epsilon> — strip them
-            transcript_text = raw_text.replace("<epsilon>", "").strip()
-            # Remove end-of-sequence tokens
-            transcript_text = transcript_text.replace("</s>", "").replace("<s>", "").strip()
-            # Collapse multiple spaces left by token removal
+
+            # CTC decoding: collapse consecutive duplicate tokens, then remove blanks
+            ids = predicted_ids[0].tolist()
+            collapsed = []
+            prev = None
+            for t in ids:
+                if t != prev:
+                    collapsed.append(t)
+                prev = t
+            # Token 0 is the CTC blank in most CTC models
+            blank_id = getattr(self._pipeline.config, 'ctc_blank_id', 0)
+            collapsed = [t for t in collapsed if t != blank_id]
+            collapsed_tensor = torch.tensor([collapsed], dtype=predicted_ids.dtype)
+
+            raw_text = self._processor.batch_decode(collapsed_tensor)[0]
+            # Strip any remaining special tokens
+            transcript_text = raw_text.replace("<epsilon>", "").replace("</s>", "").replace("<s>", "").strip()
+            # Collapse multiple spaces
             import re as _re
 
             transcript_text = _re.sub(r'\s+', ' ', transcript_text)
