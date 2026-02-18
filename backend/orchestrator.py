@@ -202,6 +202,8 @@ class PipelineOrchestrator:
                 logger.warning("FHIR degradation activated", consultation_id=consultation_id, warning=warning)
                 consultation.context = self._build_transcript_only_context(consultation, warning)
         context_s = round(time.perf_counter() - stage_start, 3)
+        if consultation.context:
+            logger.info("EHR context extracted:\n{}", consultation.context.model_dump_json(indent=2)[:3000])
         logger.info("Pipeline stage complete", consultation_id=consultation_id, stage="retrieve_context", duration_s=context_s)
         if torch is not None and torch.cuda.is_available():
             torch.cuda.empty_cache()
