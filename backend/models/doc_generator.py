@@ -205,7 +205,7 @@ class DocumentGenerator:
 
         # Extract patient details from context
         patient_name = context.demographics.get("name", "Unknown")
-        patient_dob = context.demographics.get("date_of_birth", "Unknown")
+        patient_dob = context.demographics.get("dob", "Unknown")
         patient_nhs = context.demographics.get("nhs_number", "Unknown")
 
         context_json = json.dumps(context.model_dump(mode="json"), ensure_ascii=False, indent=2)
@@ -411,6 +411,8 @@ class DocumentGenerator:
         text = re.sub(r"\n{3,}", "\n\n", text)
         # Ensure blank line before sign-off (handle optional trailing whitespace)
         text = re.sub(r'(\S)[^\S\n]*\n[^\S\n]*(Warm regards|Kind regards|Yours sincerely|Yours faithfully)', r'\1\n\n\2', text)
+        # Strip raw prompt labels from generated output
+        text = re.sub(r'^(Addressee|Salutation|Sign-off):\s*', '', text, flags=re.MULTILINE)
         return text.strip()
 
     @staticmethod
