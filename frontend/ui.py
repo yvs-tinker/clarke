@@ -759,7 +759,7 @@ def _ensure_mock_audio_file(audio_path: str | None, state: dict | None = None) -
             return str(demo_path)
 
     # Fallback: generate a short silent WAV for patients without demo audio
-    upload_dir = Path("data/uploads/mock")
+    upload_dir = Path("/tmp/mock_audio")
     upload_dir.mkdir(parents=True, exist_ok=True)
     silent_path = upload_dir / "silent.wav"
     with wave.open(str(silent_path), "wb") as wav_file:
