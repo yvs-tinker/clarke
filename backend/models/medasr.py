@@ -152,7 +152,9 @@ class MedASRModel:
             raw_text = self._processor.batch_decode(predicted_ids)[0]
             # CTC blank tokens may survive batch_decode as <epsilon> — strip them
             transcript_text = raw_text.replace("<epsilon>", "").strip()
-            # Collapse multiple spaces left by epsilon removal
+            # Remove end-of-sequence tokens
+            transcript_text = transcript_text.replace("</s>", "").replace("<s>", "").strip()
+            # Collapse multiple spaces left by token removal
             import re as _re
 
             transcript_text = _re.sub(r'\s+', ' ', transcript_text)
