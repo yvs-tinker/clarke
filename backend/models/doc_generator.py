@@ -242,6 +242,7 @@ class DocumentGenerator:
         sections: list[DocumentSection] = []
         current_heading: str | None = None
         current_lines: list[str] = []
+        header_lines: list[str] = []
 
         for raw_line in generated_text.splitlines():
             line = raw_line.strip()
@@ -260,8 +261,11 @@ class DocumentGenerator:
                 current_lines = []
                 continue
 
-            if current_heading and line:
-                current_lines.append(line)
+            if current_heading:
+                if line:
+                    current_lines.append(line)
+            elif line:
+                header_lines.append(line)
 
         if current_heading and current_lines:
             sections.append(
@@ -272,6 +276,47 @@ class DocumentGenerator:
                     fhir_sources=[],
                 )
             )
+
+        # Insert letter header (addressee, date, salutation) as first section if present
+        if header_lines:
+            header_text = "\n".join(header_lines).strip()
+            if header_text:
+                sections.insert(
+                    0,
+                    DocumentSection(
+                        heading="Letter Header",
+                        content=header_text,
+                        editable=True,
+                        fhir_sources=[],
+                    ),
+                )
+
+        # Strip sign-off block from last section content
+        if sections:
+            last = sections[-1]
+            signoff_pattern = re.compile(
+                r"\n\s*\n\s*(Warm regards|Kind regards|Yours sincerely|Yours faithfully|Sign-off:).*",
+                flags=re.IGNORECASE | re.DOTALL,
+            )
+            cleaned = signoff_pattern.sub("", last.content)
+            if cleaned != last.content:
+                signoff_text = last.content[len(cleaned):].strip()
+                sections[-1] = DocumentSection(
+                    heading=last.heading,
+                    content=cleaned.strip(),
+                    editable=last.editable,
+                    fhir_sources=last.fhir_sources,
+                )
+                # Add sign-off as its own section
+                if signoff_text:
+                    sections.append(
+                        DocumentSection(
+                            heading="Sign-off",
+                            content=signoff_text,
+                            editable=True,
+                            fhir_sources=[],
+                        )
+                    )
 
         if not sections:
             sections = [
