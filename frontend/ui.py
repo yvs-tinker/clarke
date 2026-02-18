@@ -750,6 +750,8 @@ def _ensure_mock_audio_file(audio_path: str | None, state: dict | None = None) -
         0: "data/demo/mrs_thompson.wav",
         1: "data/demo/mr_okafor.wav",
         2: "data/demo/ms_patel.wav",
+        3: "data/demo/mr_williams.wav",
+        4: "data/demo/mrs_khan.wav",
     }
 
     patient_index = (state or {}).get("current_patient_index")
