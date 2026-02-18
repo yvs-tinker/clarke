@@ -149,7 +149,13 @@ class MedASRModel:
                 logits = self._pipeline(**{list(inputs.data.keys())[0]: model_input}).logits
 
             predicted_ids = torch.argmax(logits, dim=-1)
-            transcript_text = self._processor.batch_decode(predicted_ids)[0].strip()
+            raw_text = self._processor.batch_decode(predicted_ids)[0]
+            # CTC blank tokens may survive batch_decode as <epsilon> — strip them
+            transcript_text = raw_text.replace("<epsilon>", "").strip()
+            # Collapse multiple spaces left by epsilon removal
+            import re as _re
+
+            transcript_text = _re.sub(r'\s+', ' ', transcript_text)
         except Exception as exc:
             import traceback
 
