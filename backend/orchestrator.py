@@ -180,6 +180,8 @@ class PipelineOrchestrator:
             raise ModelExecutionError("Audio could not be transcribed.")
         consultation.transcript = transcript.model_copy(update={"consultation_id": consultation_id})
         transcribe_s = round(time.perf_counter() - stage_start, 3)
+        if consultation.transcript and consultation.transcript.text:
+            logger.info("MedASR transcript:\n{}", consultation.transcript.text)
         logger.info("Pipeline stage complete", consultation_id=consultation_id, stage="transcribe", duration_s=transcribe_s)
         if torch is not None and torch.cuda.is_available():
             torch.cuda.empty_cache()
