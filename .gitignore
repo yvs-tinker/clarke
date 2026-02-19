@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Clarke runtime artifacts
+logs/
+models/
+*.pt
+*.bin
+*.safetensors
+*.ckpt
+*.wav
+!data/demo/*.wav

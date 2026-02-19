@@ -1,0 +1,19 @@
+{
+  "patient_id": "pt-001",
+  "gold_facts": [
+    "name: Mrs Margaret Thompson",
+    "dob: 1958-03-14",
+    "sex: Female",
+    "problem: Type 2 diabetes mellitus",
+    "problem: Chronic kidney disease stage 3a",
+    "medication: Metformin 1g twice daily",
+    "medication: Gliclazide 40mg once daily",
+    "allergy: Penicillin",
+    "allergy severity: Penicillin=high",
+    "lab: HbA1c=55 mmol/mol",
+    "lab: HbA1c=48 mmol/mol",
+    "lab: eGFR=52 mL/min/1.73m2",
+    "report summary: Diabetes blood panel reviewed",
+    "clinical flag: HbA1c rising trend (48 → 55)"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "patient_id": "pt-005",
+  "gold_facts": [
+    "name: Mrs Fatima Khan",
+    "dob: 1980-09-16",
+    "sex: Female",
+    "problem: Depressive disorder",
+    "problem: Insomnia",
+    "medication: Sertraline",
+    "medication: Colecalciferol",
+    "allergy: Latex",
+    "allergy severity: Latex=low",
+    "lab: PHQ-9 score=12 score",
+    "lab: GAD-7 score=9 score",
+    "lab: TSH=2.1 mIU/L",
+    "report type: Consultation note",
+    "report summary: Mood improved slightly since last review; persistent anhedonia."
+  ]
+}

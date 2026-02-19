@@ -1,0 +1,20 @@
+{
+  "patient_id": "pt-004",
+  "gold_facts": [
+    "name: Mr David Williams",
+    "dob: 1953-01-09",
+    "sex: Male",
+    "problem: Congestive heart failure",
+    "problem: Ischaemic heart disease",
+    "medication: Bisoprolol",
+    "medication: Ramipril",
+    "medication: Furosemide",
+    "allergy: ACE inhibitors",
+    "allergy severity: ACE inhibitors=low",
+    "lab: BNP=450 pg/mL",
+    "lab: Ejection fraction=35 %",
+    "lab: Creatinine=101 µmol/L",
+    "report type: Echocardiogram report",
+    "report summary: Moderately reduced LV systolic function; EF approximately 35%."
+  ]
+}
