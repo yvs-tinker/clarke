@@ -51,7 +51,7 @@ Clarke closes both gaps: ambient documentation fused with intelligent EHR retrie
 
 ### Clinician Validation
 
-A 47-respondent clinician survey confirmed the problem. Respondents reported spending substantial time on documentation, identified clinical letter writing as the most time-consuming task, and expressed strong interest in AI-assisted documentation tools with EHR integration.
+We conducted a 47-respondent clinician survey, and Yash spoke to every clinician he worked with during his placements to confirm the ubiquity and severity of the problem. Respondents reported spending substantial time on documentation, identified clinical letter writing as the most time-consuming task, and expressed strong interest in AI-assisted documentation tools with EHR integration.
 
 ---
 
@@ -233,7 +233,7 @@ clarke/
 
 ## Development
 
-Clarke was built by a solo 4th-year medical student over the competition period. Development used Claude (Anthropic) for architectural design, evaluation methodology, and technical problem-solving, and Codex (GitHub) for code implementation via pull requests.
+Clarke was built by a 4th-year medical student and a 1st-year eletronic and information engineering student over the competition period. Development used Claude (Anthropic) to aid with architectural design, evaluation methodology, and technical problem-solving, and Codex for code implementation via pull requests.
 
 Key technical decisions documented in the [evaluation report](evaluation/EVALUATION.md):
 - **Deterministic EHR retrieval over agentic tool-calling** after prototyping showed MedGemma 4B's agentic queries were unreliable.
