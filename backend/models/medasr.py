@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
 import librosa
 try:
-    from transformers import pipeline
-except ModuleNotFoundError:  # pragma: no cover - mock mode support
-    pipeline = None
+    import torch
+    from transformers import AutoProcessor, AutoModelForCTC
+except ModuleNotFoundError:
+    torch = None
+    AutoProcessor = None
+    AutoModelForCTC = None
 
 from backend.config import get_settings
 from backend.errors import ModelExecutionError
@@ -18,91 +22,62 @@ from backend.schemas import Transcript
 
 
 class MedASRModel:
-    """Load and run MedASR speech recognition or a deterministic mock implementation.
-
-    Args:
-        model_manager (ModelManager | None): Optional shared model registry manager.
-
-    Returns:
-        None: Initialised model wrapper with lazy-loaded pipeline.
-    """
+    """Load and run MedASR speech recognition or a deterministic mock implementation."""
 
     def __init__(self, model_manager: ModelManager | None = None) -> None:
-        """Initialise MedASR wrapper.
-
-        Args:
-            model_manager (ModelManager | None): Optional model manager instance.
-
-        Returns:
-            None: Sets internal settings and model state.
-        """
         self.settings = get_settings()
         self.model_manager = model_manager or ModelManager()
-        self._pipeline = None
+        self._model = None
+        self._processor = None
+        self._device = "cpu"
 
     @property
     def is_mock_mode(self) -> bool:
-        """Return whether MedASR should operate in deterministic mock mode.
-
-        Args:
-            None: Reads current settings.
-
-        Returns:
-            bool: True when configured model id is "mock".
-        """
         return self.settings.MEDASR_MODEL_ID.lower() == "mock"
 
     def load_model(self) -> None:
-        """Load the MedASR transformer pipeline unless running in mock mode.
-
-        Args:
-            None: Uses settings for model id and device selection.
-
-        Returns:
-            None: Caches loaded pipeline instance.
-        """
         if self.is_mock_mode:
-            self._pipeline = "mock"
-            self.model_manager.register_model("medasr", self._pipeline)
+            self._model = "mock"
+            self.model_manager.register_model("medasr", self._model)
             return
 
-        if self._pipeline is not None:
+        if self._model is not None:
             return
 
-        if pipeline is None:
+        if AutoModelForCTC is None:
             raise ModelExecutionError("transformers is required for non-mock MedASR mode")
 
         device = "cuda:0"
         if self.model_manager.check_gpu()["vram_total_bytes"] == 0:
             device = "cpu"
 
+        model_id = self.settings.MEDASR_MODEL_ID
+
         try:
-            self._pipeline = pipeline(
-                "automatic-speech-recognition",
-                model=self.settings.MEDASR_MODEL_ID,
-                revision="2625be4f1377ac544b451c6938eaf955c19a9c38",
-                device=device,
+            self._processor = AutoProcessor.from_pretrained(
+                model_id,
                 trust_remote_code=True,
+                revision="2625be4f1377ac544b451c6938eaf955c19a9c38",
             )
+            self._model = AutoModelForCTC.from_pretrained(
+                model_id,
+                trust_remote_code=True,
+                revision="2625be4f1377ac544b451c6938eaf955c19a9c38",
+            )
+            self._model = self._model.to(device)
+            self._model.eval()
+            self._device = device
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedASR model: {exc}") from exc
 
-        self.model_manager.register_model("medasr", self._pipeline)
+        self.model_manager.register_model("medasr", self._model)
 
     def transcribe(self, audio_path: str) -> Transcript:
-        """Transcribe audio input into a Transcript schema object.
-
-        Args:
-            audio_path (str): Path to 16kHz mono audio WAV.
-
-        Returns:
-            Transcript: Structured transcript result.
-        """
         source = Path(audio_path)
         if not source.exists():
             raise ModelExecutionError(f"Audio path not found: {source}")
 
-        if self._pipeline is None:
+        if self._model is None:
             self.load_model()
 
         if self.is_mock_mode:
@@ -114,30 +89,50 @@ class MedASRModel:
         duration_s = float(librosa.get_duration(y=waveform, sr=16000))
 
         try:
-            result = self._pipeline(
+            inputs = self._processor(
                 waveform,
-                chunk_length_s=20,
-                stride_length_s=(4, 2),
-                return_timestamps=True,
-                generate_kwargs={"language": "en", "task": "transcribe"},
+                sampling_rate=16000,
+                return_tensors="pt",
+                padding=True,
             )
+            inputs = inputs.to(self._device)
+
+            with torch.no_grad():
+                output = self._model(**inputs)
+                logits = output.logits
+
+            # Greedy CTC decoding
+            predicted_ids = torch.argmax(logits, dim=-1)[0].tolist()
+
+            # CTC collapse: remove consecutive duplicates
+            collapsed = []
+            prev = None
+            for token_id in predicted_ids:
+                if token_id != prev:
+                    collapsed.append(token_id)
+                prev = token_id
+
+            # Remove blank token
+            blank_id = getattr(self._model.config, 'ctc_blank_id', 0)
+            collapsed = [t for t in collapsed if t != blank_id]
+
+            if collapsed:
+                collapsed_tensor = torch.tensor([collapsed], dtype=torch.long)
+                transcript_text = self._processor.batch_decode(collapsed_tensor)[0]
+            else:
+                transcript_text = ""
+
+            # Clean up
+            transcript_text = transcript_text.replace("<epsilon>", "")
+            transcript_text = transcript_text.replace("</s>", "").replace("<s>", "")
+            transcript_text = re.sub(r'\s+', ' ', transcript_text).strip()
+
         except Exception as exc:
             raise ModelExecutionError(f"MedASR inference failed: {exc}") from exc
 
-        transcript_text = str(result.get("text", "")).strip()
         return self._make_transcript(source, transcript_text, duration_s)
 
     def _make_transcript(self, audio_path: Path, text: str, duration_s: float) -> Transcript:
-        """Build a Transcript object from model output values.
-
-        Args:
-            audio_path (Path): Source audio path.
-            text (str): Transcript text.
-            duration_s (float): Audio duration seconds.
-
-        Returns:
-            Transcript: Pydantic transcript model.
-        """
         now = datetime.now(tz=timezone.utc).isoformat()
         consultation_id = audio_path.stem
         return Transcript(
@@ -150,33 +145,20 @@ class MedASRModel:
 
     @staticmethod
     def _duration(audio_path: Path) -> float:
-        """Compute audio duration in seconds using librosa.
-
-        Args:
-            audio_path (Path): Audio file path.
-
-        Returns:
-            float: Duration in seconds.
-        """
         waveform, sample_rate = librosa.load(audio_path, sr=16000, mono=True)
         return float(librosa.get_duration(y=waveform, sr=sample_rate))
 
     @staticmethod
     def _get_mock_text(audio_path: Path) -> str:
-        """Return ground-truth transcript for known demo files in mock mode.
-
-        Args:
-            audio_path (Path): Audio file path used for lookup.
-
-        Returns:
-            str: Transcript text from fixture file or fallback placeholder.
-        """
         transcript_map = {
             "mrs_thompson": Path("data/demo/mrs_thompson_transcript.txt"),
             "mr_okafor": Path("data/demo/mr_okafor_transcript.txt"),
             "ms_patel": Path("data/demo/ms_patel_transcript.txt"),
+            "mr_williams": Path("data/demo/mr_williams_transcript.txt"),
+            "mrs_khan": Path("data/demo/mrs_khan_transcript.txt"),
         }
         for key, transcript_path in transcript_map.items():
             if key in audio_path.stem:
-                return transcript_path.read_text(encoding="utf-8").strip()
+                if transcript_path.exists():
+                    return transcript_path.read_text(encoding="utf-8").strip()
         return "Mock transcript placeholder for non-demo audio input."
