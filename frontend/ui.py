@@ -790,6 +790,21 @@ def _start_processing(state, audio_path):
         return updated_state, "Consultation session is missing. Start consultation again.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
     resolved_audio_path = _ensure_mock_audio_file(audio_path, state=updated_state)
+
+    # Resample microphone audio to 16kHz mono WAV if needed
+    if resolved_audio_path and audio_path and resolved_audio_path == audio_path:
+        try:
+            import subprocess
+            resampled_path = resolved_audio_path.rsplit(".", 1)[0] + "_16k.wav"
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", resolved_audio_path, "-ar", "16000", "-ac", "1", "-sample_fmt", "s16", resampled_path],
+                capture_output=True, timeout=30,
+            )
+            if os.path.exists(resampled_path) and os.path.getsize(resampled_path) > 44:
+                resolved_audio_path = resampled_path
+        except Exception:
+            pass  # Fall through with original audio
+
     if not resolved_audio_path:
         return updated_state, "Please capture audio before ending consultation.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
