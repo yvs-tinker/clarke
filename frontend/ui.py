@@ -696,6 +696,7 @@ def _handle_start_consultation(state):
 
     updated_state["consultation"] = {"id": payload.get("consultation_id"), "status": payload.get("status", "recording")}
     updated_state["recording_started_at"] = datetime.now(tz=timezone.utc).isoformat()
+    updated_state["captured_mic_audio"] = None
     updated_state["screen"] = "s3"
     return updated_state, "Consultation recording started.", _recording_screen_html("00:00"), gr.update(active=True), gr.update(value=None), *show_screen("s3")
 
@@ -772,6 +773,16 @@ def _ensure_mock_audio_file(audio_path: str | None, state: dict | None = None) -
     return str(silent_path)
 
 
+def _on_audio_recorded(audio_path, state):
+    """Capture audio path into state when user stops recording."""
+    updated_state = dict(state or initial_consultation_state())
+    if audio_path:
+        updated_state["captured_mic_audio"] = audio_path
+        ready_html = '<div style="background:#F8F6F1;padding:32px 48px;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="display:inline-block;width:24px;height:24px;background:#4CAF50;border-radius:50%;margin-bottom:16px;"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#4CAF50;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:24px;">Audio Captured</div><div style="font-family:Inter,sans-serif;font-size:16px;color:#1A1A2E;font-weight:500;">Recording saved. Click End Consultation to generate your document.</div></div>'
+        return updated_state, gr.update(value=ready_html)
+    return updated_state, gr.update()
+
+
 def _start_processing(state, audio_path):
     """Upload audio and end consultation, then transition to processing screen.
 
@@ -789,10 +800,12 @@ def _start_processing(state, audio_path):
     if not consultation_id:
         return updated_state, "Consultation session is missing. Start consultation again.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
-    resolved_audio_path = _ensure_mock_audio_file(audio_path, state=updated_state)
+    # Use mic audio from state if direct component value is None
+    effective_audio = audio_path or updated_state.get("captured_mic_audio")
+    resolved_audio_path = _ensure_mock_audio_file(effective_audio, state=updated_state)
 
     # Resample microphone audio to 16kHz mono WAV if needed
-    if resolved_audio_path and audio_path and resolved_audio_path == audio_path:
+    if resolved_audio_path and effective_audio and resolved_audio_path == effective_audio:
         try:
             import subprocess
             resampled_path = resolved_audio_path.rsplit(".", 1)[0] + "_16k.wav"
@@ -1163,6 +1176,7 @@ def build_ui() -> gr.Blocks:
         hidden_back_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_start_button.click(_handle_start_consultation, inputs=[app_state], outputs=[app_state, feedback_text, recording_html, recording_tick, consultation_audio, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         recording_tick.tick(_update_recording_timer, inputs=[app_state], outputs=[recording_html], show_progress="hidden")
+        consultation_audio.stop_recording(_on_audio_recorded, inputs=[consultation_audio, app_state], outputs=[app_state, recording_html], show_progress="hidden")
         hidden_end_btn.click(_start_processing, inputs=[app_state, consultation_audio], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         processing_tick.tick(_poll_processing_progress, inputs=[app_state], outputs=[app_state, feedback_text, processing_html, processing_tick, section_one_text, section_two_text, section_three_text, section_four_text, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_cancel_button.click(_cancel_processing, inputs=[app_state], outputs=[app_state, feedback_text, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
