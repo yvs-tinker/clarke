@@ -103,7 +103,7 @@ class MedASRModel:
             inputs = inputs.to(self._device)
 
             with torch.no_grad():
-                if hasattr(self._model, "generate"):
+                if False:  # generate() produces <epsilon> for CTC models
                     outputs = self._model.generate(**inputs)
                     transcript_text = self._processor.batch_decode(outputs)[0]
                 else:
