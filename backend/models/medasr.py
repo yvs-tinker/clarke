@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import types
 from datetime import datetime, timezone
 from pathlib import Path
 
 import librosa
-import numpy as np
 try:
     import torch
     from transformers import AutoProcessor, AutoModelForCTC
@@ -56,18 +54,6 @@ class MedASRModel:
 
         try:
             self._processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
-
-            # Monkey-patch: LasrFeatureExtractor._torch_extract_fbank_features
-            # expects (self, waveform, device='cpu') but upstream code passes
-            # extra positional args. Wrap it to accept and ignore them.
-            fe = getattr(self._processor, 'feature_extractor', self._processor)
-            if hasattr(fe, '_torch_extract_fbank_features'):
-                _orig = fe._torch_extract_fbank_features
-                def _patched(waveform, *args, **kwargs):
-                    device_arg = kwargs.get('device', 'cpu')
-                    return _orig(waveform, device=device_arg)
-                fe._torch_extract_fbank_features = _patched
-
             self._model = AutoModelForCTC.from_pretrained(model_id, trust_remote_code=True)
             self._model = self._model.to(device)
             self._model.eval()
@@ -103,15 +89,14 @@ class MedASRModel:
             inputs = inputs.to(self._device)
 
             with torch.no_grad():
-                if False:  # generate() produces <epsilon> for CTC models
-                    outputs = self._model.generate(**inputs)
-                    transcript_text = self._processor.batch_decode(outputs)[0]
-                else:
-                    logits = self._model(**inputs).logits
-                    predicted_ids = torch.argmax(logits, dim=-1)
-                    transcript_text = self._processor.batch_decode(predicted_ids)[0]
+                outputs = self._model.generate(**inputs)
+                transcript_text = self._processor.batch_decode(outputs, skip_special_tokens=True)[0]
 
-            transcript_text = transcript_text.strip()
+            # Clean up special tokens that may remain
+            import re
+            transcript_text = transcript_text.replace("<epsilon>", "")
+            transcript_text = transcript_text.replace("</s>", "").replace("<s>", "")
+            transcript_text = re.sub(r'\s+', ' ', transcript_text).strip()
 
         except Exception as exc:
             raise ModelExecutionError(f"MedASR inference failed: {exc}") from exc
