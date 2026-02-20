@@ -236,7 +236,7 @@ class DocumentGenerator:
         logger.info("Raw generated text for parsing:\n{}", generated_text[:2000])
 
         section_pattern = re.compile(
-            r"^(?:\*\*|##\s*)?(?:\d+[\)\.]\s*)?(History of presenting complaint|Examination findings|Investigation results|Assessment and plan|Current medications|Overnight events|Current status and observations|Tasks / Actions|Tasks|Actions)[:\*\s]*$",
+            r"^(?:\*\*|##\s*)?(?:\d+[\)\.]\s*)?(Summary|History of presenting complaint|Past medical history|Examination findings|Investigation results|Assessment and plan|Current medications|Overnight events|Current status and observations|Tasks / Actions|Tasks|Actions)[:\*\s]*$",
             flags=re.IGNORECASE,
         )
         sections: list[DocumentSection] = []
@@ -264,6 +264,8 @@ class DocumentGenerator:
             if current_heading:
                 if line:
                     current_lines.append(line)
+                else:
+                    current_lines.append("")
             elif line:
                 header_lines.append(line)
 
