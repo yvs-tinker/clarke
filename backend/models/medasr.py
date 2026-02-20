@@ -62,14 +62,12 @@ class MedASRModel:
             if hasattr(fe, '_torch_extract_fbank_features'):
                 _orig = fe._torch_extract_fbank_features
                 def _patched(*args, **kwargs):
-                    # Original signature: (waveform, device='cpu')
-                    # Upstream may pass: (waveform, max_length, device) or other combos
-                    waveform = args[0] if args else kwargs.get('waveform')
+                    waveform = args[0]
                     device = kwargs.get('device', 'cpu')
-                    if len(args) >= 3:
-                        device = args[2]
-                    elif len(args) == 2 and isinstance(args[1], str):
-                        device = args[1]
+                    for a in args[1:]:
+                        if isinstance(a, str) and ('cpu' in a or 'cuda' in a):
+                            device = a
+                            break
                     return _orig(waveform, device=device)
                 fe._torch_extract_fbank_features = _patched
 
