@@ -687,17 +687,17 @@ def _handle_start_consultation(state):
     updated_state = dict(state or initial_consultation_state())
     patient_id = str((updated_state.get("selected_patient") or {}).get("id", ""))
     if not patient_id:
-        return updated_state, "Please select a patient first.", _recording_screen_html("00:00"), gr.update(active=False), *show_screen("s1")
+        return updated_state, "Please select a patient first.", _recording_screen_html("00:00"), gr.update(active=False), gr.update(value=None), *show_screen("s1")
 
     try:
         payload = _api_request("POST", "/consultations/start", json={"patient_id": patient_id})
     except Exception as exc:
-        return updated_state, f"Failed to start consultation: {exc}", _recording_screen_html("00:00"), gr.update(active=False), *show_screen("s2")
+        return updated_state, f"Failed to start consultation: {exc}", _recording_screen_html("00:00"), gr.update(active=False), gr.update(value=None), *show_screen("s2")
 
     updated_state["consultation"] = {"id": payload.get("consultation_id"), "status": payload.get("status", "recording")}
     updated_state["recording_started_at"] = datetime.now(tz=timezone.utc).isoformat()
     updated_state["screen"] = "s3"
-    return updated_state, "Consultation recording started.", _recording_screen_html("00:00"), gr.update(active=True), *show_screen("s3")
+    return updated_state, "Consultation recording started.", _recording_screen_html("00:00"), gr.update(active=True), gr.update(value=None), *show_screen("s3")
 
 
 def _update_recording_timer(state):
@@ -1091,7 +1091,7 @@ def build_ui() -> gr.Blocks:
 
         with gr.Column(visible=False) as screen_s3:
             recording_html = gr.HTML(_recording_screen_html("00:00"))
-            consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="Consultation Audio", elem_id="clarke-audio-input")
+            consultation_audio = gr.Audio(sources=["microphone"], streaming=False, type="filepath", label="", elem_id="clarke-audio-input")
             recording_tick = gr.Timer(value=1.0, active=False)
             gr.HTML("""<div style='position:sticky; bottom:0; left:0; right:0; z-index:100;'><button id='clarke-end-consultation-btn' onclick="(function(){var btn=document.getElementById('clarke-end-consultation-btn');if(btn&&btn.classList.contains('clarke-end-btn-disabled'))return;var el=document.getElementById('hidden-end-consultation');if(!el){console.error('Clarke: hidden-end-consultation not found');return;}if(el.tagName==='BUTTON'){el.click();}else{var b=el.querySelector('button');if(b)b.click();}console.log('Clarke: End Consultation clicked');})()" class='clarke-end-btn-ready' style='display:block; width:100%; padding:18px 0; border:none; font-family:Inter,sans-serif; font-weight:700; font-size:16px; letter-spacing:0.5px; transition:all 0.3s ease;'>End Consultation</button></div><script>(function(){var iv=setInterval(function(){var ai=document.getElementById('clarke-audio-input');var btn=document.getElementById('clarke-end-consultation-btn');if(!ai||!btn)return;var obs=new MutationObserver(function(){var isRec=ai.querySelector('.record-button.recording, .recording, [data-recording]');if(isRec){btn.className='clarke-end-btn-disabled';btn.textContent='Recording...';}else{setTimeout(function(){btn.className='clarke-end-btn-ready';btn.textContent='End Consultation';},1000);}});obs.observe(ai,{childList:true,subtree:true,attributes:true,attributeFilter:['class','data-recording']});clearInterval(iv);},500);})()</script>""")
             hidden_end_btn = gr.Button("hidden-end-consultation", visible=True, elem_id="hidden-end-consultation")
@@ -1161,7 +1161,7 @@ def build_ui() -> gr.Blocks:
             )
 
         hidden_back_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
-        hidden_start_button.click(_handle_start_consultation, inputs=[app_state], outputs=[app_state, feedback_text, recording_html, recording_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        hidden_start_button.click(_handle_start_consultation, inputs=[app_state], outputs=[app_state, feedback_text, recording_html, recording_tick, consultation_audio, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         recording_tick.tick(_update_recording_timer, inputs=[app_state], outputs=[recording_html], show_progress="hidden")
         hidden_end_btn.click(_start_processing, inputs=[app_state, consultation_audio], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         processing_tick.tick(_poll_processing_progress, inputs=[app_state], outputs=[app_state, feedback_text, processing_html, processing_tick, section_one_text, section_two_text, section_three_text, section_four_text, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")

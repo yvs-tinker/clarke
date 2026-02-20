@@ -398,13 +398,14 @@ def build_global_style_block() -> str:
     font-family: Inter, sans-serif !important;
     font-weight: 600 !important;
   }
-  /* Top panel action buttons (download, share etc) */
-  #clarke-audio-input .top-panel .icon-button {
-    background: transparent !important;
-    color: #D4AF37 !important;
+  /* Hide top panel icons (download, share, close) */
+  #clarke-audio-input .top-panel,
+  #clarke-audio-input .icon-button-wrapper.top-panel {
+    display: none !important;
   }
-  #clarke-audio-input .top-panel .icon-button:hover {
-    background: rgba(212,175,55,0.1) !important;
+  /* End Consultation button font */
+  #clarke-end-consultation-btn {
+    font-family: Inter, sans-serif !important;
   }
   /* End Consultation button states */
   .clarke-end-btn-disabled {
