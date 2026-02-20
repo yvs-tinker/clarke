@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import types
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,7 +37,6 @@ class MedASRModel:
         return self.settings.MEDASR_MODEL_ID.lower() == "mock"
 
     def load_model(self) -> None:
-        """Load processor and model separately — avoids pipeline() argument bug."""
         if self.is_mock_mode:
             self._model = "mock"
             self.model_manager.register_model("medasr", self._model)
@@ -56,6 +56,18 @@ class MedASRModel:
 
         try:
             self._processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
+
+            # Monkey-patch: LasrFeatureExtractor._torch_extract_fbank_features
+            # expects (self, waveform, device='cpu') but upstream code passes
+            # extra positional args. Wrap it to accept and ignore them.
+            fe = getattr(self._processor, 'feature_extractor', self._processor)
+            if hasattr(fe, '_torch_extract_fbank_features'):
+                _orig = fe._torch_extract_fbank_features
+                def _patched(waveform, *args, **kwargs):
+                    device_arg = kwargs.get('device', 'cpu')
+                    return _orig(waveform, device=device_arg)
+                fe._torch_extract_fbank_features = _patched
+
             self._model = AutoModelForCTC.from_pretrained(model_id, trust_remote_code=True)
             self._model = self._model.to(device)
             self._model.eval()
@@ -66,7 +78,6 @@ class MedASRModel:
         self.model_manager.register_model("medasr", self._model)
 
     def transcribe(self, audio_path: str) -> Transcript:
-        """Transcribe audio to structured Transcript object."""
         source = Path(audio_path)
         if not source.exists():
             raise ModelExecutionError(f"Audio path not found: {source}")
@@ -83,7 +94,6 @@ class MedASRModel:
         duration_s = float(librosa.get_duration(y=waveform, sr=16000))
 
         try:
-            # Process audio directly — bypasses pipeline() argument mismatch
             inputs = self._processor(
                 waveform,
                 sampling_rate=16000,
@@ -101,7 +111,6 @@ class MedASRModel:
                     predicted_ids = torch.argmax(logits, dim=-1)
                     transcript_text = self._processor.batch_decode(predicted_ids)[0]
 
-            # Clean up
             transcript_text = transcript_text.strip()
 
         except Exception as exc:
