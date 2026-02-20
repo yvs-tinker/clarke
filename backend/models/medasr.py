@@ -83,8 +83,8 @@ class MedASRModel:
             device = "cpu"
 
         try:
-            self._processor = AutoProcessor.from_pretrained(self.settings.MEDASR_MODEL_ID)
-            model = AutoModelForCTC.from_pretrained(self.settings.MEDASR_MODEL_ID)
+            self._processor = AutoProcessor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
+            model = AutoModelForCTC.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
             model = model.to(device)
             model.eval()
             self._device = device
