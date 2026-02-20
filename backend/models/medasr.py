@@ -136,6 +136,11 @@ class MedASRModel:
             transcript_text = re.sub(r'\s+', ' ', transcript_text).strip()
 
         except Exception as exc:
+            if "CUDA" in str(exc):
+                try:
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
             raise ModelExecutionError(f"MedASR inference failed: {exc}") from exc
 
         return self._make_transcript(source, transcript_text, duration_s)

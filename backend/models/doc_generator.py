@@ -140,6 +140,12 @@ class DocumentGenerator:
                 repetition_penalty=1.1,
             )
         except Exception as exc:
+            if "CUDA" in str(exc):
+                try:
+                    import torch
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
             raise ModelExecutionError(f"MedGemma 27B inference failed: {exc}") from exc
 
         decoded_output = self._tokenizer.decode(output_tokens[0], skip_special_tokens=True)
