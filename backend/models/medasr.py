@@ -82,6 +82,7 @@ class MedASRModel:
                 model=self.settings.MEDASR_MODEL_ID,
                 revision="2625be4f1377ac544b451c6938eaf955c19a9c38",
                 device=device,
+                trust_remote_code=True,
             )
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedASR model: {exc}") from exc
