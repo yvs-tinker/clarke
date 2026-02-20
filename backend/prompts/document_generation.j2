@@ -7,11 +7,13 @@ STRICT OUTPUT FORMAT (follow exactly)
 - Re: {{ patient_name }}, DOB {{ patient_dob }}, NHS No. {{ patient_nhs }}
 - Salutation: Dear {{ gp_name }},
 - Body sections in this exact order:
-  1) History of presenting complaint
-  2) Examination findings
-  3) Investigation results
-  4) Assessment and plan
-  5) Current medications
+  1) Summary (2-3 sentences: who the patient is, why they attended, key findings, and plan going forward)
+  2) History of presenting complaint
+  3) Past medical history (from the EHR problem list — list active diagnoses concisely)
+  4) Examination findings
+  5) Investigation results
+  6) Assessment and plan
+  7) Current medications
 - Sign-off line: Warm regards,
   {{ clinician_name }}
   {{ clinician_title }}
@@ -36,8 +38,12 @@ MICRO-EXEMPLAR OF EXPECTED REGISTER
 Date: 13 Feb 2026
 Re: Mary Thompson, DOB 12/04/1964, NHS No. 943 476 5919
 Dear Dr Ahmed,
+Summary
+Mrs Thompson, a 67-year-old woman with type 2 diabetes, attended for routine diabetes review. Her HbA1c has risen to 55 mmol/mol, and her gliclazide dose was increased accordingly. Repeat bloods were arranged in three months.
 History of presenting complaint
 Mrs Thompson reported persistent fatigue and polydipsia over the preceding three months.
+Past medical history
+Type 2 diabetes mellitus, hypertension, chronic kidney disease stage 3a.
 Investigation results
 Latest blood tests showed HbA1c 55 mmol/mol and eGFR 52 mL/min/1.73m².
 Assessment and plan
