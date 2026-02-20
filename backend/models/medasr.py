@@ -21,8 +21,6 @@ from backend.config import get_settings
 from backend.errors import ModelExecutionError
 from backend.models.model_manager import ModelManager
 from backend.schemas import Transcript
-
-
 class MedASRModel:
     """Load and run MedASR speech recognition or a deterministic mock implementation.
 
@@ -86,12 +84,13 @@ class MedASRModel:
 
         try:
             try:
-                self._processor = Wav2Vec2Processor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
+                self._processor = AutoProcessor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
             except Exception:
                 try:
                     self._processor = AutoFeatureExtractor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
                 except Exception:
-                    self._processor = AutoProcessor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
+                    self._processor = Wav2Vec2Processor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
+
             model = AutoModelForCTC.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
             model = model.to(device)
             model.eval()
