@@ -1,5 +1,5 @@
 torch==2.4.1
-transformers>=4.52.0
+transformers @ git+https://github.com/huggingface/transformers.git@65dc261512cbdb1ee72b88ae5b222f2605aad8e5
 bitsandbytes==0.44.1
 accelerate>=1.2.1
 gradio>=5.10.0
@@ -18,3 +18,5 @@ python-dotenv>=1.0.1
 loguru>=0.7.2
 pydantic>=2.10.6
 pydantic-settings>=2.7.1
+scipy>=1.12.0
+soundfile>=0.12.1
