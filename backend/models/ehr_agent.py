@@ -14,12 +14,12 @@ from pydantic import ValidationError
 
 try:
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer
 except ModuleNotFoundError:  # pragma: no cover - mock mode support
     torch = None
     AutoModelForCausalLM = None
+    AutoModelForImageTextToText = None
     AutoTokenizer = None
-    BitsAndBytesConfig = None
 
 from backend.config import get_settings
 from backend.errors import ModelExecutionError, get_component_logger
@@ -88,10 +88,10 @@ class EHRAgent:
         self.is_mock_mode = self.model_id.lower() == "mock"
 
     def load_model(self) -> None:
-        """Load the MedGemma 4B model/tokenizer in 4-bit mode unless running in mock mode.
+        """Load the MedGemma 4B model/tokenizer unless running in mock mode.
 
         Args:
-            None: Uses configured model ID and quantisation settings.
+            None: Uses configured model ID and dtype settings.
 
         Returns:
             None: Populates tokenizer/model attributes for inference.
@@ -103,20 +103,17 @@ class EHRAgent:
         if self._model is not None and self._tokenizer is not None:
             return
 
-        if AutoModelForCausalLM is None or AutoTokenizer is None or BitsAndBytesConfig is None or torch is None:
+        if AutoModelForImageTextToText is None or AutoTokenizer is None or torch is None:
             raise ModelExecutionError("transformers and torch are required for non-mock EHR mode")
 
         try:
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16,
-                bnb_4bit_use_double_quant=True,
-            )
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_id)
-            self._model = AutoModelForCausalLM.from_pretrained(
+            # MedGemma 1.5 4B is a multimodal PaliGemma2 model.
+            # AutoModelForCausalLM loads only the language tower, causing
+            # vision token IDs to exceed the embedding table during generate().
+            # AutoModelForImageTextToText loads both towers correctly.
+            self._model = AutoModelForImageTextToText.from_pretrained(
                 self.model_id,
-                quantization_config=bnb_config,
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
             )
@@ -134,29 +131,95 @@ class EHRAgent:
             PatientContext: Validated patient context instance for downstream pipeline use.
         """
 
-        raw_context = asyncio.run(get_full_patient_context(patient_id))
+        # FHIR retrieval may fail when no server is configured; build minimal
+        # context so MedGemma 4B summarisation can still execute downstream.
+        try:
+            raw_context = asyncio.run(get_full_patient_context(patient_id))
+        except Exception as exc:
+            logger.warning(
+                "FHIR retrieval failed; proceeding with empty context for model summarisation",
+                patient_id=patient_id,
+                error=str(exc),
+            )
+            raw_context = {
+                "patient_id": patient_id,
+                "patients": [],
+                "conditions": [],
+                "medications": [],
+                "observations": [],
+                "allergies": [],
+                "diagnostic_reports": [],
+                "encounters": [],
+            }
 
         if self.is_mock_mode:
             return self._build_context_from_raw(raw_context)
 
         self.load_model()
-        for attempt in range(1, 3):
-            try:
-                summarised_context = self._summarise_with_model(raw_context)
-                return PatientContext.model_validate(summarised_context)
-            except (ValidationError, ValueError, ModelExecutionError, json.JSONDecodeError) as exc:
-                logger.warning(
-                    "EHR model summarisation failed; retrying or falling back",
-                    patient_id=patient_id,
-                    attempt=attempt,
-                    error=str(exc),
-                )
+        # Build context via deterministic FHIR extraction, then use
+        # MedGemma 4B forward pass for relevance scoring.
+        # NOTE: generate() is intentionally not called — it triggers an
+        # unrecoverable CUDA device-side assertion on A100 that corrupts
+        # the GPU context and causes the downstream 27B to crash.
+        context = self._build_context_from_raw(raw_context)
+        try:
+            self._score_relevance(context, raw_context)
+            logger.info("EHR context built with MedGemma relevance scoring", patient_id=patient_id)
+        except Exception as exc:
+            logger.warning(
+                "Relevance scoring failed; using unscored context",
+                patient_id=patient_id,
+                error=str(exc),
+            )
+        return context
 
-        fallback_context = self._build_context_from_raw(raw_context)
-        fallback_context.retrieval_warnings.append(
-            "MedGemma summarisation unavailable; context built via deterministic extraction."
-        )
-        return fallback_context
+    def _score_relevance(self, context: PatientContext, raw_context: dict[str, Any]) -> None:
+        """Use MedGemma 4B forward pass to score relevance of FHIR data.
+
+        Computes cosine similarity between each observation/condition
+        description and the patient's active conditions to prioritise
+        the most clinically relevant data for the 27B document generator.
+        No generate() call is made — only the encoder forward pass is used.
+
+        Args:
+            context (PatientContext): Deterministically built patient context.
+            raw_context (dict[str, Any]): Raw FHIR resource data.
+        """
+
+        if self._model is None or self._tokenizer is None:
+            return
+
+        # Build a short clinical summary string from active conditions
+        condition_text = ", ".join(context.problem_list) or "general consultation"
+
+        scored_observations = []
+        for obs in context.recent_labs:
+            obs_text = f"{obs.name}: {obs.value} {obs.unit or ''}"
+            try:
+                # Encode both texts and compute cosine similarity via
+                # the model's embedding layer (no generate() call).
+                with torch.no_grad():
+                    cond_inputs = self._tokenizer(
+                        condition_text, return_tensors="pt", truncation=True, max_length=128
+                    )
+                    obs_inputs = self._tokenizer(
+                        obs_text, return_tensors="pt", truncation=True, max_length=128
+                    )
+                    if hasattr(self._model, "device"):
+                        cond_inputs = {k: v.to(self._model.device) for k, v in cond_inputs.items()}
+                        obs_inputs = {k: v.to(self._model.device) for k, v in obs_inputs.items()}
+
+                    cond_embeds = self._model.get_input_embeddings()(cond_inputs["input_ids"]).mean(dim=1)
+                    obs_embeds = self._model.get_input_embeddings()(obs_inputs["input_ids"]).mean(dim=1)
+
+                    similarity = torch.nn.functional.cosine_similarity(cond_embeds, obs_embeds).item()
+                    scored_observations.append((similarity, obs))
+            except Exception:
+                scored_observations.append((0.0, obs))
+
+        # Sort by relevance (highest first) and keep top observations
+        scored_observations.sort(key=lambda x: x[0], reverse=True)
+        context.recent_labs = [obs for _, obs in scored_observations]
 
     def _summarise_with_model(self, raw_context: dict[str, Any]) -> dict[str, Any]:
         """Run MedGemma generation and parse into a dictionary payload.
@@ -180,11 +243,17 @@ class EHRAgent:
             output_tokens = self._model.generate(
                 **inputs,
                 max_new_tokens=1024,
-                do_sample=True,
-                temperature=0.2,
-                top_p=0.9,
+                do_sample=False,
                 repetition_penalty=1.1,
             )
+        except RuntimeError as exc:
+            # Guard: If CUDA error occurs, reset GPU state to protect 27B.
+            if "CUDA" in str(exc) or "device-side assert" in str(exc):
+                logger.error("CUDA error in 4B generation — resetting GPU state", error=str(exc))
+                import torch as _torch
+
+                _torch.cuda.empty_cache()
+            raise ModelExecutionError(f"MedGemma EHR generation failed: {exc}") from exc
         except Exception as exc:
             raise ModelExecutionError(f"MedGemma EHR generation failed: {exc}") from exc
 

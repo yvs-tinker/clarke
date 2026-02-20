@@ -42,6 +42,8 @@ def build_global_style_block() -> str:
     return """
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+</style>
+<style>
   @keyframes clarkeGradientShift {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -59,6 +61,195 @@ def build_global_style_block() -> str:
   }
 
   html, body { margin: 0 !important; padding: 0 !important; overflow-x: hidden !important; }
+
+  /* Letter Preferences Accordion */
+  #clarke-letter-prefs {
+    margin: 0 48px 24px 48px !important;
+    border: 1px solid rgba(212, 175, 55, 0.25) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  }
+  #clarke-letter-prefs > .label-wrap {
+    padding: 14px 20px !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: none !important;
+    cursor: pointer !important;
+  }
+  #clarke-letter-prefs > .label-wrap span {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 16px !important;
+    color: #D4AF37 !important;
+  }
+  #clarke-letter-prefs > .label-wrap:hover {
+    background: rgba(212, 175, 55, 0.04) !important;
+  }
+  #clarke-letter-prefs input[type="text"],
+  #clarke-letter-prefs textarea {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 14px !important;
+    border: 1px solid rgba(212, 175, 55, 0.2) !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    color: #1A1A2E !important;
+    padding: 10px 14px !important;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+  }
+  #clarke-letter-prefs input[type="text"]:focus,
+  #clarke-letter-prefs textarea:focus {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12) !important;
+    outline: none !important;
+  }
+  #clarke-letter-prefs label span {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #555 !important;
+  }
+
+  /* Letter Preferences Accordion */
+  #clarke-letter-prefs {
+    margin: 0 48px 24px 48px !important;
+    border: 1px solid rgba(212, 175, 55, 0.2) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(8px) !important;
+    overflow: hidden !important;
+  }
+  #clarke-letter-prefs > .label-wrap {
+    padding: 14px 20px !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+  }
+  #clarke-letter-prefs > .label-wrap > span {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 16px !important;
+    color: #D4AF37 !important;
+  }
+  #clarke-letter-prefs > .label-wrap:hover {
+    background: rgba(212, 175, 55, 0.04) !important;
+  }
+  #clarke-letter-prefs .wrap {
+    padding: 4px 20px 16px 20px !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.12) !important;
+  }
+  #clarke-letter-prefs input[type="text"],
+  #clarke-letter-prefs textarea {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 14px !important;
+    border: 1px solid rgba(212, 175, 55, 0.2) !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    color: #1A1A2E !important;
+    padding: 10px 14px !important;
+    transition: all 0.3s ease !important;
+  }
+  #clarke-letter-prefs input[type="text"]:focus,
+  #clarke-letter-prefs textarea:focus {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15) !important;
+    outline: none !important;
+  }
+  #clarke-letter-prefs label span {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #555 !important;
+  }
+
+  /* Document Type Radio — matches Letter Preferences */
+  fieldset#clarke-doc-type,
+  #clarke-doc-type {
+    --block-border-width: 0px !important;
+    --block-border-color: transparent !important;
+    --border-color-primary: transparent !important;
+    --block-background-fill: transparent !important;
+    --block-shadow: none !important;
+    --block-radius: 12px !important;
+    margin: 0 48px 16px 48px !important;
+    border: 1px solid rgba(212, 175, 55, 0.2) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  fieldset#clarke-doc-type > div,
+  #clarke-doc-type > div,
+  #clarke-doc-type .form {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  #clarke-doc-type > span[data-testid="block-info"] {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 16px !important;
+    color: #D4AF37 !important;
+    padding: 14px 20px 8px 20px !important;
+    display: block !important;
+  }
+  #clarke-doc-type > div.wrap {
+    padding: 4px 20px 16px 20px !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.12) !important;
+    background: transparent !important;
+    gap: 12px !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+  }
+  fieldset#clarke-doc-type label,
+  #clarke-doc-type label {
+    font-family: 'DM Serif Display', serif !important;
+    font-size: 14px !important;
+    border: 1px solid rgba(212, 175, 55, 0.25) !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    color: #555 !important;
+  }
+  #clarke-doc-type label.selected {
+    background: rgba(212, 175, 55, 0.12) !important;
+    border-color: #D4AF37 !important;
+    color: #1A1A2E !important;
+    font-weight: 600 !important;
+  }
+  #clarke-doc-type label:hover {
+    background: rgba(212, 175, 55, 0.06) !important;
+    border-color: rgba(212, 175, 55, 0.4) !important;
+  }
+  #clarke-doc-type input[type="radio"] {
+    accent-color: #D4AF37 !important;
+  }
+  #clarke-doc-type *:not(label):not(input):not(span) {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+  #clarke-doc-type > div[class*="form"],
+  #clarke-doc-type > div[class*="svelte"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  /* Make Gradio progress bar gold instead of red */
+  .progress-bar, .progress-bar > .progress-bar-wrap, .progress-bar > .progress-bar-wrap > .progress-bar-fill {
+    background: linear-gradient(135deg, #D4AF37, #F0D060) !important;
+  }
+  .eta-bar { background: rgba(212, 175, 55, 0.15) !important; }
+  /* Hide Gradio error toasts */
+  .toast-wrap, .toast-body, .error { display: none !important; }
 
   #hidden-select-0, #hidden-select-1, #hidden-select-2, #hidden-select-3, #hidden-select-4,
   #hidden-start-consultation, #hidden-back, #hidden-cancel, #hidden-regenerate, #hidden-copy, #hidden-download,
@@ -148,7 +339,7 @@ def build_global_style_block() -> str:
     overflow: hidden !important;
   }
 </style>
-<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){function e(){document.documentElement.style.setProperty('background','#F8F6F1','important');var a=document.querySelector('gradio-app');if(a){a.style.setProperty('background','transparent','important');a.style.setProperty('padding','0','important');a.style.setProperty('margin','0','important');a.style.setProperty('overflow-x','hidden','important');}document.querySelectorAll('.gradio-container,[class*=gradio-container-]').forEach(function(c){c.style.setProperty('max-width','100vw','important');c.style.setProperty('padding','0','important');c.style.setProperty('margin','0','important');c.style.setProperty('background','transparent','important');});document.body.style.setProperty('margin','0','important');document.body.style.setProperty('padding','0','important');document.body.style.setProperty('background','transparent','important');var f=document.querySelector('footer');if(f)f.style.display='none';}if(!document.getElementById('clarke-sunrise-glow')){var s=document.createElement('style');s.textContent='@keyframes clarkeWarmthPulse{0%{opacity:0.55;transform:scaleY(1) scaleX(1);}50%{opacity:1;transform:scaleY(1.35) scaleX(1.12);}100%{opacity:0.55;transform:scaleY(1) scaleX(1);}}';document.head.appendChild(s);var g=document.createElement('div');g.id='clarke-sunrise-glow';g.style.cssText='position:fixed;top:0;left:0;width:100vw;height:600px;pointer-events:none;z-index:0;background:radial-gradient(ellipse 140% 110% at 50% 0%, rgba(255,193,7,0.80) 0%, rgba(255,213,79,0.55) 20%, rgba(212,175,55,0.28) 45%, transparent 75%);animation:clarkeWarmthPulse 8s ease-in-out infinite;transform-origin:top center;';document.body.insertBefore(g,document.body.firstChild);console.log('Clarke: Sunrise glow injected');}e();[100,300,600,1200,2500,5000].forEach(function(t){setTimeout(e,t);});new MutationObserver(function(){e();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});console.log('Clarke: Layout enforcer active via img onload');})()" style="display:none;position:absolute;width:0;height:0;">
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){function e(){document.documentElement.style.setProperty('background','#F8F6F1','important');var a=document.querySelector('gradio-app');if(a){a.style.setProperty('background','transparent','important');a.style.setProperty('padding','0','important');a.style.setProperty('margin','0','important');a.style.setProperty('overflow-x','hidden','important');}document.querySelectorAll('.gradio-container,[class*=gradio-container-]').forEach(function(c){c.style.setProperty('max-width','100vw','important');c.style.setProperty('padding','0','important');c.style.setProperty('margin','0','important');c.style.setProperty('background','transparent','important');});document.body.style.setProperty('margin','0','important');document.body.style.setProperty('padding','0','important');document.body.style.setProperty('background','transparent','important');var f=document.querySelector('footer');if(f)f.style.display='none';}if(!document.getElementById('clarke-sunrise-glow')){var s=document.createElement('style');s.textContent='@keyframes clarkeWarmthPulse{0%{opacity:0.55;transform:scaleY(1) scaleX(1);}50%{opacity:1;transform:scaleY(1.35) scaleX(1.12);}100%{opacity:0.55;transform:scaleY(1) scaleX(1);}}';document.head.appendChild(s);var g=document.createElement('div');g.id='clarke-sunrise-glow';g.style.cssText='position:fixed;top:0;left:0;width:100vw;height:600px;pointer-events:none;z-index:0;background:radial-gradient(ellipse 140% 110% at 50% 0%, rgba(255,193,7,0.80) 0%, rgba(255,213,79,0.55) 20%, rgba(212,175,55,0.28) 45%, transparent 75%);animation:clarkeWarmthPulse 8s ease-in-out infinite;transform-origin:top center;';document.body.insertBefore(g,document.body.firstChild);console.log('Clarke: Sunrise glow injected');}window.clarkePrintPDF=function(){var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){alert('No letter text found');return;}text=text.trim();var headings=['History of Presenting Complaint','Examination','Investigations','Assessment','Plan'];var lines=text.split('\\n');var css='@page{size:A4;margin:25mm 20mm 25mm 20mm;}body{font-family:Helvetica,Arial,sans-serif;font-size:12pt;line-height:1.6;color:#1a1a2e;margin:0;padding:0;}.hdr{border-top:3px solid #D4AF37;margin-bottom:8px;}.trust{text-align:right;color:#888;font-size:12pt;margin-bottom:16px;}.gl{border-top:1.5px solid #D4AF37;margin:12px 0;}.sh{font-weight:bold;font-size:14pt;color:#1a1a2e;margin-top:20px;margin-bottom:4px;border-bottom:2px solid #D4AF37;display:inline-block;padding-bottom:2px;}.rl{font-weight:bold;font-size:13pt;}.pi{margin-left:12px;}.so{margin-top:24px;}.sn{font-weight:bold;}.ft{margin-top:40px;text-align:center;color:#bbb;font-size:9pt;}';var h='<!DOCTYPE html><html><head><style>'+css+'</style></head><body>';h+='<div class=hdr></div>';h+='<div class=trust>Clarke NHS Trust<br>General Practice Department<br>University Hospital London</div>';h+='<div class=gl></div>';var inSignoff=false;for(var i=0;i<lines.length;i++){var line=lines[i].trim();if(!line){h+='<br>';continue;}var isH=false;for(var j=0;j<headings.length;j++){if(line===headings[j]){isH=true;break;}}if(isH){h+='<div class=sh>'+line+'</div>';continue;}if(line.match(/^Re:/)){h+='<div class=rl>'+line+'</div>';continue;}if(line.match(/^Warm regards/)||line.match(/^Yours sincerely/)){inSignoff=true;h+='<div class=so>'+line+'</div>';continue;}if(inSignoff){h+='<div class=sn>'+line+'</div>';continue;}if(line.match(/^\d+\./)){h+='<div class=pi>'+line+'</div>';continue;}h+='<div>'+line+'</div>';}h+='<div class=ft>Generated by Clarke - AI Clinical Documentation System</div></body></html>';var iframe=document.createElement('iframe');iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;';document.body.appendChild(iframe);iframe.contentDocument.open();iframe.contentDocument.write(h);iframe.contentDocument.close();setTimeout(function(){iframe.contentWindow.print();setTimeout(function(){document.body.removeChild(iframe);},2000);},500);console.log('Clarke: Print PDF dialog opened');};console.log('Clarke: clarkePrintPDF registered');e();[100,300,600,1200,2500,5000].forEach(function(t){setTimeout(e,t);});new MutationObserver(function(){e();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});console.log('Clarke: Layout enforcer active via img onload');})()" style="display:none;position:absolute;width:0;height:0;">
 """
 
 

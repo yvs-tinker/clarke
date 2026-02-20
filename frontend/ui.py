@@ -351,6 +351,64 @@ def _format_patient_context_html(context: dict[str, Any]) -> str:
     )
 
 
+def _letter_prefs_persistence_js() -> str:
+    """Return an HTML snippet that persists letter preference values via JavaScript."""
+    return """<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){
+        if(window.clarkePrefsInitDone)return;
+        window.clarkePrefsInitDone=true;
+        window.clarkeLetterPrefs={};
+        function getInputs(){
+            var acc=document.getElementById('clarke-letter-prefs');
+            if(!acc)return[];
+            return Array.prototype.slice.call(acc.querySelectorAll('input[type=text],textarea'));
+        }
+        function saveAll(){
+            var inputs=getInputs();
+            for(var i=0;i<inputs.length;i++){
+                window.clarkeLetterPrefs[i]=inputs[i].value;
+            }
+        }
+        function restoreAll(){
+            var inputs=getInputs();
+            if(inputs.length===0)return;
+            var changed=false;
+            for(var i=0;i<inputs.length;i++){
+                var saved=window.clarkeLetterPrefs[i];
+                if(saved!==undefined&&saved!==inputs[i].value){
+                    var proto=inputs[i].tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype;
+                    var setter=Object.getOwnPropertyDescriptor(proto,'value');
+                    if(setter&&setter.set){setter.set.call(inputs[i],saved);}
+                    else{inputs[i].value=saved;}
+                    inputs[i].dispatchEvent(new Event('input',{bubbles:true}));
+                    inputs[i].dispatchEvent(new Event('change',{bubbles:true}));
+                    changed=true;
+                }
+            }
+            if(changed)console.log('Clarke: Restored letter prefs');
+        }
+        function attachListeners(){
+            var inputs=getInputs();
+            inputs.forEach(function(inp){
+                if(!inp.dataset.clarkeTracked){
+                    inp.dataset.clarkeTracked='1';
+                    inp.addEventListener('input',function(){saveAll();});
+                    inp.addEventListener('change',function(){saveAll();});
+                }
+            });
+        }
+        function check(){
+            var inputs=getInputs();
+            if(inputs.length>0){
+                attachListeners();
+                if(Object.keys(window.clarkeLetterPrefs).length>0){restoreAll();}
+            }
+        }
+        new MutationObserver(function(){check();}).observe(document.body,{childList:true,subtree:true});
+        setInterval(check,2000);
+        console.log('Clarke: Letter prefs persistence active');
+    })()" style="display:none;position:absolute;width:0;height:0;">"""
+
+
 def _context_screen_html(patient: dict[str, Any], context: dict[str, Any]) -> str:
     """Build S2 shell + actions + context in one full-screen HTML block."""
 
@@ -382,8 +440,13 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
     dob = str(demographics.get("dob") or "Unknown")
     nhs = str(demographics.get("nhs_number") or "Unknown")
     today = datetime.now().strftime("%d %B %Y")
-    gp_name = "Andrew Wilson"
-    address = "Riverside Medical Practice\n14 Harcourt Street\nLondon"
+    prefs = (state or {}).get("letter_prefs", {})
+    gp_name = prefs.get("gp_name", "Dr Andrew Wilson").replace("Dr ", "", 1)
+    address = prefs.get("gp_address", "Riverside Medical Practice\n14 Harcourt Street\nLondon")
+    clinician_display = prefs.get("clinician_name", "Dr Sarah Chen")
+    clinician_title = prefs.get("clinician_title", "Consultant, General Practice")
+    hospital_name = prefs.get("hospital", "Clarke NHS Trust")
+    signoff_phrase = prefs.get("signoff_phrase", "Warm regards")
 
     investigations = "\n".join(
         f"- {lab.get('name', 'Test')}: {lab.get('value', '')} {lab.get('unit', '')} ({lab.get('date', '')})".strip()
@@ -409,6 +472,8 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
             "Review in specialist clinic to reassess response and escalation needs.",
         ]
 
+    clinical_issues_text = "\n".join(f"- {item}" for item in problems) if problems else "- None listed"
+
     letter_text = (
         f"{today}\n\n"
         f"Dr {gp_name}\n"
@@ -416,29 +481,98 @@ def _build_generated_document(state: dict[str, Any]) -> dict[str, Any]:
         f"Dear Dr {gp_name},\n\n"
         f"Re: {patient_name} (DOB: {dob}, NHS: {nhs})\n"
         f"    {address}\n\n"
-        f"Thank you for referring / I reviewed {patient_name} in General Practice Clinic on {today}.\n\n"
+        f"Thank you for referring / I reviewed {patient_name} in {clinician_title.split(',')[-1].strip() if ',' in clinician_title else clinician_title} Clinic on {today}.\n\n"
         "History of Presenting Complaint\n"
         f"{history}\n\n"
         "Examination\n"
         "The patient was comfortable at rest, haemodynamically stable, and clinically euvolaemic on examination. No acute red-flag findings were identified today.\n\n"
         "Investigations\n"
         f"{investigations}\n\n"
+        "Clinical Issues\n"
+        f"{clinical_issues_text}\n\n"
+        "Current Medications\n"
+        f"{medication_line or 'None documented'}\n\n"
         "Assessment\n"
         f"{assessment}\n\n"
         "Plan\n"
         + "\n".join(f"{i + 1}. {line}" for i, line in enumerate(plan_lines))
         + f"\n\nI will review {patient_name} in 8 weeks. Please do not hesitate to contact us if there are any concerns in the interim.\n\n"
-        "Yours sincerely,\n\n"
-        "Dr Sarah Chen\n"
-        "Consultant, General Practice\n"
-        "Clarke NHS Trust"
+        f"{signoff_phrase},\n\n"
+        f"{clinician_display}\n"
+        f"{clinician_title}\n"
+        f"{hospital_name}"
     )
+
+    doc_type = (state or {}).get("doc_type", "Clinic Letter")
+
+    if doc_type == "Ward Round Note":
+        now_time = datetime.now().strftime("%H:%M")
+
+        if "Margaret Thompson" in patient_name:
+            overnight = "Remained stable overnight. Blood glucose levels ranged 8.4-14.2 mmol/L. No hypoglycaemic episodes. Nursing staff report adequate oral intake."
+            current_status = "Alert and oriented. Reports mild fatigue but no chest pain, dyspnoea, or new symptoms. Tolerating diet well."
+            exam_findings = "Obs: BP 142/88, HR 78 regular, SpO2 97% RA, Temp 36.8. CVS: HS I+II+0, no peripheral oedema. Resp: Clear bilaterally. Abdo: Soft, non-tender."
+            today_plan = [
+                "Optimise glycaemic control — consider increasing gliclazide to 80mg BD.",
+                "Chase repeat HbA1c and renal profile results from this morning.",
+                "Dietitian review requested for structured carbohydrate counselling.",
+                "Continue current medications including lisinopril 10mg OD and atorvastatin 40mg ON.",
+                "Aim for discharge tomorrow if glucose control improving — arrange diabetes nurse follow-up within 1 week.",
+            ]
+        else:
+            overnight = f"Stable overnight. No acute events reported by nursing staff. Observations within acceptable parameters for {main_problem.lower()}."
+            current_status = f"Patient reports feeling stable this morning. Ongoing management of {main_problem.lower()} continues."
+            exam_findings = "Obs: Within normal limits. Systems examination unremarkable. No new clinical findings."
+            today_plan = [
+                "Continue current management plan.",
+                "Review outstanding investigation results.",
+                "Reassess clinical progress and escalation needs.",
+                "Estimated discharge: pending clinical improvement.",
+            ]
+
+        clinical_issues_ward = "\n".join(f"- {item}" for item in problems) if problems else "- None listed"
+
+        ward_note_text = (
+            f"WARD ROUND NOTE — {today} at {now_time}\n"
+            f"{'=' * 50}\n\n"
+            f"Patient: {patient_name}\n"
+            f"DOB: {dob} | NHS: {nhs}\n"
+            f"Ward: General Medical | Bed: 12A\n"
+            f"Consultant: {clinician_display}\n\n"
+            f"Day {2} of admission | Primary Dx: {main_problem}\n\n"
+            "Overnight Events\n"
+            f"{overnight}\n\n"
+            "Current Status\n"
+            f"{current_status}\n\n"
+            "Examination Findings\n"
+            f"{exam_findings}\n\n"
+            "Investigations\n"
+            f"{investigations}\n\n"
+            "Current Medications\n"
+            f"{medication_line or 'As per drug chart'}\n\n"
+            "Clinical Issues\n"
+            f"{clinical_issues_ward}\n\n"
+            "Assessment\n"
+            f"{assessment}\n\n"
+            "Plan\n"
+            + "\n".join(f"{i + 1}. {line}" for i, line in enumerate(today_plan))
+            + f"\n\n{clinician_display} | {clinician_title} | {hospital_name}\n"
+            f"Documented at {now_time} on {today}"
+        )
+
+        sections = [
+            {"heading": "Ward Round Note", "content": ward_note_text},
+        ]
+        return {
+            "title": "Ward Round Note",
+            "status": "ready_for_review",
+            "sections": sections,
+            "patient_name": patient_name,
+            "nhs_number": nhs,
+        }
 
     sections = [
         {"heading": "NHS Clinic Letter", "content": letter_text},
-        {"heading": "Clinical Issues", "content": "\n".join(f"- {item}" for item in problems) or "- None listed"},
-        {"heading": "Current Medications", "content": medication_line or "None documented"},
-        {"heading": "Follow-up", "content": "Review in 8 weeks with repeat investigations."},
     ]
     return {
         "title": "NHS Clinic Letter",
@@ -470,7 +604,7 @@ def _render_letter_sections(letter_sections: list[dict[str, str]]) -> tuple[str,
     return (combined, "", "", "")
 
 
-def _handle_patient_selection(state: dict[str, Any], patient_index: int):
+def _handle_patient_selection(state: dict[str, Any], patient_index: int, clinician_name: str = "Dr Sarah Chen", clinician_title: str = "Consultant, General Practice", hospital: str = "Clarke NHS Trust", department: str = "General Practice Department", gp_name: str = "Dr Andrew Wilson", signoff_phrase: str = "Warm regards", gp_address: str = "Riverside Medical Practice\n14 Harcourt Street\nLondon", doc_type: str = "Clinic Letter"):
     """Update state and call backend context endpoint when a patient index is selected.
 
     Args:
@@ -489,6 +623,16 @@ def _handle_patient_selection(state: dict[str, Any], patient_index: int):
     patient = patients[patient_index]
     updated_state = select_patient(state, patient)
     updated_state['current_patient_index'] = patient_index
+    updated_state["letter_prefs"] = {
+        "clinician_name": clinician_name or "Dr Sarah Chen",
+        "clinician_title": clinician_title or "Consultant, General Practice",
+        "hospital": hospital or "Clarke NHS Trust",
+        "department": department or "General Practice Department",
+        "gp_name": gp_name or "Dr Andrew Wilson",
+        "gp_address": gp_address or "Riverside Medical Practice\n14 Harcourt Street\nLondon",
+        "signoff_phrase": signoff_phrase or "Warm regards",
+    }
+    updated_state["doc_type"] = doc_type or "Clinic Letter"
     patient_id = str(patient.get("id", ""))
     if os.getenv("USE_MOCK_FHIR", "").lower() == "true":
         context = _mock_context_for_index(patient_index)
@@ -587,23 +731,37 @@ def _stage_from_pipeline(stage: str) -> tuple[int, str, str]:
     mapping = {
         "transcribing": (1, "Finalising transcript…", "MedASR processing audio"),
         "retrieving_context": (2, "Synthesising patient context…", "MedGemma 4B querying records"),
-        "generating_document": (3, "Generating clinical letter…", "MedGemma 27B composing document"),
-        "complete": (3, "Generating clinical letter…", "MedGemma 27B composing document"),
+        "generating_document": (3, "Generating document…", "MedGemma 27B composing document"),
+        "complete": (3, "Generating document…", "MedGemma 27B composing document"),
     }
     return mapping.get(stage, mapping["transcribing"])
 
 
 
 
-def _ensure_mock_audio_file(audio_path: str | None) -> str | None:
-    """Create a short silent WAV when running in mock mode and no audio was captured."""
+def _ensure_mock_audio_file(audio_path: str | None, state: dict | None = None) -> str | None:
+    """Return audio path, falling back to demo audio files for known patients."""
 
     if audio_path:
         return audio_path
-    if os.getenv("MEDASR_MODEL_ID", "").lower() != "mock":
-        return None
 
-    upload_dir = Path("data/uploads/mock")
+    # Map patient indices to demo audio files
+    DEMO_AUDIO_MAP = {
+        0: "data/demo/mrs_thompson.wav",
+        1: "data/demo/mr_okafor.wav",
+        2: "data/demo/ms_patel.wav",
+        3: "data/demo/mr_williams.wav",
+        4: "data/demo/mrs_khan.wav",
+    }
+
+    patient_index = (state or {}).get("current_patient_index")
+    if patient_index is not None and patient_index in DEMO_AUDIO_MAP:
+        demo_path = Path(DEMO_AUDIO_MAP[patient_index])
+        if demo_path.exists():
+            return str(demo_path)
+
+    # Fallback: generate a short silent WAV for patients without demo audio
+    upload_dir = Path("/tmp/mock_audio")
     upload_dir.mkdir(parents=True, exist_ok=True)
     silent_path = upload_dir / "silent.wav"
     with wave.open(str(silent_path), "wb") as wav_file:
@@ -631,7 +789,7 @@ def _start_processing(state, audio_path):
     if not consultation_id:
         return updated_state, "Consultation session is missing. Start consultation again.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
-    resolved_audio_path = _ensure_mock_audio_file(audio_path)
+    resolved_audio_path = _ensure_mock_audio_file(audio_path, state=updated_state)
     if not resolved_audio_path:
         return updated_state, "Please capture audio before ending consultation.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
@@ -645,9 +803,21 @@ def _start_processing(state, audio_path):
         return updated_state, "Consultation ended. Processing audio and generating document.", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=True), *show_screen("s4")
 
     try:
-        with Path(resolved_audio_path).open("rb") as stream:
-            _api_request("POST", f"/consultations/{consultation_id}/audio", files={"audio_file": (Path(resolved_audio_path).name, stream, "audio/wav")}, data={"is_final": "true"}, timeout=120.0)
-        _api_request("POST", f"/consultations/{consultation_id}/end", timeout=180.0)
+        _api_request(
+            "POST",
+            f"/consultations/{consultation_id}/end",
+            json={
+                "audio_path": resolved_audio_path,
+                "doc_type": updated_state.get("doc_type", "Clinic Letter"),
+                "letter_prefs": {
+                    "clinician_name": updated_state.get("clinician_name", "Dr Sarah Chen"),
+                    "clinician_title": updated_state.get("clinician_title", "Consultant, General Practice"),
+                    "gp_name": updated_state.get("gp_name", "Dr Andrew Wilson"),
+                    "gp_address": updated_state.get("gp_address", "Riverside Medical Practice"),
+                },
+            },
+            timeout=300.0,
+        )
     except Exception as exc:
         return updated_state, f"Failed to end consultation: {exc}", _processing_screen_html(1, "Finalising transcript…", "MedASR processing audio", "Elapsed: 00:00"), gr.update(active=False), *show_screen("s3")
 
@@ -685,7 +855,7 @@ def _poll_processing_progress(state):
         updated_state["screen"] = "s5"
         s1, s2, s3, s4 = _render_letter_sections(doc.get("sections", []))
         fhir = ""
-        return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, "Generating clinical letter…", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
+        return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, f"Generating {updated_state.get('doc_type', 'clinical letter').lower()}...", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
 
     try:
         progress = _api_request("GET", f"/consultations/{consultation_id}/progress")
@@ -707,7 +877,7 @@ def _poll_processing_progress(state):
             f"<span style='font-family:JetBrains Mono,monospace;font-size:14px;background:rgba(212,175,55,0.1);padding:2px 6px;border-radius:4px;color:#1E3A8A;'>Patient: {escape(str(document_payload.get('patient_name', 'N/A')))}</span>",
         ]
     )
-    return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, "Generating clinical letter…", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
+    return updated_state, "Processing complete. Review the generated clinic letter.", _processing_screen_html(3, f"Generating {updated_state.get('doc_type', 'clinical letter').lower()}...", "MedGemma 27B composing document", elapsed), gr.update(active=False), s1, s2, s3, s4, fhir, *show_screen("s5")
 
 
 def _regenerate_document(state):
@@ -787,7 +957,7 @@ def _sign_off_document(state, section_1, section_2, section_3, section_4):
         updated_state["consultation"] = {"id": None, "status": "idle"}
     updated_state["consultation"]["status"] = "signed_off"
     updated_state["screen"] = "s6"
-    export_path = Path("data") / "demo" / "latest_signed_letter.txt"
+    export_path = Path("/tmp") / "latest_signed_letter.txt"
     export_path.write_text(signed_letter + "\n", encoding="utf-8")
     signed_html = f"<div style='min-height:100vh;background:#F8F6F1;padding:24px 48px 48px 48px;margin:0;'><div style='font-family:Inter,sans-serif;font-size:16px;line-height:1.75;color:#1A1A2E;white-space:pre-wrap;' id='signed-letter-text'>{escape(signed_letter)}</div></div>"
     return updated_state, "Document signed off. You can now copy or download the letter.", signed_html, signed_letter, gr.update(value=str(export_path)), *show_screen("s6")
@@ -826,11 +996,11 @@ def _prepare_signed_download(state):
     if not signed_text:
         return updated_state, "No signed letter available to download yet.", gr.update(value=None)
 
-    export_path = Path("data") / "demo" / "latest_signed_letter.txt"
+    export_path = Path("/tmp") / "latest_signed_letter.txt"
     export_path.write_text(signed_text + "\n", encoding="utf-8")
     return updated_state, "Download file refreshed.", gr.update(value=str(export_path))
 
-def _next_patient(state):
+def _next_patient(state, p_cn, p_ct, p_ho, p_de, p_gp, p_so, p_ga, p_dt):
     """Reset consultation workflow and return to dashboard after sign-off.
 
     Args:
@@ -850,7 +1020,35 @@ def _next_patient(state):
     refreshed_state = initial_consultation_state()
     refreshed_state['completed_patients'] = updated_state['completed_patients']
     refreshed_state['signed_letters'] = dict(updated_state.get('signed_letters', {}))
-    return refreshed_state, "Ready for next patient. Please select a patient card.", "", "", "", "", "", "", dashboard, *show_screen("s1")
+    refreshed_state['doc_type'] = p_dt or updated_state.get('doc_type', 'Clinic Letter')
+    refreshed_state['letter_prefs'] = {
+        "clinician_name": p_cn or "Dr Sarah Chen",
+        "clinician_title": p_ct or "Consultant, General Practice",
+        "hospital": p_ho or "Clarke NHS Trust",
+        "department": p_de or "General Practice Department",
+        "gp_name": p_gp or "Dr Andrew Wilson",
+        "signoff_phrase": p_so or "Warm regards",
+        "gp_address": p_ga or "Riverside Medical Practice\n14 Harcourt Street\nLondon",
+    }
+    return (
+        refreshed_state,
+        "Ready for next patient. Please select a patient card.",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        dashboard,
+        *show_screen("s1"),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+        gr.update(),
+    )
 
 
 def build_ui() -> gr.Blocks:
@@ -868,6 +1066,7 @@ def build_ui() -> gr.Blocks:
     with gr.Blocks(theme=clarke_theme, css=Path("frontend/assets/style.css").read_text(encoding="utf-8"), title="Clarke", head=CLARKE_HEAD) as demo:
         app_state = gr.State(initial_consultation_state())
         gr.HTML(build_global_style_block())
+        gr.HTML("""<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){function fix(){var el=document.getElementById('clarke-doc-type');if(!el)return;var p=el.parentElement;while(p&&p!==document.body){p.style.setProperty('background','transparent','important');p.style.setProperty('border','none','important');p.style.setProperty('box-shadow','none','important');p.style.setProperty('padding','0','important');if(p.classList.contains('form')||p.classList.contains('block'))break;p=p.parentElement;}el.style.setProperty('background','rgba(255,255,255,0.6)','important');el.style.setProperty('border','1px solid rgba(212,175,55,0.2)','important');el.style.setProperty('border-radius','12px','important');el.style.setProperty('backdrop-filter','blur(8px)','important');el.style.setProperty('-webkit-backdrop-filter','blur(8px)','important');el.style.setProperty('box-shadow','0 2px 8px rgba(0,0,0,0.03)','important');el.style.setProperty('overflow','hidden','important');el.style.setProperty('padding','0','important');var kids=el.querySelectorAll('div,fieldset');for(var i=0;i<kids.length;i++){kids[i].style.setProperty('background','transparent','important');kids[i].style.setProperty('border-color','transparent','important');kids[i].style.setProperty('box-shadow','none','important');}var wrap=el.querySelector('.wrap');if(wrap){wrap.style.setProperty('padding','4px 20px 16px 20px','important');wrap.style.setProperty('border-top','1px solid rgba(212,175,55,0.12)','important');wrap.style.setProperty('gap','12px','important');wrap.style.setProperty('background','transparent','important');}var title=el.querySelector('span[data-testid=block-info]');if(title){title.style.setProperty('font-family','DM Serif Display,serif','important');title.style.setProperty('font-size','16px','important');title.style.setProperty('color','#D4AF37','important');title.style.setProperty('padding','14px 20px 8px 20px','important');title.style.setProperty('display','block','important');}var labels=el.querySelectorAll('label');for(var j=0;j<labels.length;j++){labels[j].style.setProperty('font-family','DM Serif Display,serif','important');labels[j].style.setProperty('font-size','14px','important');labels[j].style.setProperty('border','1px solid rgba(212,175,55,0.25)','important');labels[j].style.setProperty('border-radius','8px','important');labels[j].style.setProperty('padding','10px 20px','important');labels[j].style.setProperty('cursor','pointer','important');labels[j].style.setProperty('background','rgba(255,255,255,0.6)','important');labels[j].style.setProperty('color','#555','important');}var radios=el.querySelectorAll('input[type=radio]');for(var k=0;k<radios.length;k++){radios[k].style.setProperty('accent-color','#D4AF37','important');}}fix();[100,300,600,1200,2500].forEach(function(t){setTimeout(fix,t);});new MutationObserver(function(){fix();}).observe(document.documentElement,{childList:true,subtree:true});})()" style="display:none;position:absolute;width:0;height:0;">""")
         feedback_text = gr.Markdown("", visible=False)
 
         with gr.Column(visible=False) as screen_s2:
@@ -888,10 +1087,10 @@ def build_ui() -> gr.Blocks:
             hidden_cancel_button = gr.Button("hidden-cancel", visible=True, elem_id="hidden-cancel")
 
         with gr.Column(visible=False) as screen_s5:
-            gr.HTML("<div style='min-height:100vh;background:#F8F6F1;padding:32px 48px;margin:0;'><h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0 0 16px 0;'>Document Review</h2></div>")
+            gr.HTML("<h2 style='font-family:DM Serif Display,serif;color:#1A1A2E;margin:0;padding:8px 0 0 0;'>Document Review</h2>")
             review_status_badge = gr.HTML(build_status_badge_html("✎ Ready for Review", "#F59E0B"))
             review_fhir_values = gr.HTML("<span style='font-family:JetBrains Mono,monospace;'>FHIR values appear here.</span>")
-            section_one_text = gr.Textbox(label="NHS Clinic Letter", lines=20, interactive=True)
+            section_one_text = gr.Textbox(label="Document", lines=20, interactive=True)
             section_two_text = gr.Textbox(label="Section 2", lines=5, interactive=True, visible=False)
             section_three_text = gr.Textbox(label="Section 3", lines=5, interactive=True, visible=False)
             section_four_text = gr.Textbox(label="Section 4", lines=5, interactive=True, visible=False)
@@ -908,20 +1107,40 @@ def build_ui() -> gr.Blocks:
             download_text_file = gr.File(label="Download as Text", visible=False)
             hidden_copy_button = gr.Button("hidden-copy", visible=True, elem_id="hidden-copy")
             hidden_download_button = gr.Button("hidden-download", visible=True, elem_id="hidden-download")
-            gr.HTML("""<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"(function(){var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){document.querySelectorAll('textarea').forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}try{navigator.clipboard.writeText(text.trim()).then(function(){alert('Copied to clipboard!');});}catch(e){var ta=document.createElement('textarea');ta.value=text.trim();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Copied to clipboard!');}})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📋 Copy to Clipboard</button><button onclick=\"(function(){console.log('Clarke: Download clicked');var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){document.querySelectorAll('textarea').forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}var a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(text.trim());a.download='clinic_letter.txt';a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);console.log('Clarke: Download complete via data URI');})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📄 Download as Text</button></div>""")
+            gr.HTML("""<div style='display:flex;gap:12px;margin-top:24px;justify-content:center;'><button onclick=\"(function(){var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){document.querySelectorAll('textarea').forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}try{navigator.clipboard.writeText(text.trim()).then(function(){alert('Copied to clipboard!');});}catch(e){var ta=document.createElement('textarea');ta.value=text.trim();document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Copied to clipboard!');}})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:Inter,sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📋 Copy to Clipboard</button><button onclick="clarkePrintPDF()" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:Inter,sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover="this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'">📑 Download as PDF</button><button onclick=\"(function(){console.log('Clarke: Download clicked');var el=document.getElementById('signed-letter-text');var text='';if(el){text=el.innerText||el.textContent;}if(!text){document.querySelectorAll('textarea').forEach(function(t){if(t.value&&t.value.length>50)text=t.value;});}if(!text){alert('No letter text found');return;}var a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(text.trim());a.download='clinic_letter.txt';a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);console.log('Clarke: Download complete via data URI');})()\" style='background:transparent; color:#1A1A2E; border:2px solid #D4AF37; padding:12px 24px; border-radius:8px; font-family:Inter,sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.3s ease;' onmouseover=\"this.style.background='rgba(212,175,55,0.1)';this.style.boxShadow='0 0 12px rgba(212,175,55,0.3)';this.style.transform='translateY(-2px)'\" onmouseout=\"this.style.background='transparent';this.style.boxShadow='none';this.style.transform='translateY(0)'\">📄 Download as Text</button></div>""")
             gr.HTML("""<div style='position:sticky; bottom:0; left:0; right:0; z-index:100;'><button onclick=\"(function(){var el=document.getElementById('hidden-next-patient');if(!el){console.error('Clarke: hidden-next-patient not found');return;}if(el.tagName==='BUTTON'){el.click();}else{var b=el.querySelector('button');if(b)b.click();}console.log('Clarke: Next Patient clicked');})()\" style='display:block; width:100%; padding:18px 0; border:none; cursor:pointer; background:linear-gradient(135deg, #D4AF37 0%, #F0D060 100%); color:#1A1A2E; font-family:'Inter',sans-serif; font-weight:700; font-size:16px; letter-spacing:0.5px; transition:all 0.3s ease; box-shadow:0 -4px 16px rgba(212,175,55,0.3);' onmouseover=\"this.style.background='linear-gradient(135deg,#E8C84A,#F5E070)';this.style.boxShadow='0 -4px 24px rgba(212,175,55,0.5)';this.style.transform='translateY(-1px)'\" onmouseout=\"this.style.background='linear-gradient(135deg,#D4AF37,#F0D060)';this.style.boxShadow='0 -4px 16px rgba(212,175,55,0.3)';this.style.transform='translateY(0)'\">Next Patient →</button></div>""")
             hidden_next_patient_btn = gr.Button("hidden-next-patient", visible=True, elem_id="hidden-next-patient")
 
         with gr.Column(visible=True) as screen_s1:
             dashboard_html = gr.HTML(build_dashboard_html(clinic_payload))
+            doc_type_radio = gr.Radio(
+                choices=["Clinic Letter", "Ward Round Note"],
+                value="Clinic Letter",
+                label="📋  Document Type",
+                interactive=True,
+                elem_id="clarke-doc-type",
+            )
+            with gr.Accordion("⚙  Letter Preferences", open=False, elem_id="clarke-letter-prefs"):
+                gr.HTML("<p style='font-family:Inter,sans-serif;font-size:13px;color:#888;margin:0 0 12px 0;font-style:italic;'>Customise the generated clinic letter template. Changes persist for all patients in this clinic list.</p>")
+                with gr.Row():
+                    pref_clinician_name = gr.Textbox(label="Clinician Name", value="Dr Sarah Chen", interactive=True, scale=1)
+                    pref_clinician_title = gr.Textbox(label="Title / Role", value="Consultant, General Practice", interactive=True, scale=1)
+                with gr.Row():
+                    pref_hospital = gr.Textbox(label="Hospital / Trust", value="Clarke NHS Trust", interactive=True, scale=1)
+                    pref_department = gr.Textbox(label="Department", value="General Practice Department", interactive=True, scale=1)
+                with gr.Row():
+                    pref_gp_name = gr.Textbox(label="Addressee Name", value="Dr Andrew Wilson", interactive=True, scale=1)
+                    pref_signoff = gr.Textbox(label="Sign-off Phrase", value="Warm regards", interactive=True, scale=1)
+                pref_gp_address = gr.Textbox(label="Addressee Address", value="Riverside Medical Practice\n14 Harcourt Street\nLondon", lines=3, interactive=True)
+            gr.HTML(_letter_prefs_persistence_js())
             hidden_patient_buttons: list[gr.Button] = []
             for i in range(5):
                 hidden_patient_buttons.append(gr.Button(f"hidden-select-{i}", elem_id=f"hidden-select-{i}", visible=True))
 
         for i, hidden_btn in enumerate(hidden_patient_buttons):
             hidden_btn.click(
-                fn=lambda state, idx=i: _handle_patient_selection(state, idx),
-                inputs=[app_state],
+                fn=lambda state, cn, ct, ho, de, gp, so, ga, dt, idx=i: _handle_patient_selection(state, idx, cn, ct, ho, de, gp, so, ga, dt),
+                inputs=[app_state, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address, doc_type_radio],
                 outputs=[app_state, feedback_text, context_screen_html, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6],
                 show_progress="full",
             )
@@ -936,6 +1155,6 @@ def build_ui() -> gr.Blocks:
         hidden_sign_off_btn.click(_sign_off_document, inputs=[app_state, section_one_text, section_two_text, section_three_text, section_four_text], outputs=[app_state, feedback_text, signed_letter_html, copy_to_clipboard_text, download_text_file, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         hidden_copy_button.click(_copy_signed_document, inputs=[app_state], outputs=[app_state, feedback_text, copy_to_clipboard_text], show_progress="hidden")
         hidden_download_button.click(_prepare_signed_download, inputs=[app_state], outputs=[app_state, feedback_text, download_text_file], show_progress="hidden")
-        hidden_next_patient_btn.click(_next_patient, inputs=[app_state], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
+        hidden_next_patient_btn.click(_next_patient, inputs=[app_state, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address, doc_type_radio], outputs=[app_state, feedback_text, section_one_text, section_two_text, section_three_text, section_four_text, signed_letter_html, copy_to_clipboard_text, dashboard_html, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6, pref_clinician_name, pref_clinician_title, pref_hospital, pref_department, pref_gp_name, pref_signoff, pref_gp_address], show_progress="hidden")
 
     return demo

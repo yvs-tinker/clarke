@@ -20,6 +20,16 @@ except ModuleNotFoundError:  # pragma: no cover - mock mode support
     AutoTokenizer = None
     BitsAndBytesConfig = None
 
+if torch is not None and not hasattr(torch.nn.Module, "set_submodule"):
+    def _set_submodule(self, target, module):
+        atoms = target.split(".")
+        mod = self
+        for item in atoms[:-1]:
+            mod = getattr(mod, item)
+        setattr(mod, atoms[-1], module)
+
+    torch.nn.Module.set_submodule = _set_submodule
+
 from backend.config import get_settings
 from backend.errors import ModelExecutionError, get_component_logger
 from backend.schemas import ClinicalDocument, ConsultationStatus, DocumentSection, PatientContext
@@ -126,23 +136,23 @@ class DocumentGenerator:
             output_tokens = self._model.generate(
                 **inputs,
                 max_new_tokens=generation_max_tokens,
-                temperature=0.3,
-                top_p=0.9,
-                top_k=40,
-                do_sample=True,
+                do_sample=False,
                 repetition_penalty=1.1,
             )
         except Exception as exc:
             raise ModelExecutionError(f"MedGemma 27B inference failed: {exc}") from exc
 
         decoded_output = self._tokenizer.decode(output_tokens[0], skip_special_tokens=True)
-        return self._strip_prompt_prefix(decoded_output, prompt)
+        stripped = self._strip_prompt_prefix(decoded_output, prompt)
+        return self._clean_model_output(stripped)
 
     def generate_document(
         self,
         transcript: str,
         context: PatientContext,
         max_new_tokens: int | None = None,
+        doc_type: str = "Clinic Letter",
+        letter_prefs: dict | None = None,
     ) -> ClinicalDocument:
         """Render prompt, generate text with retry policy, and build ClinicalDocument.
 
@@ -155,7 +165,7 @@ class DocumentGenerator:
             ClinicalDocument: Parsed clinical letter representation with section objects.
         """
 
-        prompt = self._render_prompt(transcript, context)
+        prompt = self._render_prompt(transcript, context, doc_type=doc_type, letter_prefs=letter_prefs)
         generation_start = time.perf_counter()
 
         last_error: Exception | None = None
@@ -175,24 +185,39 @@ class DocumentGenerator:
 
         raise ModelExecutionError(f"Document generation failed after retry: {last_error}")
 
-    def _render_prompt(self, transcript: str, context: PatientContext) -> str:
+    def _render_prompt(self, transcript: str, context: PatientContext, doc_type: str = "Clinic Letter", letter_prefs: dict | None = None) -> str:
         """Render the document generation Jinja2 template with consultation inputs.
 
         Args:
             transcript (str): Consultation transcript text.
             context (PatientContext): Structured patient context data.
+            doc_type (str): Document type - "Clinic Letter" or "Ward Round Note".
+            letter_prefs (dict | None): Optional letter preferences from frontend.
 
         Returns:
             str: Rendered prompt string supplied to the language model.
         """
 
+        prefs = letter_prefs or {}
         env = Environment(loader=FileSystemLoader(PROMPTS_DIR))
-        template = env.get_template("document_generation.j2")
+        template_name = "ward_round_generation.j2" if doc_type == "Ward Round Note" else "document_generation.j2"
+        template = env.get_template(template_name)
+
+        # Extract patient details from context
+        patient_name = context.demographics.get("name", "Unknown")
+        patient_dob = context.demographics.get("dob", "Unknown")
+        patient_nhs = context.demographics.get("nhs_number", "Unknown")
+
         context_json = json.dumps(context.model_dump(mode="json"), ensure_ascii=False, indent=2)
         return template.render(
             letter_date=datetime.now(tz=timezone.utc).strftime("%d %b %Y"),
-            clinician_name="Dr. Sarah Chen",
-            clinician_title="Consultant Diabetologist",
+            clinician_name=prefs.get("clinician_name", "Dr. Sarah Chen"),
+            clinician_title=prefs.get("clinician_title", "Consultant Diabetologist"),
+            gp_name=prefs.get("gp_name", "Dr Andrew Wilson"),
+            gp_address=prefs.get("gp_address", "Riverside Medical Practice"),
+            patient_name=patient_name,
+            patient_dob=patient_dob,
+            patient_nhs=patient_nhs,
             transcript=transcript,
             context_json=context_json,
         )
@@ -208,13 +233,16 @@ class DocumentGenerator:
             list[DocumentSection]: Ordered parsed sections with heading and content fields.
         """
 
+        logger.info("Raw generated text for parsing:\n{}", generated_text[:2000])
+
         section_pattern = re.compile(
-            r"^(?:\*\*|##\s*)?(History of presenting complaint|Examination findings|Investigation results|Assessment and plan|Current medications)[:\*\s]*$",
+            r"^(?:\*\*|##\s*)?(?:\d+[\)\.]\s*)?(History of presenting complaint|Examination findings|Investigation results|Assessment and plan|Current medications|Overnight events|Current status and observations|Tasks / Actions|Tasks|Actions)[:\*\s]*$",
             flags=re.IGNORECASE,
         )
         sections: list[DocumentSection] = []
         current_heading: str | None = None
         current_lines: list[str] = []
+        header_lines: list[str] = []
 
         for raw_line in generated_text.splitlines():
             line = raw_line.strip()
@@ -233,8 +261,11 @@ class DocumentGenerator:
                 current_lines = []
                 continue
 
-            if current_heading and line:
-                current_lines.append(line)
+            if current_heading:
+                if line:
+                    current_lines.append(line)
+            elif line:
+                header_lines.append(line)
 
         if current_heading and current_lines:
             sections.append(
@@ -245,6 +276,47 @@ class DocumentGenerator:
                     fhir_sources=[],
                 )
             )
+
+        # Insert letter header (addressee, date, salutation) as first section if present
+        if header_lines:
+            header_text = "\n".join(header_lines).strip()
+            if header_text:
+                sections.insert(
+                    0,
+                    DocumentSection(
+                        heading="Letter Header",
+                        content=header_text,
+                        editable=True,
+                        fhir_sources=[],
+                    ),
+                )
+
+        # Strip sign-off block from last section content
+        if sections:
+            last = sections[-1]
+            signoff_pattern = re.compile(
+                r"\n\s*\n\s*(Warm regards|Kind regards|Yours sincerely|Yours faithfully|Sign-off:).*",
+                flags=re.IGNORECASE | re.DOTALL,
+            )
+            cleaned = signoff_pattern.sub("", last.content)
+            if cleaned != last.content:
+                signoff_text = last.content[len(cleaned):].strip()
+                sections[-1] = DocumentSection(
+                    heading=last.heading,
+                    content=cleaned.strip(),
+                    editable=last.editable,
+                    fhir_sources=last.fhir_sources,
+                )
+                # Add sign-off as its own section
+                if signoff_text:
+                    sections.append(
+                        DocumentSection(
+                            heading="Sign-off",
+                            content=signoff_text,
+                            editable=True,
+                            fhir_sources=[],
+                        )
+                    )
 
         if not sections:
             sections = [
@@ -313,6 +385,35 @@ class DocumentGenerator:
         if decoded_output.startswith(prompt):
             return decoded_output[len(prompt) :].strip()
         return decoded_output.strip()
+
+    @staticmethod
+    def _clean_model_output(text: str) -> str:
+        """Remove model sequence tokens and replace clinical flags with human-readable notes.
+
+        Args:
+            text (str): Raw model output after prompt prefix stripping.
+
+        Returns:
+            str: Cleaned text safe for clinical document display.
+        """
+
+        # End-of-sequence tokens leak from decoder when skip_special_tokens misses them
+        text = text.replace("<|end|>", "").replace("<|endoftext|>", "")
+        text = text.replace("<|END|>", "").replace("<|ENDOFTEXT|>", "")
+        # Replace raw discrepancy tags with human-readable clinical note
+        text = re.sub(
+            r"\[DISCREPANCY\]",
+            "(Note: value differs from EHR, must verify)",
+            text,
+            flags=re.IGNORECASE,
+        )
+        # Collapse excessive blank lines left behind by removals
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        # Ensure blank line before sign-off (handle optional trailing whitespace)
+        text = re.sub(r'(\S)[^\S\n]*\n[^\S\n]*(Warm regards|Kind regards|Yours sincerely|Yours faithfully)', r'\1\n\n\2', text)
+        # Strip raw prompt labels from generated output
+        text = re.sub(r'^(Addressee|Salutation|Sign-off):\s*', '', text, flags=re.MULTILINE)
+        return text.strip()
 
     @staticmethod
     def _mock_reference_letter() -> str:

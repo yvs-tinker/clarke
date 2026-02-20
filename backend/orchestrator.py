@@ -180,7 +180,11 @@ class PipelineOrchestrator:
             raise ModelExecutionError("Audio could not be transcribed.")
         consultation.transcript = transcript.model_copy(update={"consultation_id": consultation_id})
         transcribe_s = round(time.perf_counter() - stage_start, 3)
+        if consultation.transcript and consultation.transcript.text:
+            logger.info("MedASR transcript:\n{}", consultation.transcript.text)
         logger.info("Pipeline stage complete", consultation_id=consultation_id, stage="transcribe", duration_s=transcribe_s)
+        if torch is not None and torch.cuda.is_available():
+            torch.cuda.empty_cache()
         self._clear_cuda_cache()
 
         stage_start = time.perf_counter()
@@ -198,7 +202,11 @@ class PipelineOrchestrator:
                 logger.warning("FHIR degradation activated", consultation_id=consultation_id, warning=warning)
                 consultation.context = self._build_transcript_only_context(consultation, warning)
         context_s = round(time.perf_counter() - stage_start, 3)
+        if consultation.context:
+            logger.info("EHR context extracted:\n{}", consultation.context.model_dump_json(indent=2)[:3000])
         logger.info("Pipeline stage complete", consultation_id=consultation_id, stage="retrieve_context", duration_s=context_s)
+        if torch is not None and torch.cuda.is_available():
+            torch.cuda.empty_cache()
         self._clear_cuda_cache()
 
         stage_start = time.perf_counter()
@@ -214,6 +222,8 @@ class PipelineOrchestrator:
                 consultation.transcript.text,
                 consultation.context,
                 consultation_id,
+                doc_type=consultation.doc_type,
+                letter_prefs=consultation.letter_prefs,
             ).model_copy(update={"consultation_id": consultation_id})
         else:
             raise ModelExecutionError("Transcript and patient context are required before document generation")
@@ -245,6 +255,8 @@ class PipelineOrchestrator:
         transcript_text: str,
         context: PatientContext,
         consultation_id: str,
+        doc_type: str = "Clinic Letter",
+        letter_prefs: dict | None = None,
     ) -> ClinicalDocument:
         """Generate a document with one OOM recovery retry.
 
@@ -259,7 +271,7 @@ class PipelineOrchestrator:
 
         max_tokens = int(self._doc_generator.settings.DOC_GEN_MAX_TOKENS)
         try:
-            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=max_tokens)
+            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=max_tokens, doc_type=doc_type, letter_prefs=letter_prefs)
         except TypeError as exc:
             if "max_new_tokens" not in str(exc):
                 raise
@@ -267,7 +279,7 @@ class PipelineOrchestrator:
                 "Document generator does not accept max_new_tokens override; falling back to default signature",
                 consultation_id=consultation_id,
             )
-            return self._doc_generator.generate_document(transcript_text, context)
+            return self._doc_generator.generate_document(transcript_text, context, doc_type=doc_type, letter_prefs=letter_prefs)
         except torch.cuda.OutOfMemoryError as exc:
             self._clear_cuda_cache()
             reduced_tokens = max(256, max_tokens // 2)
@@ -277,7 +289,7 @@ class PipelineOrchestrator:
                 previous_max_new_tokens=max_tokens,
                 retry_max_new_tokens=reduced_tokens,
             )
-            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=reduced_tokens)
+            return self._doc_generator.generate_document(transcript_text, context, max_new_tokens=reduced_tokens, doc_type=doc_type, letter_prefs=letter_prefs)
 
     def _build_transcript_only_context(self, consultation: Consultation, warning: str) -> PatientContext:
         """Build minimal patient context when EHR retrieval fails.

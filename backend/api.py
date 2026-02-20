@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from shutil import copyfileobj
@@ -302,7 +303,7 @@ def upload_audio(
     if extension not in {".wav", ".webm"}:
         raise HTTPException(status_code=400, detail="Only WAV or WebM audio uploads are supported")
 
-    uploads_root = Path("data/uploads") / consultation_id
+    uploads_root = Path("/tmp/uploads") / consultation_id
     raw_path = uploads_root / f"raw{extension}"
     original_stem = Path(audio_file.filename or "audio").stem or "audio"
     wav_path = uploads_root / f"{original_stem}_16k.wav"
@@ -335,7 +336,7 @@ def upload_audio(
 
 
 @app.post("/api/v1/consultations/{consultation_id}/end", status_code=202)
-def end_consultation(consultation_id: str) -> dict[str, Any]:
+def end_consultation(consultation_id: str, body: dict[str, Any] | None = Body(None)) -> dict[str, Any]:
     """End a consultation and execute full processing pipeline.
 
     Args:
@@ -346,24 +347,43 @@ def end_consultation(consultation_id: str) -> dict[str, Any]:
     """
 
     try:
-        consultation = orchestrator.end_consultation(consultation_id)
-        progress = orchestrator.get_progress(consultation_id)
+        consultation = orchestrator.get_consultation(consultation_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except TimeoutError as exc:
-        raise HTTPException(status_code=504, detail={"error": "timeout", "message": str(exc)}) from exc
-    except AudioError as exc:
-        raise HTTPException(status_code=400, detail={"error": "audio_error", "message": str(exc)}) from exc
-    except ModelExecutionError as exc:
-        error_type = "audio_error" if "transcribed" in str(exc).lower() else "model_error"
-        status_code = 400 if error_type == "audio_error" else 500
-        raise HTTPException(status_code=status_code, detail={"error": error_type, "message": str(exc)}) from exc
+
+    # Accept audio path directly from frontend for demo/server-side audio files
+    if body and body.get("audio_path"):
+        audio_path = body["audio_path"]
+        if Path(audio_path).exists():
+            consultation.audio_file_path = audio_path
+
+    # Accept document type and letter preferences from frontend
+    if body and body.get("doc_type"):
+        consultation.doc_type = body["doc_type"]
+    if body and body.get("letter_prefs"):
+        consultation.letter_prefs = body["letter_prefs"]
+
+    # Launch pipeline in background thread – avoids HF Spaces 60s gateway timeout
+    def _run_pipeline_background() -> None:
+        """Execute the orchestrator pipeline in a daemon thread.
+
+        Allows the /end endpoint to return 202 immediately while processing
+        continues. Frontend polls /progress for status updates.
+        """
+
+        try:
+            orchestrator.end_consultation(consultation_id)
+        except Exception as exc:
+            logger.error(f"Background pipeline error: {exc}", consultation_id=consultation_id)
+
+    thread = threading.Thread(target=_run_pipeline_background, daemon=True)
+    thread.start()
 
     return {
         "consultation_id": consultation.id,
-        "status": consultation.status.value,
-        "pipeline_stage": progress.stage.value,
-        "message": "Pipeline completed. Document is ready for review.",
+        "status": "processing",
+        "pipeline_stage": "transcribing",
+        "message": "Pipeline started in background. Poll /progress for updates.",
     }
 
 

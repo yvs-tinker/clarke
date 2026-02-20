@@ -5,11 +5,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-import librosa
+import soundfile as sf
+import numpy as np
 try:
-    from transformers import pipeline
+    import torch
+    from transformers import AutoProcessor, AutoModelForCTC
 except ModuleNotFoundError:  # pragma: no cover - mock mode support
-    pipeline = None
+    torch = None
+    AutoProcessor = None
+    AutoModelForCTC = None
 
 from backend.config import get_settings
 from backend.errors import ModelExecutionError
@@ -39,6 +43,8 @@ class MedASRModel:
         self.settings = get_settings()
         self.model_manager = model_manager or ModelManager()
         self._pipeline = None
+        self._processor = None
+        self._device = "cpu"
 
     @property
     def is_mock_mode(self) -> bool:
@@ -53,13 +59,13 @@ class MedASRModel:
         return self.settings.MEDASR_MODEL_ID.lower() == "mock"
 
     def load_model(self) -> None:
-        """Load the MedASR transformer pipeline unless running in mock mode.
+        """Load the MedASR model and processor unless running in mock mode.
 
         Args:
             None: Uses settings for model id and device selection.
 
         Returns:
-            None: Caches loaded pipeline instance.
+            None: Caches loaded model and processor instances.
         """
         if self.is_mock_mode:
             self._pipeline = "mock"
@@ -69,7 +75,7 @@ class MedASRModel:
         if self._pipeline is not None:
             return
 
-        if pipeline is None:
+        if AutoModelForCTC is None:
             raise ModelExecutionError("transformers is required for non-mock MedASR mode")
 
         device = "cuda:0"
@@ -77,11 +83,12 @@ class MedASRModel:
             device = "cpu"
 
         try:
-            self._pipeline = pipeline(
-                "automatic-speech-recognition",
-                model=self.settings.MEDASR_MODEL_ID,
-                device=device,
-            )
+            self._processor = AutoProcessor.from_pretrained(self.settings.MEDASR_MODEL_ID)
+            model = AutoModelForCTC.from_pretrained(self.settings.MEDASR_MODEL_ID)
+            model = model.to(device)
+            model.eval()
+            self._device = device
+            self._pipeline = model  # store model here so is_mock_mode / None checks still work
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedASR model: {exc}") from exc
 
@@ -108,21 +115,66 @@ class MedASRModel:
             duration_s = self._duration(source)
             return self._make_transcript(source, text, duration_s)
 
-        waveform, _ = librosa.load(source, sr=16000, mono=True)
-        duration_s = float(librosa.get_duration(y=waveform, sr=16000))
+        waveform, file_sr = sf.read(source, dtype="float32", always_2d=False)
+        # Convert to mono if stereo
+        if waveform.ndim > 1:
+            waveform = waveform.mean(axis=1)
+        # Resample if needed
+        if file_sr != 16000:
+            from scipy.signal import resample
+
+            num_samples = int(len(waveform) * 16000 / file_sr)
+            waveform = resample(waveform, num_samples).astype(np.float32)
+        duration_s = float(len(waveform)) / 16000.0
 
         try:
-            result = self._pipeline(
+            inputs = self._processor(
                 waveform,
-                chunk_length_s=20,
-                stride_length_s=(4, 2),
-                return_timestamps=True,
-                generate_kwargs={"language": "en", "task": "transcribe"},
+                sampling_rate=16000,
+                return_tensors="pt",
+                padding=True,
             )
-        except Exception as exc:
-            raise ModelExecutionError(f"MedASR inference failed: {exc}") from exc
+            # MedASR processor may return input_features or input_values
+            if hasattr(inputs, "input_features") and inputs.input_features is not None:
+                model_input = inputs.input_features.to(self._device)
+            elif hasattr(inputs, "input_values") and inputs.input_values is not None:
+                model_input = inputs.input_values.to(self._device)
+            else:
+                # Fallback: get first tensor from the batch encoding
+                key = list(inputs.data.keys())[0]
+                model_input = inputs[key].to(self._device)
 
-        transcript_text = str(result.get("text", "")).strip()
+            with torch.no_grad():
+                model_input = model_input.float()
+                logits = self._pipeline(**{list(inputs.data.keys())[0]: model_input}).logits
+
+            predicted_ids = torch.argmax(logits, dim=-1)
+
+            # CTC decoding: collapse consecutive duplicate tokens, then remove blanks
+            ids = predicted_ids[0].tolist()
+            collapsed = []
+            prev = None
+            for t in ids:
+                if t != prev:
+                    collapsed.append(t)
+                prev = t
+            # Token 0 is the CTC blank in most CTC models
+            blank_id = getattr(self._pipeline.config, 'ctc_blank_id', 0)
+            collapsed = [t for t in collapsed if t != blank_id]
+            collapsed_tensor = torch.tensor([collapsed], dtype=predicted_ids.dtype)
+
+            raw_text = self._processor.batch_decode(collapsed_tensor)[0]
+            # Strip any remaining special tokens
+            transcript_text = raw_text.replace("<epsilon>", "").replace("</s>", "").replace("<s>", "").strip()
+            # Collapse multiple spaces
+            import re as _re
+
+            transcript_text = _re.sub(r'\s+', ' ', transcript_text)
+        except Exception as exc:
+            import traceback
+
+            tb = traceback.format_exc()
+            raise ModelExecutionError(f"MedASR inference failed: {exc}\nTraceback:\n{tb}") from exc
         return self._make_transcript(source, transcript_text, duration_s)
 
     def _make_transcript(self, audio_path: Path, text: str, duration_s: float) -> Transcript:
@@ -148,7 +200,7 @@ class MedASRModel:
 
     @staticmethod
     def _duration(audio_path: Path) -> float:
-        """Compute audio duration in seconds using librosa.
+        """Compute audio duration in seconds using soundfile.
 
         Args:
             audio_path (Path): Audio file path.
@@ -156,8 +208,8 @@ class MedASRModel:
         Returns:
             float: Duration in seconds.
         """
-        waveform, sample_rate = librosa.load(audio_path, sr=16000, mono=True)
-        return float(librosa.get_duration(y=waveform, sr=sample_rate))
+        info = sf.info(audio_path)
+        return float(info.frames) / float(info.samplerate)
 
     @staticmethod
     def _get_mock_text(audio_path: Path) -> str:

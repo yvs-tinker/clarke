@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import librosa
+
+# librosa removed — using stdlib wave module for validation to avoid numba issues in Docker
 from pydub import AudioSegment
 
 from backend.errors import AudioError
@@ -62,12 +63,15 @@ def validate_audio(file_path: str) -> dict[str, float | int]:
         raise AudioError(f"Audio file not found: {path}")
 
     try:
-        waveform, sample_rate = librosa.load(path, sr=None, mono=False)
+        import wave as wave_mod
+
+        with wave_mod.open(str(path), "rb") as wf:
+            sample_rate = wf.getframerate()
+            channels = wf.getnchannels()
+            n_frames = wf.getnframes()
+            duration_s = float(n_frames) / float(sample_rate) if sample_rate > 0 else 0.0
     except Exception as exc:
         raise AudioError(f"Unable to load audio for validation: {path}: {exc}") from exc
-
-    channels = int(waveform.shape[0]) if getattr(waveform, "ndim", 1) > 1 else 1
-    duration_s = float(librosa.get_duration(y=waveform, sr=sample_rate))
 
     if sample_rate != EXPECTED_SAMPLE_RATE:
         raise AudioError(f"Invalid sample rate {sample_rate}; expected {EXPECTED_SAMPLE_RATE}")
