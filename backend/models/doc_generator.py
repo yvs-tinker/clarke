@@ -286,7 +286,7 @@ class DocumentGenerator:
                 sections.insert(
                     0,
                     DocumentSection(
-                        heading="Letter Header",
+                        heading="",
                         content=header_text,
                         editable=True,
                         fhir_sources=[],
@@ -313,7 +313,7 @@ class DocumentGenerator:
                 if signoff_text:
                     sections.append(
                         DocumentSection(
-                            heading="Sign-off",
+                            heading="",
                             content=signoff_text,
                             editable=True,
                             fhir_sources=[],
