@@ -339,6 +339,9 @@ def build_global_style_block() -> str:
     box-shadow: 0 4px 20px rgba(212,175,55,0.12) !important;
     backdrop-filter: blur(8px) !important;
   }
+  #clarke-audio-input, #clarke-audio-input * {
+    font-family: Inter, sans-serif !important;
+  }
   #clarke-audio-input .label-wrap span {
     color: #1A1A2E !important;
     font-family: Inter, sans-serif !important;
@@ -346,41 +349,62 @@ def build_global_style_block() -> str:
     font-size: 13px !important;
     letter-spacing: 0.03em !important;
   }
-  /* Gold bar for controls instead of individual circles */
-  #clarke-audio-input .controls, #clarke-audio-input .actions {
-    background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(240,208,96,0.15) 100%) !important;
+  /* Gold control bar */
+  #clarke-audio-input .controls {
+    background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(240,208,96,0.12) 100%) !important;
     border-radius: 12px !important;
-    padding: 8px 12px !important;
-    gap: 6px !important;
+    padding: 8px 16px !important;
     border: 1px solid rgba(212,175,55,0.25) !important;
+    backdrop-filter: blur(4px) !important;
   }
-  #clarke-audio-input button {
+  /* Buttons inside audio — rounded rect not circles */
+  #clarke-audio-input .icon-button,
+  #clarke-audio-input .action,
+  #clarke-audio-input .play-pause-button,
+  #clarke-audio-input .playback,
+  #clarke-audio-input .rewind,
+  #clarke-audio-input .skip {
     background: linear-gradient(135deg, #D4AF37 0%, #F0D060 100%) !important;
     border: none !important;
     color: #1A1A2E !important;
     border-radius: 8px !important;
     transition: all 0.3s ease !important;
-    padding: 6px 10px !important;
   }
-  #clarke-audio-input button:hover {
+  #clarke-audio-input .icon-button:hover,
+  #clarke-audio-input .action:hover,
+  #clarke-audio-input .play-pause-button:hover {
     box-shadow: 0 2px 12px rgba(212,175,55,0.4) !important;
-    transform: scale(1.03) !important;
+    transform: scale(1.05) !important;
   }
-  /* Gold waveform with glow */
-  #clarke-audio-input .waveform-container, #clarke-audio-input audio {
+  /* Gold waveform glow */
+  #clarke-audio-input .waveform-container {
     border-radius: 8px !important;
+    box-shadow: 0 0 12px rgba(212,175,55,0.15) !important;
   }
   #clarke-audio-input canvas {
-    filter: sepia(0.6) saturate(2) hue-rotate(10deg) !important;
+    filter: sepia(0.5) saturate(2.5) hue-rotate(15deg) brightness(1.1) !important;
   }
-  /* Hide 'No microphone found' label */
-  #clarke-audio-input .microphone-not-found,
-  #clarke-audio-input .not-found,
-  #clarke-audio-input span[data-testid="not-found"] {
+  /* Hide mic-select dropdown ("No microphone found") */
+  #clarke-audio-input select.mic-select,
+  #clarke-audio-input .mic-select {
     display: none !important;
   }
-  #clarke-audio-input .empty-wrap, #clarke-audio-input .upload-text {
-    display: none !important;
+  /* Record button gold styling */
+  #clarke-audio-input .component-wrapper button {
+    background: linear-gradient(135deg, #D4AF37 0%, #F0D060 100%) !important;
+    border: none !important;
+    color: #1A1A2E !important;
+    border-radius: 8px !important;
+    font-family: Inter, sans-serif !important;
+    font-weight: 600 !important;
+  }
+  /* Top panel action buttons (download, share etc) */
+  #clarke-audio-input .top-panel .icon-button {
+    background: transparent !important;
+    color: #D4AF37 !important;
+  }
+  #clarke-audio-input .top-panel .icon-button:hover {
+    background: rgba(212,175,55,0.1) !important;
   }
   /* End Consultation button states */
   .clarke-end-btn-disabled {
