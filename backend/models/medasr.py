@@ -54,16 +54,26 @@ class MedASRModel:
         model_id = self.settings.MEDASR_MODEL_ID
 
         try:
-            self._processor = AutoProcessor.from_pretrained(
-                model_id,
-                trust_remote_code=True,
-                revision="2625be4f1377ac544b451c6938eaf955c19a9c38",
-            )
-            self._model = AutoModelForCTC.from_pretrained(
-                model_id,
-                trust_remote_code=True,
-                revision="2625be4f1377ac544b451c6938eaf955c19a9c38",
-            )
+            self._processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
+
+            # Monkey-patch: LasrFeatureExtractor._torch_extract_fbank_features
+            # expects (waveform, device) but upstream passes extra args.
+            fe = getattr(self._processor, 'feature_extractor', self._processor)
+            if hasattr(fe, '_torch_extract_fbank_features'):
+                _orig = fe._torch_extract_fbank_features
+                def _patched(*args, **kwargs):
+                    # Original signature: (waveform, device='cpu')
+                    # Upstream may pass: (waveform, max_length, device) or other combos
+                    waveform = args[0] if args else kwargs.get('waveform')
+                    device = kwargs.get('device', 'cpu')
+                    if len(args) >= 3:
+                        device = args[2]
+                    elif len(args) == 2 and isinstance(args[1], str):
+                        device = args[1]
+                    return _orig(waveform, device=device)
+                fe._torch_extract_fbank_features = _patched
+
+            self._model = AutoModelForCTC.from_pretrained(model_id, trust_remote_code=True)
             self._model = self._model.to(device)
             self._model.eval()
             self._device = device
