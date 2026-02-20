@@ -96,6 +96,16 @@ class MedASRModel:
             model = model.to(device)
             model.eval()
             self._device = device
+
+            # Monkey-patch: newer transformers passes extra arg to _torch_extract_fbank_features
+            fe = getattr(self._processor, "feature_extractor", self._processor)
+            if hasattr(fe, "_torch_extract_fbank_features"):
+                _orig_fn = fe._torch_extract_fbank_features
+                import inspect
+                if len(inspect.signature(_orig_fn).parameters) < 3:
+                    def _patched(waveform, device=None, center=None):
+                        return _orig_fn(waveform) if device is None else _orig_fn(waveform, device)
+                    fe._torch_extract_fbank_features = _patched
             self._pipeline = model  # store model here so is_mock_mode / None checks still work
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedASR model: {exc}") from exc
