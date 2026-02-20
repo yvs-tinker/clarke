@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
 RUN ln -s /usr/bin/python3.11 /usr/bin/python
 
 WORKDIR /app
+ENV HF_HOME=/tmp/hf_cache TRANSFORMERS_CACHE=/tmp/hf_cache
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
