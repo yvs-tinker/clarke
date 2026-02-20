@@ -13,6 +13,8 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - mock mode support
     torch = None
     AutoProcessor = None
+    Wav2Vec2Processor = None
+    Wav2Vec2Processor = None
     AutoModelForCTC = None
 
 from backend.config import get_settings
@@ -83,7 +85,13 @@ class MedASRModel:
             device = "cpu"
 
         try:
-            self._processor = AutoProcessor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
+            try:
+                self._processor = Wav2Vec2Processor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
+            except Exception:
+                try:
+                    self._processor = AutoFeatureExtractor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
+                except Exception:
+                    self._processor = AutoProcessor.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
             model = AutoModelForCTC.from_pretrained(self.settings.MEDASR_MODEL_ID, trust_remote_code=True)
             model = model.to(device)
             model.eval()
