@@ -81,6 +81,7 @@ class MedASRModel:
                 "automatic-speech-recognition",
                 model=self.settings.MEDASR_MODEL_ID,
                 device=device,
+                trust_remote_code=True,
             )
         except Exception as exc:
             raise ModelExecutionError(f"Failed to load MedASR model: {exc}") from exc
