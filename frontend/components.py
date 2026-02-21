@@ -398,9 +398,12 @@ def build_global_style_block() -> str:
     font-family: Inter, sans-serif !important;
     font-weight: 600 !important;
   }
-  /* Hide top panel icons (download, share, close) */
-  #clarke-audio-input .top-panel,
+  /* Hide top panel icons (download, share, close) but keep component functional */
   #clarke-audio-input .icon-button-wrapper.top-panel {
+    display: none !important;
+  }
+  /* Hide trim/scissors button */
+  #clarke-audio-input .action.icon:last-child {
     display: none !important;
   }
   /* End Consultation button font */
