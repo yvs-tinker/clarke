@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+export USER="${USER:-appuser}"
+export TORCHINDUCTOR_CACHE_DIR="/tmp/torch_cache"
 
 echo "Starting Clarke..."
 

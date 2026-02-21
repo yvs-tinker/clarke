@@ -81,8 +81,6 @@ peft_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
-from trl import SFTConfig
-
 training_args = SFTConfig(
     output_dir="/tmp/clarke-lora-checkpoints",
     num_train_epochs=3,
