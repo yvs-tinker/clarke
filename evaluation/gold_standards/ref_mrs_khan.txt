@@ -15,43 +15,45 @@ Re: Mrs Fatima Khan, DOB 16/09/1980, NHS No. 239-715-8046
 
 Summary
 
-Mrs Khan, a 45-year-old woman with depressive disorder and insomnia, attended for mental health review. She reported persistent low mood, difficulty sleeping, and reduced motivation. Her PHQ-9 score was 12, indicating moderate depression. Sertraline was increased from 50 mg to 100 mg daily and a referral to talking therapy was made, with follow-up in four weeks.
+Mrs Khan, a 45-year-old woman with depressive disorder and insomnia, attended for mental health review. She reported low mood, difficulty sleeping, and reduced motivation for the past six weeks. Her PHQ-9 score was 12, indicating moderate depression, and GAD-7 score was 8, suggesting mild to moderate anxiety. Sertraline was increased from 50 mg to 100 mg daily and a referral for talking therapy was made, with follow-up in four weeks.
 
 History of presenting complaint
 
-Mrs Khan attended for review. She has been finding things quite difficult recently. Her mood has been low for the past six weeks, with difficulty sleeping and reduced motivation to do things she normally enjoys. She has been taking sertraline 50 mg daily for the past three months. Her symptoms have not fully improved on this dose.
+Mrs Khan attended for review. She reported low mood, difficulty sleeping, and reduced motivation for approximately six weeks. She noted that her symptoms had not fully resolved despite taking sertraline 50 mg daily for the past three months. PHQ-9 score was 12, indicating moderate depression. GAD-7 score was 8, suggesting mild to moderate anxiety.
 
 Past medical history
 
-Depressive Disorder, Insomnia, Latex Allergy.
+Depressive Disorder, Insomnia.
 
 Current medications
 
-Sertraline 100 mg once daily (increased from 50 mg)
-Colecalciferol (unchanged)
+Sertraline 50 mg once daily (changed to 100 mg once daily)
+Colecalciferol 800 units once daily (unchanged)
 
 Examination findings
 
-No formal physical examination was performed at this visit. Mental state assessment noted low mood, reduced motivation, and difficulty sleeping consistent with moderate depressive episode.
+No formal examination findings were documented during this consultation.
 
 Investigation results
 
-PHQ-9 score was 12, indicating moderate depression. GAD-7 score was 9, suggesting mild to moderate anxiety. TSH was 2.1 mIU/L, within the normal range, excluding a thyroid cause for her symptoms.
+PHQ-9 score was 12, indicating moderate depression.
+GAD-7 score was 8, suggesting mild to moderate anxiety.
+TSH was 2.1 mIU/L, within the normal range.
 
 Assessment
 
-Mrs Khan has moderate depression with comorbid mild to moderate anxiety. She has been on sertraline 50 mg for three months without full improvement, as evidenced by a PHQ-9 of 12. TSH is normal, excluding hypothyroidism as a contributing factor.
+Mrs Khan presents with persistent symptoms of moderate depression and mild to moderate anxiety despite treatment with sertraline 50 mg daily for three months.
 
 Plan
 
-1. Increase sertraline to 100 mg once daily. This is a safe and commonly used dose and it may take two to four weeks before she notices the full benefit.
-2. Referral for talking therapy through the local IAPT service, as a combination of medication and therapy tends to work best.
-3. Continue with regular exercise as this helps with mood.
-4. Follow-up in four weeks to see how the new dose is working.
+1. Increase sertraline from 50 mg to 100 mg once daily.
+2. Refer for talking therapy through the local IAPT service.
+3. Review in four weeks.
 
 Advice to patient
 
-1. If at any point she feels her mood is getting significantly worse or she has any thoughts of harming herself, she should contact us urgently or call the crisis line.
+1. Advised to contact the practice urgently or the crisis line if mood worsens significantly or thoughts of self-harm occur.
+2. Encouraged to continue regular exercise.
 
 Warm regards,
 

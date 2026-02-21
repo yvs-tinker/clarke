@@ -15,46 +15,47 @@ Re: Mr David Williams, DOB 09/01/1953, NHS No. 518-630-2741
 
 Summary
 
-Mr Williams, a 73-year-old man with congestive heart failure and ischaemic heart disease, attended for heart failure review. He reported worsening breathlessness on exertion and ankle swelling. His ejection fraction is 35% and BNP is elevated at 450 pg/mL. Furosemide was increased from 40 mg to 80 mg daily, with follow-up in six weeks.
+Mr Williams, a 73-year-old man with congestive heart failure and ischaemic heart disease, attended for heart failure review. He reported worsening breathlessness on exertion and ankle swelling. His ejection fraction remains stable at 35% and BNP is elevated at 450 pg/mL. The furosemide dose was increased, and renal function and electrolytes will be checked. A review of his ramipril prescription is planned given his documented ACE inhibitor allergy.
 
 History of presenting complaint
 
-Mr Williams attended for review of his heart failure. His breathing has been getting a little worse when he walks uphill or climbs stairs. He has noticed ankle swelling in the evenings. He confirmed adherence to all prescribed medications.
+Mr Williams attended for review of his heart failure. He reported increasing breathlessness on walking and climbing stairs, along with ankle swelling in the evenings over the past few months. He confirmed adherence to all prescribed medications.
 
 Past medical history
 
-Congestive Heart Failure, Ischaemic Heart Disease, ACE Inhibitor Allergy.
+Congestive Heart Failure, Ischaemic Heart Disease.
 
 Current medications
 
 Bisoprolol 5 mg once daily (unchanged)
-Ramipril 2.5 mg once daily (under review due to ACE inhibitor allergy)
-Furosemide 80 mg once daily (increased from 40 mg)
-
-Note: Mr Williams has a documented allergy to ACE inhibitors. Whether ramipril is the best choice requires review.
+Ramipril 5 mg once daily (Note: Patient has documented allergy to ACE inhibitors)
+Furosemide 40 mg once daily (increased to 80 mg once daily)
 
 Examination findings
 
-Bilateral ankle oedema was noted. Cardiovascular and respiratory examinations were otherwise unremarkable. There were no signs of decompensation at rest.
+No formal examination findings were documented during this consultation.
 
 Investigation results
 
-Echocardiogram showed an ejection fraction of 35%, which is unchanged from last time, indicating moderately reduced left ventricular systolic function. BNP was 450 pg/mL, which is elevated and suggests the heart is working harder than it should. Creatinine was 101 umol/L, indicating acceptable renal function.
+Ejection fraction was 35%, unchanged from last time.
+BNP was 450 pg/mL, which is elevated.
+Creatinine was 101 umol/L.
 
 Assessment
 
-Mr Williams has congestive heart failure with a background of ischaemic heart disease. His symptoms of worsening breathlessness on exertion and ankle swelling suggest suboptimal fluid balance despite current diuretic therapy. Ejection fraction remains at 35%. BNP is elevated at 450 pg/mL.
+Mr Williams presents with symptomatic deterioration of his heart failure, evidenced by worsening exertional breathlessness and ankle swelling. His ejection fraction remains stable at 35%. BNP is elevated at 450 pg/mL.
 
 Plan
 
-1. Increase furosemide from 40 mg to 80 mg daily to help with fluid retention and ankle swelling.
-2. Check kidney function and electrolytes in two weeks after the dose change.
-3. Review whether ramipril is the best choice given documented ACE inhibitor allergy.
-4. Follow-up in six weeks with repeat bloods to see how symptoms are responding.
+1. Increase Furosemide from 40 mg to 80 mg once daily.
+2. Check renal function and electrolytes in two weeks following the dose change.
+3. Review appropriateness of Ramipril given documented ACE inhibitor allergy.
+4. Follow up in six weeks with repeat bloods and symptom review.
 
 Advice to patient
 
-1. Advised to weigh himself daily and contact the surgery if he gains more than two kilograms in two days, as this can be a sign of fluid building up.
+1. Advised to monitor weight daily and contact the surgery if weight increases by more than 2 kg within two days.
+2. Instructed to seek urgent medical attention if experiencing severe shortness of breath or chest pain.
 
 Warm regards,
 

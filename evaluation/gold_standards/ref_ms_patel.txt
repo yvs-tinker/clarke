@@ -15,11 +15,11 @@ Re: Ms Priya Patel, DOB 30/06/1997, NHS No. 762-048-1935
 
 Summary
 
-Ms Patel, a 28-year-old woman with asthma and allergic rhinitis, attended for routine asthma review. She is using her salbutamol reliever inhaler four to five times per week and her peak flow is 320 litres per minute, about 80% of predicted. Beclometasone 200 micrograms twice daily was started as a regular preventer, with follow-up in six weeks.
+Ms Patel, a 28-year-old woman with asthma and allergic rhinitis, attended for routine asthma review. She is using her salbutamol reliever inhaler four to five times per week and her peak flow is 320 L/min, about 80% of predicted. Beclometasone 200 micrograms twice daily was initiated as a regular preventer, with follow-up in six weeks.
 
 History of presenting complaint
 
-Ms Patel attended for her asthma review. She has been using her salbutamol reliever inhaler quite frequently, about four to five times per week, which suggests her asthma is not as well controlled as we would like. She denied nocturnal symptoms, exercise limitation, or occupational triggers. She is not currently using a regular preventer inhaler.
+Ms Patel attended for a routine asthma review. She reported using her salbutamol reliever inhaler approximately four to five times per week, which suggests her asthma is not as well controlled as we would like. Her peak flow measurement was 320 L/min, representing 80% of her predicted best. Inhaler technique was assessed and she was not holding her breath long enough after inhaling. Correct technique was demonstrated.
 
 Past medical history
 
@@ -27,32 +27,38 @@ Asthma, Allergic Rhinitis.
 
 Current medications
 
-Salbutamol 100 mcg inhaler, two puffs as required
-Beclometasone 200 mcg inhaler, one puff twice daily (newly initiated)
-Cetirizine (unchanged)
+Salbutamol inhaler 100 micrograms, 2 puffs as required (unchanged)
+Cetirizine 10 mg once daily as needed (unchanged)
+Beclometasone 200 mcg twice daily (newly initiated)
 
 Examination findings
 
-Peak flow was 320 litres per minute, about 80% of predicted best, so there is room for improvement. Respiratory examination revealed good air entry with no wheeze or crackles. Oxygen saturations were 97% on room air. Inhaler technique was assessed and she was not holding her breath long enough after inhaling, which means some of the medication is not reaching her lungs properly. Correct technique was demonstrated.
+Oxygen saturation (SpO2) was 97%. No other formal examination findings were documented during this consultation.
 
 Investigation results
 
-Peak flow was 320 L/min. SpO2 was 97%. Chest X-ray showed no acute cardiopulmonary abnormality. No additional investigations were performed at this visit. Peak flow monitoring has been requested.
+Peak flow was 320 L/min.
+SpO2 was 97%.
+Eosinophils were 0.42 x 10*9/L.
+Chest X-ray showed no acute cardiopulmonary abnormality.
+Peak flow monitoring has been requested.
 
 Assessment
 
-Ms Patel has asthma that is not as well controlled as we would like, with frequent reliever use and a peak flow at 80% of predicted. Suboptimal inhaler technique is likely contributing to reduced medication efficacy.
+Ms Patel has asthma that is not optimally controlled, evidenced by frequent reliever use and a peak flow at 80% of predicted. Suboptimal inhaler technique is likely contributing to reduced medication efficacy.
 
 Plan
 
-1. Start beclometasone 200 micrograms twice daily as a regular preventer to reduce the inflammation in the airways.
-2. Use the preventer every day even when feeling well.
-3. Peak flow diary requested for the next four weeks and to bring to next appointment.
-4. Follow-up in six weeks to review symptoms.
+1. Initiate Beclometasone 200 mcg twice daily as a regular preventer.
+2. Continue Salbutamol inhaler 100 micrograms, 2 puffs as required.
+3. Continue Cetirizine 10 mg once daily as needed.
+4. Peak flow diary requested for the next four weeks.
+5. Review in six weeks.
 
 Advice to patient
 
-1. Advised to come back if symptoms worsen or if salbutamol use exceeds three times a week despite the preventer.
+1. Advised to seek urgent medical attention if experiencing severe shortness of breath or wheezing unresponsive to salbutamol.
+2. Instructed to return sooner if salbutamol use exceeds three times per week despite beclometasone.
 
 Warm regards,
 

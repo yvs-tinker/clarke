@@ -15,11 +15,11 @@ Re: Mr Emeka Okafor, DOB 22/11/1971, NHS No. 401-592-7384
 
 Summary
 
-Mr Okafor, a 54-year-old man with angina pectoris and hypertensive disorder, attended for chest pain follow-up. His coronary angiography showed normal coronary arteries with no obstructive disease, and troponin was negative. Blood pressure remains above target and lifestyle measures were discussed, with follow-up in eight weeks.
+Mr Okafor, a 54-year-old man with angina pectoris and hypertensive disorder, attended for chest pain follow-up. His coronary angiography showed normal coronary arteries with no obstructive disease, and troponin was negative. Blood pressure remains elevated. He will continue aspirin and atorvastatin, with follow-up in eight weeks.
 
 History of presenting complaint
 
-Mr Okafor attended for his chest pain follow-up appointment. The angiogram results showed normal coronaries with no significant blockages. His hospital blood tests including troponin were negative. There is no evidence of a heart attack from this episode, which is reassuring. We discussed how chest discomfort can still occur from non-cardiac causes, including chest wall strain, reflux, and stress. His blood pressure today remains a little high.
+Mr Okafor attended for his chest pain follow-up appointment. He expressed concern regarding his symptoms. Investigations were performed to rule out acute cardiac events. We discussed how chest discomfort can still occur from non-cardiac causes, including chest wall strain, reflux, and stress. His blood pressure today remains elevated.
 
 Past medical history
 
@@ -28,30 +28,34 @@ Angina Pectoris, Hypertensive Disorder.
 Current medications
 
 Aspirin 75 mg once daily (unchanged)
-Atorvastatin 40 mg once nightly (unchanged)
+Atorvastatin 40 mg at night (unchanged)
 
 Examination findings
 
-Blood pressure was 148/92 mmHg, which remains above target. Cardiovascular examination revealed normal heart sounds with no murmurs. Chest was clear on auscultation. There was no peripheral oedema.
+No formal examination findings were documented during this consultation.
 
 Investigation results
 
-Coronary angiography showed normal coronary arteries with no obstructive disease. Troponin I was 8 ng/L, within the normal range. These results exclude acute coronary syndrome.
+Coronary angiography report showed normal coronary arteries with no obstructive disease.
+Troponin I was 8 ng/L, within the normal range.
+Systolic BP was 148 mm[Hg].
+Diastolic BP was 92 mm[Hg].
 
 Assessment
 
-Mr Okafor has a background of angina pectoris and hypertensive disorder. The recent cardiac investigations are reassuring, demonstrating no obstructive coronary artery disease and a normal troponin. Blood pressure remains suboptimally controlled at 148/92 mmHg.
+Mr Okafor has a background of angina pectoris and hypertensive disorder. The recent cardiac investigations are reassuring, demonstrating no obstructive coronary artery disease and a normal troponin. His blood pressure remains elevated.
 
 Plan
 
-1. Continue aspirin 75 mg and atorvastatin 40 mg as prescribed.
-2. Blood pressure management reviewed including reducing salt, improving sleep, maintaining regular exercise, and checking readings at home.
-3. Lifestyle advice discussed including balanced diet, gradual weight control, and limiting alcohol.
-4. Follow-up in eight weeks to review blood pressure trend and symptoms.
+1. Continue Aspirin 75 mg once daily.
+2. Continue Atorvastatin 40 mg at night.
+3. Optimise cardiovascular risk factor management including lifestyle modifications and blood pressure control.
+4. Review blood pressure trend and symptoms in eight weeks.
 
 Advice to patient
 
-1. If chest pain becomes severe, prolonged, or associated with breathlessness or sweating, seek urgent care immediately.
+1. Advised to seek urgent care if chest pain becomes severe, prolonged, or associated with breathlessness or sweating.
+2. Counselled on lifestyle modifications including reduced salt intake, improved sleep, regular exercise, balanced diet, gradual weight control, and limiting alcohol.
 
 Warm regards,
 
