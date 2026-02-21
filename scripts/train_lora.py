@@ -1,5 +1,7 @@
 """One-shot LoRA training on HF Space A100, then push adapter to Hub."""
 import os
+os.environ["TORCHINDUCTOR_CACHE_DIR"] = "/tmp/torch_cache"
+os.environ["USER"] = "appuser"
 import gc
 import json
 import torch
