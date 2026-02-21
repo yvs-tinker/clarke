@@ -93,8 +93,6 @@ training_args = SFTConfig(
     bf16=True,
     optim="adamw_8bit",
     gradient_checkpointing=True,
-    max_seq_length=2048,
-    dataset_text_field="text",
 )
 
 trainer = SFTTrainer(
