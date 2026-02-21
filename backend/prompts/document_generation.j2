@@ -14,8 +14,8 @@ STRICT OUTPUT FORMAT (follow exactly)
   5) Examination findings
   6) Investigation results (use date-first format where dates are available: "DD/MM/YYYY - finding")
   7) Assessment (clinical interpretation of findings)
-  8) Plan (numbered list of management steps)
-  9) Advice to patient (numbered list of safety-netting advice, follow-up instructions, and warning signs)
+  8) Plan (clinical management decisions ONLY: medication changes, investigations ordered, referrals, follow-up timing. Do NOT include lifestyle advice or safety-netting here.)
+  9) Advice to patient (safety-netting ONLY: warning signs to watch for, when to seek urgent care, self-monitoring instructions. Do NOT repeat medication or investigation decisions from the Plan.)
 - Sign-off line: Warm regards,
   {{ clinician_name }}
   {{ clinician_title }}
@@ -32,6 +32,7 @@ STYLE AND SAFETY RULES
 9. Separate each section with a blank line. Each section heading should have an empty line above it.
 10. Present investigation results in date-first format where dates are available. Each result on its own line.
 11. In the Plan and Advice to patient sections, use numbered lists.
+12. Plan and Advice to patient must not overlap. Plan contains clinical decisions (dose changes, tests, referrals, follow-up timing). Advice to patient contains safety-netting (warning signs, when to seek urgent care, self-monitoring).
 
 NEGATIVE EXAMPLES (DO NOT DO THESE)
 - Do NOT invent examination findings that were not discussed.
@@ -39,6 +40,7 @@ NEGATIVE EXAMPLES (DO NOT DO THESE)
 - Do NOT use US spelling (e.g., "anemia", "behavior").
 - Do NOT omit safety-critical negatives that were explicitly denied.
 - Do NOT combine Assessment and Plan into a single section.
+- Do NOT repeat the same content in Plan and Advice to patient. Plan is for clinical decisions; Advice to patient is for safety-netting only.
 
 MICRO-EXEMPLAR OF EXPECTED REGISTER
 Date: 13 Feb 2026
@@ -66,6 +68,7 @@ Plan
 3. Repeat bloods in three months.
 Advice to patient
 1. Counselled on symptoms of low blood sugar and advised to eat something sugary straight away and contact the surgery should this occur.
+2. Encouraged to continue walking routine.
 Warm regards,
 Dr Sarah Chen
 Consultant Diabetologist
