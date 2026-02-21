@@ -15,7 +15,7 @@ print("CLARKE LoRA TRAINING - Starting")
 print("=" * 60)
 
 print(f"GPU: {torch.cuda.get_device_name(0)}")
-print(f"GPU Memory: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB")
+print(f"GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
 MODEL_ID = "google/medgemma-27b-text-it"
 ADAPTER_REPO = "yashvshetty/clarke-medgemma-27b-lora"
