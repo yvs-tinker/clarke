@@ -781,9 +781,8 @@ def _on_audio_recorded(audio_path, state):
     if audio_path:
         updated_state["captured_mic_audio"] = audio_path
         updated_state["audio_ready"] = True
-        ready_html = '<div style="background:#F8F6F1;padding:24px 48px;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="display:inline-block;width:20px;height:20px;background:#4CAF50;border-radius:50%;margin-bottom:12px;box-shadow:0 0 16px rgba(76,175,80,0.4);"></div><div style="font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#4CAF50;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Audio Ready</div><div style="font-family:Inter,sans-serif;font-size:14px;color:#1A1A2E;font-weight:500;">Recording saved. Click End Consultation to generate your document.</div></div>'
-        return updated_state, gr.update(value=ready_html)
-    return updated_state, gr.update()
+        return updated_state, gr.update(), gr.update(active=False)
+    return updated_state, gr.update(), gr.update()
 
 
 def _start_processing(state, audio_path):
@@ -1179,7 +1178,7 @@ def build_ui() -> gr.Blocks:
         hidden_back_button.click(_handle_back_to_dashboard, inputs=[app_state], outputs=[app_state, feedback_text, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_start_button.click(_handle_start_consultation, inputs=[app_state], outputs=[app_state, feedback_text, recording_html, recording_tick, consultation_audio, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         recording_tick.tick(_update_recording_timer, inputs=[app_state], outputs=[recording_html], show_progress="hidden")
-        consultation_audio.stop_recording(_on_audio_recorded, inputs=[consultation_audio, app_state], outputs=[app_state, recording_html], show_progress="hidden")
+        consultation_audio.stop_recording(_on_audio_recorded, inputs=[consultation_audio, app_state], outputs=[app_state, recording_html, recording_tick], show_progress="hidden")
         hidden_end_btn.click(_start_processing, inputs=[app_state, consultation_audio], outputs=[app_state, feedback_text, processing_html, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="full")
         processing_tick.tick(_poll_processing_progress, inputs=[app_state], outputs=[app_state, feedback_text, processing_html, processing_tick, section_one_text, section_two_text, section_three_text, section_four_text, review_fhir_values, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
         hidden_cancel_button.click(_cancel_processing, inputs=[app_state], outputs=[app_state, feedback_text, processing_tick, screen_s1, screen_s2, screen_s3, screen_s4, screen_s5, screen_s6], show_progress="hidden")
