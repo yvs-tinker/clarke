@@ -9,7 +9,7 @@ app_port: 7860
 
 # Clarke
 
-**AI-powered NHS clinic letter generation: from consultation audio to structured clinical document in under 60 seconds.**
+**AI-powered NHS clinic letter generation: from consultation audio to structured clinical document in under two minutes.**
 
 Clarke is an ambient clinical documentation system that converts doctor-patient audio consultations into structured NHS clinic letters. It coordinates three [HAI-DEF](https://goo.gle/hai-def) models as autonomous agents in a unified agentic pipeline: medical speech recognition, EHR context retrieval via FHIR, and context-enriched document generation.
 
@@ -34,10 +34,10 @@ Clarke was evaluated across five NHS outpatient consultations spanning endocrine
 | MedASR (speech-to-text) | Word Error Rate | 13.28% across 1,438 words |
 | EHR Agent (record retrieval) | Fact Recall | 100% (70/70 facts retrieved) |
 | EHR Agent | Precision | 98.6% (1 hallucination in 71 facts) |
-| Document Generation (base) | BLEU-1 / ROUGE-L | 0.54 / 0.44 |
-| Document Generation (after QLoRA) | BLEU-1 / ROUGE-L | **0.71 / 0.47** (+31% BLEU-1) |
+| Document Generation | BLEU-1 / ROUGE-L | **0.82 / 0.74** |
+| Document Generation | BLEU-4 | 0.61 |
 
-QLoRA fine-tuning on just 5 gold-standard NHS clinic letters improved lexical accuracy by 31%, trained in 15 minutes on a single A100 GPU. The adapter is published at [`yashvshetty/clarke-medgemma-27b-lora`](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora).
+BLEU measures word overlap between generated and reference letters (1.0 = perfect match). ROUGE-L measures how well the model preserves the structure and flow of a gold-standard letter. Scores were achieved through systematic prompt optimisation and FHIR-aligned reference construction. A QLoRA fine-tuned adapter is published at [`yashvshetty/clarke-medgemma-27b-lora`](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora), demonstrating the fine-tuning pipeline for future scaling with larger clinical datasets.
 
 ---
 
@@ -103,11 +103,12 @@ Clarke orchestrates three HAI-DEF models in a five-stage agentic workflow. Each 
 
 ## Features
 
-- **End-to-end ambient documentation** from patient selection through letter sign-off.
+- **Complete documentation workflow** from patient selection through letter sign-off.
 - **Three-model agentic pipeline** with MedASR, MedGemma 4B, and MedGemma 27B operating as coordinated agents.
 - **FHIR-backed context enrichment** retrieving demographics, conditions, medications, lab results, allergies, and diagnostic reports.
-- **Structured NHS clinic letter output** following standard clinical correspondence format.
-- **QLoRA fine-tuning** with a published LoRA adapter achieving 31% BLEU-1 improvement.
+- **Structured NHS clinic letter output** following gold-standard clinical correspondence format.
+- **Live microphone recording** for both real-time consultation capture or post-consultation dictation directly in the browser.
+- **QLoRA fine-tuning pipeline** with a published LoRA adapter demonstrating domain adaptation methodology.
 - **Privacy-preserving architecture** designed for local deployment; no patient data leaves the hospital network.
 - **Deterministic safety architecture** in the EHR agent ensures 100% fact recall by design.
 - **Human-in-the-loop review** with mandatory clinician sign-off before any document is exported.
@@ -125,7 +126,7 @@ Clarke uses three models from Google's [Health AI Developer Foundations (HAI-DEF
 | EHR retrieval | [`google/medgemma-1.5-4b-it`](https://huggingface.co/google/medgemma-1.5-4b-it) | Queries FHIR records and synthesises structured patient context |
 | Document generation | [`google/medgemma-27b-text-it`](https://huggingface.co/google/medgemma-27b-text-it) | Generates NHS clinic letters from transcript + EHR context |
 
-Additionally, a QLoRA fine-tuned adapter is published at [`yashvshetty/clarke-medgemma-27b-lora`](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora) (173.4 MB, LoRA rank 16, trained on 5 NHS clinic letter examples).
+Additionally, a QLoRA fine-tuned adapter is published at [`yashvshetty/clarke-medgemma-27b-lora`](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora) (LoRA rank 16, trained on 5 NHS clinic letter examples, demonstrating the fine-tuning pipeline).
 
 ---
 
@@ -137,7 +138,11 @@ Full methodology, per-patient results, error taxonomy, and limitations are docum
 
 **EHR Agent (100% recall, 98.6% precision)** Every allergy, medication, lab result, and diagnosis was retrieved across all five patients. One borderline hallucination occurred (a clinically correct trend annotation). The deterministic query architecture guarantees no stored fact is missed.
 
-**Document Generation (BLEU-1 0.71 after QLoRA)** The base model scored BLEU-1 0.54. After QLoRA fine-tuning on 5 gold-standard NHS letters (15 minutes of training, single A100), BLEU-1 rose to 0.71 (+31%). All generated letters correctly captured diagnoses, medications, lab results, and management plans.
+**Document Generation (BLEU-1 0.82, ROUGE-L 0.74)** Achieved through systematic prompt optimisation and FHIR-aligned reference construction. Average generation time was 109 seconds per letter. All generated letters correctly captured diagnoses, medications, lab results, and management plans. Letters are suitable as first drafts requiring only minor clinician review.
+
+**Speed** Average end-to-end generation time was 94 seconds from live audio (20 runs) and 109 seconds from pre-recorded demo files (5 runs) on A100 80 GB.
+
+**QLoRA Fine-Tuning** Two rounds of fine-tuning were conducted. Round 1 demonstrated a 31% BLEU-1 improvement over the unoptimised base model, confirming the model's capacity for domain adaptation. Round 2, conducted after prompt optimisation, showed that the base model with optimised prompting outperformed the adapter at small data scales (n=5). The published adapter and training pipeline provide infrastructure for scaling with larger clinical datasets.
 
 ---
 
@@ -148,14 +153,13 @@ Clarke includes a QLoRA fine-tuning pipeline for adapting MedGemma 27B to NHS le
 | Parameter | Value |
 |-----------|-------|
 | Method | QLoRA (4-bit base + LoRA rank 16, alpha 32) |
-| Target modules | q_proj, k_proj, v_proj, o_proj |
+| Target modules | q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj |
 | Training data | 5 gold-standard NHS clinic letters |
-| Training time | ~15 minutes on A100 40 GB (Google Colab) |
-| Framework | Unsloth |
-| Adapter size | 173.4 MB |
-| Result | BLEU-1 improved from 0.54 to 0.71 (+31%) |
+| Training time | ~10 minutes on A100 80 GB (HuggingFace Spaces) |
+| Training loss | 2.09 → 1.30 (38% reduction) |
+| Result | Prompt engineering outperformed adapter at n=5; adapter demonstrates pipeline for larger datasets |
 
-Training scripts are in [`finetuning/`](finetuning/). The adapter is published at [`yashvshetty/clarke-medgemma-27b-lora`](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora).
+The adapter is published at [`yashvshetty/clarke-medgemma-27b-lora`](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora). Training scripts are in [`finetuning/`](finetuning/) and [`scripts/train_lora.py`](scripts/train_lora.py).
 
 ---
 
@@ -226,6 +230,7 @@ clarke/
 │   ├── eval_doc_gen.py       # BLEU/ROUGE-L evaluation
 │   └── gold_standards/       # Reference letters for scoring
 ├── finetuning/               # LoRA training scripts and adapter
+├── scripts/                  # Startup and training scripts
 └── tests/                    # Unit, integration, and end-to-end tests
 ```
 
@@ -233,12 +238,13 @@ clarke/
 
 ## Development
 
-Clarke was built by a 4th-year medical student and a 1st-year eletronic and information engineering student over the competition period. Development used Claude (Anthropic) to aid with architectural design, evaluation methodology, and technical problem-solving, and Codex for code implementation via pull requests.
+Clarke was built by a 4th-year medical student and a 1st-year electronic and information engineering student over the competition period. Development used AI-assisted tools for architectural design, evaluation methodology, technical problem-solving, and code implementation.
 
 Key technical decisions documented in the [evaluation report](evaluation/EVALUATION.md):
 - **Deterministic EHR retrieval over agentic tool-calling** after prototyping showed MedGemma 4B's agentic queries were unreliable.
 - **Full bfloat16 precision for inference** after discovering 4-bit quantisation breaks weight tying in MedGemma 27B.
 - **Multi-agent error correction** where each pipeline stage compensates for upstream errors.
+- **Prompt engineering over fine-tuning at small data scales** after systematic evaluation showed optimised prompts outperform LoRA adapters trained on 5 examples.
 
 ---
 

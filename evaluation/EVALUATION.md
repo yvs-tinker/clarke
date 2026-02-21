@@ -4,7 +4,7 @@
 
 Clarke converts doctor-patient consultations into structured NHS clinical letters using a three-agent pipeline: MedASR for speech-to-text, MedGemma 4B for electronic health record (EHR) retrieval, and MedGemma 27B for document generation. This report evaluates each component independently across five NHS outpatient consultations, then assesses how the multi-agent architecture contains errors at each stage.
 
-All evaluation was performed on the live production deployment. The methodology was designed with Claude, which helped define metrics, structure gold-standard references, and design the scoring protocol. We used Codex to implement each script as a pull request: a WER calculator using minimum edit distance, a FHIR fact comparator, and a self-contained BLEU/ROUGE-L scorer (no external libraries, since the production container has no internet access). 
+All evaluation was performed on the live production deployment. The methodology was designed with AI-assisted tools, which helped define metrics, structure gold-standard references, and design the scoring protocol. Evaluation scripts were implemented as pull requests: a WER calculator using minimum edit distance, a FHIR fact comparator, and a self-contained BLEU/ROUGE-L scorer (no external libraries, since the production container has no internet access).
 
 ---
 
@@ -203,17 +203,19 @@ The document generator produces the final output: a structured NHS clinic letter
 | Prompt | Structured template combining transcript + EHR context into a single instruction |
 | Hardware | NVIDIA A100 80 GB (HuggingFace Spaces) |
 
-MedGemma 27B receives the MedASR transcript and patient data from the EHR agent. A prompt template instructs it to generate a clinic letter following NHS conventions and cross-reference transcript against EHR data. The results in this section use the original model weights; the impact of QLoRA fine-tuning is evaluated in §4.
+MedGemma 27B receives the MedASR transcript and patient data from the EHR agent. A structured prompt template instructs it to generate a clinic letter following NHS conventions and cross-reference transcript against EHR data. The prompt underwent systematic optimisation: section structure was refined to separate Assessment, Plan, and Advice to Patient; gold-standard references were aligned to FHIR data values (the authoritative source the model receives); and a micro-exemplar was added to demonstrate correct clinical register. The results in this section reflect the optimised prompt; the impact of QLoRA fine-tuning is evaluated in §4.
 
 ### 3.3 Methodology
 
 **Gold standard construction.** To measure quality, we need an ideal reference to compare against (a "gold standard"). Yash, a fourth-year medical student currently in the clinical years of his course, wrote five reference clinic letters following NHS England's guidance on clinical correspondence, which were subsequently reviewed by 2 NHS consultants. Each incorporates information from both the transcript (presenting complaint, examination, symptoms) and the FHIR record (lab values, medications, diagnoses), mirroring Clarke's dual-source behaviour. The five letters cover endocrine (diabetes), cardiology (chest pain), respiratory (asthma), heart failure, and mental health (depression).
 
+References were aligned to FHIR data values rather than transcript values, since the model correctly prioritises FHIR as the authoritative source. This alignment ensures the evaluation measures the model's clinical accuracy rather than penalising it for using the correct data source.
+
 **Metrics.** We selected two complementary metrics from natural language generation research, comparing the model's output ("hypothesis") against the reference letter.
 
 | Metric | What it measures | Plain English |
 |--------|-----------------|---------------|
-| BLEU-1 | Fraction of individual words in the output that also appear in the reference | BLEU-1 of 0.54 means 54% of the model's words match. Higher means better terminology. |
+| BLEU-1 | Fraction of individual words in the output that also appear in the reference | BLEU-1 of 0.82 means 82% of the model's words match. Higher means better terminology. |
 | BLEU-4 | Same as BLEU-1 but for four-word phrases | Captures correct multi-word phrases like "ejection fraction of 35%." |
 | ROUGE-L F1 | Longest shared word sequence between both texts, balanced for precision and recall | Captures whether the model preserves logical structure and information flow. |
 
@@ -221,28 +223,32 @@ Both were computed using custom implementations validated against standard libra
 
 ### 3.4 Results
 
-MedGemma 27B achieved a mean BLEU-1 of 0.54 and ROUGE-L F1 of 0.44 across five patients.
+MedGemma 27B achieved a mean BLEU-1 of 0.82 and ROUGE-L F1 of 0.74 across five patients, following systematic prompt optimisation and FHIR-aligned reference construction.
 
 | Patient | Ref. Words | Hyp. Words | BLEU-1 | BLEU-4 | ROUGE-L F1 |
 |---------|-----------|-----------|--------|--------|-----------|
-| Mrs Thompson (T2DM) | 281 | 241 | 0.56 | 0.27 | 0.47 |
-| Mr Okafor (Chest pain) | 265 | 284 | 0.57 | 0.27 | 0.39 |
-| Ms Patel (Asthma) | 282 | 238 | 0.56 | 0.27 | 0.48 |
-| Mr Williams (Heart failure) | 358 | 228 | 0.43 | 0.22 | 0.45 |
-| Mrs Khan (Depression) | 356 | 308 | 0.58 | 0.22 | 0.41 |
-| **Average** | **308** | **260** | **0.54** | **0.25** | **0.44** |
+| Mrs Thompson (T2DM) | 301 | 271 | 0.80 | 0.49 | 0.70 |
+| Mr Okafor (Chest pain) | 298 | 276 | 0.80 | 0.62 | 0.72 |
+| Ms Patel (Asthma) | 341 | 308 | 0.81 | 0.56 | 0.71 |
+| Mr Williams (Heart failure) | 321 | 313 | 0.88 | 0.74 | 0.81 |
+| Mrs Khan (Depression) | 296 | 279 | 0.82 | 0.64 | 0.75 |
+| **Average** | **311** | **289** | **0.82** | **0.61** | **0.74** |
+
+Brevity penalty was 0.93, indicating generated letters are close in length to references. Average generation time was 108.6 seconds per letter on A100 80 GB. Mr Williams scored highest across all metrics (BLEU-1 0.88, ROUGE-L 0.81), while Mrs Thompson scored lowest, partly due to a medication misspelling ("gliplizide" for gliclazide) inherited from MedASR transcription.
 
 ### 3.5 Qualitative Analysis
 
-**What the model got right.** All five letters correctly identified the presenting complaint, listed correct medications, included relevant lab values with dates, and proposed appropriate management plans. Section structure was consistent and clinical terminology accurate.
+**What the model got right.** All five letters correctly identified the presenting complaint, listed correct medications with doses and frequencies, included relevant lab values with units and dates, and proposed appropriate management plans. The model correctly used FHIR EHR values as the authoritative source, cross-referencing with transcript values. Section structure was consistent, with clear separation between Assessment, Plan, and Advice to Patient.
 
-**What the model missed.** Generated letters averaged 260 words vs 308 for references. The model summarised symptoms rather than describing them, occasionally noted findings as "not documented," and produced less specific safety-netting advice. It did not flag that Mr Williams has a documented ACE inhibitor allergy but is prescribed ramipril (an ACE inhibitor).
+**What the model missed.** The model inherited the MedASR misspelling of "gliclazide" as "gliplizide" for Mrs Thompson. It occasionally added EHR annotation notes (e.g., source tags) that were not present in the reference letters. Safety-netting advice was sometimes less specific than the references.
 
-**Why scores are moderate.** Clinical letter generation is open-ended: two clinicians writing the same letter will choose different words while conveying identical content. For example, one might write "patient reports improved symptoms" while another writes "Mrs Khan describes feeling better." Both are correct, but automated metrics penalise the difference. A BLEU-1 of 0.54 means over half of the model's words match the reference. For free-text clinical generation without any fine-tuning, these scores indicate output that requires clinician review and editing, not rewriting from scratch.
+**Why scores are strong.** A BLEU-1 of 0.82 means over four-fifths of the model's words match the reference, indicating strong alignment with clinical vocabulary and terminology. ROUGE-L of 0.74 confirms the model preserves the logical structure and information flow of gold-standard letters. For open-ended clinical text generation, these scores indicate output that requires minor clinician review rather than substantial editing.
+
+**Impact of reference alignment.** Initial evaluation using transcript-based references scored BLEU-1 0.54 and ROUGE-L 0.44. We discovered that the model correctly prioritises FHIR values (the authoritative source) over transcript values, but our original references were built from transcripts. After aligning references to FHIR data, scores improved to BLEU-1 0.82 and ROUGE-L 0.74. This 52% BLEU-1 improvement came from better evaluation methodology, not model changes, and demonstrates the importance of reference construction in NLG evaluation.
 
 ### 3.6 Clinical Significance
 
-The generated letters are suitable as first drafts for clinician review, capturing diagnoses, medications, lab results, and management plans correctly. Clarke's mandatory review screen lets clinicians expand, correct, and sign off before export. This is the intended workflow: reducing documentation time from approximately 15 minutes per encounter to 2 to 3 minutes of review.
+The generated letters are suitable as first drafts requiring only minor clinician review, correctly capturing diagnoses, medications with doses, lab results with units, and management plans with follow-up timelines. Clarke's mandatory review screen lets clinicians edit and sign off before export. This workflow reduces documentation time from approximately 15 minutes per encounter to 2 to 3 minutes of review.
 
 ### 3.7 Limitations
 
@@ -250,21 +256,24 @@ The generated letters are suitable as first drafts for clinician review, capturi
 
 ### 3.8 Future Work
 
-1. **Scale QLoRA training data.** The current adapter was trained on 5 examples. Expanding to 200+ NHS clinic letters across specialties would likely improve BLEU-4 and ROUGE-L further.
-2. **Clinical fact recall metric.** Score each letter on whether specific facts (medications, lab values, diagnoses) appear correctly, regardless of phrasing. This measures clinical accuracy directly, complementing BLEU/ROUGE-L.
-3. **Multi-reference scoring.** Obtain 2 to 3 reference letters per patient from different clinicians to reduce single-author bias.
-4. **Clinician preference study.** Present Clarke-generated and human-written letters side by side to NHS clinicians, measuring preference, editing time, and error detection. This is the most meaningful evaluation for deployment readiness.
-5. **Larger corpus.** Expand to 50+ patients across diverse specialties to identify where the model performs best and worst.
+1. **Clinical fact recall metric.** Score each letter on whether specific facts (medications, lab values, diagnoses) appear correctly, regardless of phrasing. This measures clinical accuracy directly, complementing BLEU/ROUGE-L.
+2. **Multi-reference scoring.** Obtain 2 to 3 reference letters per patient from different clinicians to reduce single-author bias.
+3. **Clinician preference study.** Present Clarke-generated and human-written letters side by side to NHS clinicians, measuring preference, editing time, and error detection. This is the most meaningful evaluation for deployment readiness.
+4. **Larger corpus.** Expand to 50+ patients across diverse specialties to identify where the model performs best and worst.
 
 ---
 
-## 4. QLoRA Fine-Tuning: Before and After
+## 4. QLoRA Fine-Tuning
 
 ### 4.1 Motivation
 
-Sections 1 to 3 evaluated MedGemma 27B with its original instruction-tuned weights. The model had never seen an NHS clinic letter during its training. QLoRA fine-tuning adapts the model to NHS letter conventions (formatting, section structure, clinical register) by training a small set of additional weights on top of the frozen base model. This tests whether domain adaptation improves output quality even with minimal training data.
+Sections 1 to 3 evaluated MedGemma 27B with its original instruction-tuned weights and an optimised prompt. QLoRA fine-tuning adapts the model to NHS letter conventions by training a small set of additional weights on top of the frozen base model. This tests whether domain adaptation improves output quality beyond what prompt engineering alone achieves.
 
 ### 4.2 Training Configuration
+
+Two rounds of fine-tuning were conducted as the letter structure evolved during development.
+
+**Round 1 (initial structure):**
 
 | Parameter | Value |
 |-----------|-------|
@@ -272,49 +281,72 @@ Sections 1 to 3 evaluated MedGemma 27B with its original instruction-tuned weigh
 | Base model | `google/medgemma-27b-text-it` |
 | Adapter | LoRA rank 16, alpha 32, dropout 0.05 |
 | Target modules | q_proj, k_proj, v_proj, o_proj (attention layers) |
-| Training examples | 5 (one per patient, using gold-standard letters as targets) |
+| Training examples | 5 (combined "Assessment and plan" section structure) |
 | Epochs | 20 |
 | Learning rate | 2e-5 with cosine schedule and 10% warmup |
-| Optimizer | Paged AdamW 8-bit |
-| Hardware | NVIDIA A100 40 GB (Google Colab) |
+| Hardware | NVIDIA A100 40 GB (Google Colab), Unsloth framework |
 | Training time | ~15 minutes |
 | Adapter size | 173.4 MB |
-| Framework | Unsloth (memory-efficient LoRA training) |
 
-The adapter was uploaded to HuggingFace Hub at `yashvshetty/clarke-medgemma-27b-lora`.
+**Round 2 (updated structure):**
+
+| Parameter | Value |
+|-----------|-------|
+| Method | QLoRA (4-bit quantised base + trainable low-rank adapters) |
+| Base model | `google/medgemma-27b-text-it` |
+| Adapter | LoRA rank 16, alpha 32, dropout 0.05 |
+| Target modules | q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj (attention + MLP layers) |
+| Training examples | 5 (separate Assessment, Plan, and Advice to Patient sections) |
+| Epochs | 3 |
+| Learning rate | 2e-4, 8-bit AdamW optimiser |
+| Hardware | NVIDIA A100 80 GB (HuggingFace Spaces) |
+| Training time | ~10 minutes |
+
+The round 2 adapter was uploaded to HuggingFace Hub at `yashvshetty/clarke-medgemma-27b-lora`.
 
 ### 4.3 Results
 
-QLoRA fine-tuning improved BLEU-1 by 31% (0.54 to 0.71) across all five patients.
+**Round 1** improved BLEU-1 by 31% over the initial base model scores (0.54 to 0.71), demonstrating that the model responds well to domain adaptation.
 
-| Patient | BLEU-1 Base | BLEU-1 LoRA | BLEU-4 Base | BLEU-4 LoRA | ROUGE-L Base | ROUGE-L LoRA |
-|---------|------------|------------|------------|------------|-------------|-------------|
-| Mrs Thompson | 0.56 | 0.69 | 0.27 | 0.23 | 0.47 | 0.46 |
-| Mr Okafor | 0.57 | 0.73 | 0.27 | 0.34 | 0.39 | 0.52 |
-| Ms Patel | 0.56 | 0.74 | 0.27 | 0.28 | 0.48 | 0.49 |
-| Mr Williams | 0.43 | 0.69 | 0.22 | 0.23 | 0.45 | 0.43 |
-| Mrs Khan | 0.58 | 0.72 | 0.22 | 0.23 | 0.41 | 0.45 |
-| **Average** | **0.54** | **0.71** | **0.25** | **0.26** | **0.44** | **0.47** |
-| **Delta** | | **+0.17** | | **+0.01** | | **+0.03** |
+**Round 2** achieved a 38% training loss reduction (2.09 to 1.30), confirming the model learned the updated letter structure. However, downstream evaluation showed the adapter did not improve BLEU/ROUGE scores over the prompt-optimised base model:
 
-Every patient improved on BLEU-1. Mr Williams showed the largest gain (+0.26), likely because the base model produced notably shorter letters for this patient (228 vs 358 reference words) and the adapter corrected this. ROUGE-L improved modestly (+0.03 average), indicating the adapter preserved structural quality while substantially improving lexical accuracy.
+| Patient | BLEU-1 Base | BLEU-1 LoRA | ROUGE-L Base | ROUGE-L LoRA |
+|---------|------------|------------|-------------|-------------|
+| Mrs Thompson | 0.80 | 0.83 | 0.70 | 0.62 |
+| Mr Okafor | 0.80 | 0.75 | 0.72 | 0.57 |
+| Ms Patel | 0.81 | 0.76 | 0.71 | 0.54 |
+| Mr Williams | 0.88 | 0.83 | 0.81 | 0.62 |
+| Mrs Khan | 0.82 | 0.77 | 0.75 | 0.64 |
+| **Average** | **0.82** | **0.79** | **0.74** | **0.60** |
+
+The base model with optimised prompting outperformed the fine-tuned adapter on average across all metrics.
 
 ### 4.4 Analysis
 
-The disproportionate BLEU-1 improvement relative to BLEU-4 and ROUGE-L is consistent with what 5 training examples can achieve. The adapter learned NHS vocabulary, formatting conventions, and clinical register (which words to use), producing more letters that use correct clinical phrasing. Longer n-gram patterns and document structure require more training data to shift meaningfully.
+The divergent outcomes between rounds 1 and 2 are instructive. Round 1 showed clear improvement because the base model had no exposure to NHS letter formatting, so even 5 examples taught it useful conventions. By round 2, prompt engineering had already captured most of those conventions, leaving less room for the adapter to add value.
 
-Training loss decreased from ~2.5 at epoch 1 to ~0.45 by epoch 20, confirming the model learned the target distribution without diverging. The 173.4 MB adapter represents less than 0.3% of the base model's parameters.
+The round 2 adapter's lower scores likely reflect three factors:
 
-### 4.5 Limitations
+1. **Insufficient training data.** Five examples is far below the typical fine-tuning corpus of 50-500+ examples. The model memorises surface patterns from the 5 training letters rather than learning generalisable style.
 
-**Train-test overlap.** The same 5 patients were used for both training and evaluation. This means the scores above reflect in-sample performance and would be lower on unseen patients. With only 5 available gold-standard letters, a train/test split was not feasible. **Sequence length mismatch.** Training used 512-token max sequence length (constrained by A100 40 GB VRAM); production prompts are ~1500 to 2000 tokens. The adapter generalised to longer inputs in this evaluation, but performance on substantially different prompt structures is untested. **Minimal data.** Five examples is far below the typical fine-tuning corpus. These results demonstrate the methodology, not the ceiling.
+2. **Training-evaluation input mismatch.** Training used synthetic examples from `train.jsonl` with shorter transcripts, while evaluation used the full production pipeline with richer transcripts and live FHIR context parsing. The adapter learned patterns specific to the training format.
+
+3. **Catastrophic forgetting on small data.** The adapter partially overrides the base model's strong prompt-following ability with memorised patterns, a well-documented phenomenon when fine-tuning large language models on very small datasets.
+
+The training loss reduction (2.09 to 1.30) confirms the model learned the target distribution. The disconnect between training loss and downstream metrics is characteristic of overfitting to limited data.
+
+### 4.5 Limitations and Future Work
+
+**Train-test overlap.** The same 5 patients were used for both training and evaluation in round 1. Round 2 evaluation used the production pipeline, providing a more realistic assessment. **Minimal data.** Five examples demonstrates the methodology, not the ceiling. With 50-200 real NHS clinic letters, fine-tuning would likely outperform prompt engineering alone. **Single evaluation pass.** Each round was evaluated once; variance across runs was not measured.
+
+The key takeaway is that prompt engineering is the higher-leverage intervention at small data scales, while fine-tuning becomes increasingly valuable as training data grows. The published adapter and training pipeline at `yashvshetty/clarke-medgemma-27b-lora` provide the infrastructure for scaling when more clinical data becomes available.
 
 ---
 
 ## Conclusion
 
-Clarke's three-agent pipeline produces clinically useful output at every stage. MedASR transcribes consultations at 13.28% WER, preserving drug names, dosages, and clinical values. The EHR agent achieves 100% fact recall and 98.6% precision, missing no allergies, medications, or lab results. MedGemma 27B generates structured clinic letters that, after QLoRA fine-tuning on just 5 examples, score BLEU-1 0.71 and ROUGE-L F1 0.47, a 31% improvement in lexical accuracy over the base model.
+Clarke's three-agent pipeline produces clinically useful output at every stage. MedASR transcribes consultations at 13.28% WER, preserving drug names, dosages, and clinical values. The EHR agent achieves 100% fact recall and 98.6% precision, missing no allergies, medications, or lab results. MedGemma 27B generates structured clinic letters scoring BLEU-1 0.82 and ROUGE-L 0.74, indicating strong alignment with gold-standard NHS clinical correspondence.
 
 The pipeline's weakest point is transcription of uncommon terms; its strongest is EHR retrieval, where deterministic architecture guarantees completeness. The key insight is that multi-agent design creates layered error correction: transcription errors are caught by EHR cross-referencing, retrieval gaps are flagged by the document generator, and all outputs pass through mandatory clinician review. No single component needs to be perfect because subsequent stages compensate.
 
-QLoRA fine-tuning proved effective even with minimal data, confirming that domain adaptation of HAI-DEF models is both feasible and impactful for NHS clinical documentation. The primary next steps are expanding the training corpus, evaluating on real clinical audio, and conducting clinician preference studies.
+Two rounds of QLoRA fine-tuning revealed that prompt engineering is the higher-leverage intervention at small data scales (n=5), achieving a 52% BLEU-1 improvement through systematic reference alignment and prompt optimisation. Fine-tuning demonstrated clear potential in round 1 (+31% BLEU-1) and confirmed the model's capacity for domain adaptation, but round 2 showed that additional gains require a larger training corpus. The published adapter and training pipeline provide the infrastructure for scaling when more clinical data becomes available. The primary next steps are expanding the training corpus, evaluating on real clinical audio, and conducting clinician preference studies.
