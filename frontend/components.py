@@ -447,6 +447,10 @@ def build_global_style_block() -> str:
     box-shadow: 0 -4px 16px rgba(212,175,55,0.3) !important;
     animation: clarkeGoldPulse 2s ease-in-out infinite !important;
   }
+  @keyframes clarkeSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
   @keyframes clarkeGoldPulse {
     0%, 100% { box-shadow: 0 -4px 16px rgba(212,175,55,0.3); }
     50% { box-shadow: 0 -4px 28px rgba(212,175,55,0.6); }
