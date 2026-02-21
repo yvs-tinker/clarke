@@ -6,9 +6,9 @@ import gc
 import json
 import torch
 from pathlib import Path
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import LoraConfig
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 from datasets import Dataset
 from jinja2 import Template
 
@@ -81,7 +81,9 @@ peft_config = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
-training_args = TrainingArguments(
+from trl import SFTConfig
+
+training_args = SFTConfig(
     output_dir="/tmp/clarke-lora-checkpoints",
     num_train_epochs=3,
     per_device_train_batch_size=1,
@@ -93,6 +95,8 @@ training_args = TrainingArguments(
     bf16=True,
     optim="adamw_8bit",
     gradient_checkpointing=True,
+    max_seq_length=2048,
+    dataset_text_field="text",
 )
 
 trainer = SFTTrainer(
@@ -100,7 +104,6 @@ trainer = SFTTrainer(
     train_dataset=train_dataset,
     processing_class=tokenizer,
     peft_config=peft_config,
-    max_seq_length=2048,
     args=training_args,
 )
 
