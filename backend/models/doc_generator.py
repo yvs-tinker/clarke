@@ -39,10 +39,13 @@ logger = get_component_logger("doc_generator")
 PROMPTS_DIR = Path("backend/prompts")
 KNOWN_SECTION_HEADINGS = [
     "History of presenting complaint",
+    "Past medical history",
+    "Current medications",
     "Examination findings",
     "Investigation results",
-    "Assessment and plan",
-    "Current medications",
+    "Assessment",
+    "Plan",
+    "Advice to patient",
 ]
 
 
@@ -242,7 +245,7 @@ class DocumentGenerator:
         logger.info("Raw generated text for parsing:\n{}", generated_text[:2000])
 
         section_pattern = re.compile(
-            r"^(?:\*\*|##\s*)?(?:\d+[\)\.]\s*)?(Summary|History of presenting complaint|Past medical history|Examination findings|Investigation results|Assessment and plan|Current medications|Overnight events|Current status and observations|Tasks / Actions|Tasks|Actions)[:\*\s]*$",
+            r"^(?:\*\*|##\s*)?(?:\d+[\)\.]\s*)?(Summary|History of presenting complaint|Past medical history|Current medications|Examination findings|Investigation results|Assessment and plan|Assessment|Plan|Advice to patient|Current medications|Overnight events|Current status and observations|Tasks / Actions|Tasks|Actions)[:\*\s]*$",
             flags=re.IGNORECASE,
         )
         sections: list[DocumentSection] = []
@@ -443,9 +446,14 @@ class DocumentGenerator:
             "Investigation results\n"
             "Recent blood results showed HbA1c 55 mmol/mol with eGFR 52 mL/min/1.73m². "
             "Penicillin allergy with previous anaphylaxis was reconfirmed.\n\n"
-            "Assessment and plan\n"
-            "Overall picture is suboptimal glycaemic control with associated fatigue. Plan is lifestyle reinforcement, medicine adherence review, "
-            "repeat renal profile in 3 months, and consideration of treatment escalation if HbA1c remains above target.\n\n"
+            "Assessment\n"
+            "Overall picture is suboptimal glycaemic control with associated fatigue.\n\n"
+            "Plan\n"
+            "1. Lifestyle reinforcement and medicine adherence review.\n"
+            "2. Repeat renal profile in 3 months.\n"
+            "3. Consideration of treatment escalation if HbA1c remains above target.\n\n"
+            "Advice to patient\n"
+            "1. Counselled on symptoms of low blood sugar.\n\n"
             "Current medications\n"
             "Metformin 1 g twice daily; Gliclazide 80 mg twice daily."
         )

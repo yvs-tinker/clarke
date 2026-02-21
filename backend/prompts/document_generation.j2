@@ -9,11 +9,13 @@ STRICT OUTPUT FORMAT (follow exactly)
 - Body sections in this exact order:
   1) Summary (2-3 sentences: who the patient is, why they attended, key findings, and plan going forward)
   2) History of presenting complaint
-  3) Past medical history (from the EHR problem list — list active diagnoses concisely)
-  4) Examination findings
-  5) Investigation results
-  6) Assessment and plan
-  7) Current medications
+  3) Past medical history (from the EHR problem list, list active diagnoses concisely)
+  4) Current medications (list each medication with dose, frequency, and note any changes)
+  5) Examination findings
+  6) Investigation results (use date-first format where dates are available: "DD/MM/YYYY - finding")
+  7) Assessment (clinical interpretation of findings)
+  8) Plan (numbered list of management steps)
+  9) Advice to patient (numbered list of safety-netting advice, follow-up instructions, and warning signs)
 - Sign-off line: Warm regards,
   {{ clinician_name }}
   {{ clinician_title }}
@@ -28,12 +30,15 @@ STYLE AND SAFETY RULES
 7. Do not add bullet points unless the source explicitly lists items.
 8. If a section has no discussed information, write a short factual sentence stating this.
 9. Separate each section with a blank line. Each section heading should have an empty line above it.
+10. Present investigation results in date-first format where dates are available. Each result on its own line.
+11. In the Plan and Advice to patient sections, use numbered lists.
 
 NEGATIVE EXAMPLES (DO NOT DO THESE)
 - Do NOT invent examination findings that were not discussed.
 - Do NOT replace exact values (e.g., "55 mmol/mol") with vague language (e.g., "raised").
 - Do NOT use US spelling (e.g., "anemia", "behavior").
 - Do NOT omit safety-critical negatives that were explicitly denied.
+- Do NOT combine Assessment and Plan into a single section.
 
 MICRO-EXEMPLAR OF EXPECTED REGISTER
 Date: 13 Feb 2026
@@ -44,11 +49,23 @@ Mrs Thompson, a 67-year-old woman with type 2 diabetes, attended for routine dia
 History of presenting complaint
 Mrs Thompson reported persistent fatigue and polydipsia over the preceding three months.
 Past medical history
-Type 2 diabetes mellitus, hypertension, chronic kidney disease stage 3a.
+Type 2 Diabetes Mellitus, Chronic Kidney Disease Stage 3a.
+Current medications
+Metformin 1g twice daily (unchanged)
+Gliclazide 80 mg once daily (increased from 40 mg)
+Examination findings
+No formal examination findings were documented during this consultation.
 Investigation results
-Latest blood tests showed HbA1c 55 mmol/mol and eGFR 52 mL/min/1.73m².
-Assessment and plan
-The impression was suboptimal glycaemic control; metformin was continued and repeat bloods were arranged in three months.
+HbA1c was 55 mmol/mol, rising from 48 mmol/mol at last check.
+eGFR was 52 mL/min/1.73m2.
+Assessment
+Mrs Thompson has suboptimal glycaemic control with a rising HbA1c.
+Plan
+1. Increase gliclazide from 40 mg to 80 mg once daily.
+2. Continue metformin 1g twice daily unchanged.
+3. Repeat bloods in three months.
+Advice to patient
+1. Counselled on symptoms of low blood sugar and advised to eat something sugary straight away and contact the surgery should this occur.
 Warm regards,
 Dr Sarah Chen
 Consultant Diabetologist

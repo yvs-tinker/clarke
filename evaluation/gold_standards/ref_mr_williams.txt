@@ -13,31 +13,48 @@ Dear Dr Wilson,
 
 Re: Mr David Williams, DOB 09/01/1953, NHS No. 518-630-2741
 
+Summary
+
+Mr Williams, a 73-year-old man with congestive heart failure and ischaemic heart disease, attended for heart failure review. He reported worsening breathlessness on exertion and ankle swelling. His ejection fraction is 35% and BNP is elevated at 450 pg/mL. Furosemide was increased from 40 mg to 80 mg daily, with follow-up in six weeks.
+
 History of presenting complaint
 
-Mr Williams attended for review of his congestive heart failure. He reported increasing breathlessness on exertion over recent weeks, particularly on stairs and hills. He is comfortable at rest and on the flat. He denied orthopnoea and has not required additional pillows. He also reported bilateral ankle swelling returning over the past two weeks, resolving overnight but recurring each afternoon. He confirmed adherence to all prescribed medications.
+Mr Williams attended for review of his heart failure. His breathing has been getting a little worse when he walks uphill or climbs stairs. He has noticed ankle swelling in the evenings. He confirmed adherence to all prescribed medications.
 
-Examination findings
+Past medical history
 
-Bilateral pitting ankle oedema was noted. Cardiovascular and respiratory examinations were otherwise unremarkable. There were no signs of decompensation at rest.
-
-Investigation results
-
-Echocardiogram on 05/01/2026 showed a left ventricular ejection fraction of 35%, indicating reduced systolic function. BNP was 450 pg/mL on 10/01/2026, which is elevated and consistent with ongoing cardiac strain. Creatinine was 101 µmol/L on 10/01/2026, indicating acceptable renal function.
-
-Assessment and plan
-
-Mr Williams has congestive heart failure with a background of ischaemic heart disease. His symptoms of exertional dyspnoea and peripheral oedema suggest suboptimal fluid balance despite current diuretic therapy. Ejection fraction remains reduced at 35%. BNP is elevated at 450 pg/mL, consistent with the clinical picture.
-
-We discussed optimising his diuretic therapy and will consider increasing furosemide if symptoms persist. He was advised to monitor his weight daily and contact the surgery if he gains more than two kilograms in two days. Lifestyle advice regarding fluid and salt intake was reinforced. Follow-up is arranged in four weeks to reassess symptoms and repeat bloods. He was advised to seek urgent medical attention if breathlessness worsens, he develops chest pain, or he cannot lie flat.
-
-Note: Mr Williams has a documented allergy to ACE inhibitors. He is currently prescribed ramipril, which requires review and reconciliation.
+Congestive Heart Failure, Ischaemic Heart Disease, ACE Inhibitor Allergy.
 
 Current medications
 
-Bisoprolol 5 mg once daily
-Ramipril 5 mg once daily
-Furosemide 40 mg once daily
+Bisoprolol 5 mg once daily (unchanged)
+Ramipril 2.5 mg once daily (under review due to ACE inhibitor allergy)
+Furosemide 80 mg once daily (increased from 40 mg)
+
+Note: Mr Williams has a documented allergy to ACE inhibitors. Whether ramipril is the best choice requires review.
+
+Examination findings
+
+Bilateral ankle oedema was noted. Cardiovascular and respiratory examinations were otherwise unremarkable. There were no signs of decompensation at rest.
+
+Investigation results
+
+Echocardiogram showed an ejection fraction of 35%, which is unchanged from last time, indicating moderately reduced left ventricular systolic function. BNP was 450 pg/mL, which is elevated and suggests the heart is working harder than it should. Creatinine was 101 umol/L, indicating acceptable renal function.
+
+Assessment
+
+Mr Williams has congestive heart failure with a background of ischaemic heart disease. His symptoms of worsening breathlessness on exertion and ankle swelling suggest suboptimal fluid balance despite current diuretic therapy. Ejection fraction remains at 35%. BNP is elevated at 450 pg/mL.
+
+Plan
+
+1. Increase furosemide from 40 mg to 80 mg daily to help with fluid retention and ankle swelling.
+2. Check kidney function and electrolytes in two weeks after the dose change.
+3. Review whether ramipril is the best choice given documented ACE inhibitor allergy.
+4. Follow-up in six weeks with repeat bloods to see how symptoms are responding.
+
+Advice to patient
+
+1. Advised to weigh himself daily and contact the surgery if he gains more than two kilograms in two days, as this can be a sign of fluid building up.
 
 Warm regards,
 
