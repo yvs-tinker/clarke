@@ -1,0 +1,56 @@
+**Project Name:** Clarke
+
+**Team**  
+**Yashvardhan Shetty** — 4th-year medical student, University of Edinburgh.   
+**Anshvardhan Shetty** — 1st-year Electronics & Information Engineering, Imperial College London. Both contributed equally across problem identification, solution ideation, design, technical implementation, evaluation, and deployment.
+
+## **Problem Statement** 
+
+**The problem:** [NHS doctors spend 73% of their working day on administrative tasks. Only 17.9% is spent with patients](https://pubmed.ncbi.nlm.nih.gov/40581365/). Clinical documentation is the dominant task, consuming up to [“15 minutes per patient”](https://docs.google.com/document/d/1sESzzYbowjx5HL-1vnBBALskT8mz8VMw/edit?usp=sharing&ouid=107784074747863368449&rtpof=true&sd=true) encounter. This is exacerbated by fragmentation of patient information across [≤15 disconnected IT systems](https://www.gov.uk/government/news/40-million-investment-to-reduce-nhs-staff-login-times), turning every letter into a manual assembly job that wastes [13.5 million hours (equivalent to 8,000 full-time doctors and £1 billion) every year.](https://www.bma.org.uk/news-and-opinion/millions-of-hours-of-doctors-time-lost-each-year-to-inadequate-it-systems#:~:text=Nearly%20three%20quarters%20\(74%25\),Accessing%20records)
+
+**Clinician validation:** [We queried over 50 NHS clinicians](https://docs.google.com/document/u/0/d/199ljlgED76TE9WQ0HrFW-ZGQiIBoXzrsHa4I7M2sKW0/edit). Documentation was the number one frustration. One consultant: "If I could have someone transcribing my consultation and producing a letter to the GP, that would save me 15 minutes per patient." Another described assembling patient history as undesirable "detective work": logging into separate systems for imaging, pathology, notes, and prescribing to piece together a single patient's story.
+
+**Why this matters at scale:** [England has 190,200 FTE NHS doctors](https://digital.nhs.uk/data-and-information/publications/statistical/nhs-workforce-statistics/august-2025). If each saves even as little as [30 minutes per day on documentation](https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2839542), that yields 95,100 clinician-hours freed daily (assuming the average [7.5hr workday](https://www.sanctuarypersonnel.com/blog/2020/04/how-many-hours-is-full-time-in-the-nhs/#:~:text=The%20standard%20hours%20of%20all,33%20days%20after%2010%20years)), equivalent to 12,680  additional full-time doctors. The annual financial value: £1 billion in reclaimed clinical time. [Burnout dropped from 51.9% to 38.8% within 30 days of ambient AI deployment.](https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2839542) Documentation is not just an inconvenience. It is a workforce-scale crisis with a measurable, evidence-based solution that can solve systemic issues and personal ones.
+
+**The unmet need:** AI scribes like Heidi Health, DAX Copilot, and Tortus are increasingly capable with EHR integration, NHS pilot programmes, and growing clinical adoption. But all are cloud-dependent, closed-source, and commercially licensed. This means that they require patient data to leave the hospital network, require trusts to rely on vendor certifications rather than inspecting code and models directly, and make widespread adoption prohibitively expensive. One survey respondent: "The NHS needs open-access AI software." Another: "Any data sent to US companies, even if their servers are in the UK, would not be private."
+
+**Why AI is a plausible solution:** Clinical documentation is structured, repetitive, and information-dense: unstructured input (speech) combined with structured context (health records) to produce structured output (clinical letters). This is precisely the problem class where AI excels. Multiple survey respondents described AI-ready solutions unprompted, indicating existing demand.
+
+**Target user:** All NHS doctors in England (to start with). Every specialty, every trust. The unmet need is ubiquitous. The architecture could generalise to any FHIR-connected health system internationally.
+
+**Current user journey:** Have multiple systems open across 2 monitors to find medical history, labs, medications, allergies (min. 5 mins), see patient (min. 10 mins), document (5-15 mins or postponed to the end of the day if there isn’t enough time), proofread, send. **With Clarke:** see patient, Clarke generates a complete letter from both conversation and health record in under 2 minutes, clinician reviews and signs off. 
+
+## **Overall Solution** 
+
+**Architecture.** Clarke coordinates three HAI-DEF models as autonomous agents in a sequential pipeline. 
+
+**Agent 1: MedASR** converts consultation audio into a clinical transcript. Unlike general-purpose speech models, MedASR is trained on medical vocabulary: correctly transcribing drug names (metformin, bisoprolol, sertraline), clinical measurements (HbA1c, eGFR), and validated screening tools (PHQ-9, GAD-7). Evaluated word error rate: 13.28% across 1,438 words, with errors concentrated on proper nouns rather than clinical terms.
+
+**Agent 2: MedGemma 4B** queries the patient's electronic health record via FHIR: the international interoperability standard mandated by NHS England. It retrieves demographics, diagnoses (ICD-10 coded), medications with doses, allergies with severity, lab results with values and trends, and synthesises these into a structured patient context summary. Evaluated: 100% fact recall across 70 clinical facts and 5 patients; 98.6% precision (1 hallucinated trend annotation in 71 reported facts).
+
+**Agent 3: MedGemma 27B** receives both the transcript from MedASR and the patient context from MedGemma 4B. The model generates a complete, structured NHS clinic letter: summary, history of presenting complaint, past medical history, medications, examination findings, investigations, assessment, plan, and advice to patient. Evaluated: BLEU-1 0.82, ROUGE-L 0.74 which means the generated letters share 82% of the same clinical vocabulary and 74% of the same sentence structure as gold-standard references written by Yash and reviewed by two NHS consultants.
+
+**Why three models, not one?** The multi-agent design creates compounding safety. When MedASR transcribes "gliclizide" (phonetic error), the FHIR record provides the correct spelling "gliclazide 40mg." When MedASR garbles "eGFR" into "regar," MedGemma 27B infers the correct term from the renal context in the patient record. No single component needs to be perfect. Subsequent stages compensate. A human clinician also reviews and signs off every document before it leaves the system.
+
+**What makes Clarke different?** It is fully open-source: every line of code and every model weight is inspectable and modifiable, enabling a level of transparency that closed-source systems cannot offer. Its architecture enables fully local deployment. All models are open-weight and run on standard GPU hardware, meaning NHS trusts can keep all patient data on-premises. It uses Google's open-weight HAI-DEF models, purpose-built for healthcare. It generates structured NHS clinic letters rather than generic clinical notes, matching established NHS templates and guidance. It has no licensing fees. Clarke demonstrates that high-quality clinical documentation can be open, local, and transparent.
+
+## **Technical Details** 
+
+**Technical Stack.** Clarke is deployed as a fully functional application at [https://yashvshetty-clarke.hf.space](https://yashvshetty-clarke.hf.space), running on HuggingFace Spaces with A100 GPU access. All three HAI-DEF models load concurrently on a single GPU. MedGemma 27B runs in bfloat16 precision. The frontend is built in Gradio, the backend in FastAPI, packaged in a Docker container. FHIR-standard patient records are served via a built-in mock server with five synthetic NHS patients (Synthea-generated, UK-adapted). The system supports live browser microphone recording.
+
+[**Evaluation**](https://docs.google.com/document/d/1aAnmZjIFDqX1XlrONbH376ke0OuHxP3b0dtcw9AfShU/edit?usp=sharing)**.** Gold-standard reference letters were written by a fourth-year medical student and reviewed by two NHS consultants. All evaluation was performed on the live production deployment, not a local or staged environment.
+
+| Agent | Metric | Result |
+| ----- | ----- | ----- |
+| MedASR | Word error rate | 13.28% (1,438 words; errors on proper nouns, not clinical terms) |
+| MedGemma 4B | Fact recall / Precision | 100% recall (70/70 facts); 98.6% precision (1 hallucination in 71 reported facts) |
+| MedGemma 27B | BLEU-1 / ROUGE-L | 0.82 / 0.74 against clinician-written gold standards |
+| From “End Consultation” to generated documentation | Latency (for roughly 1-minute dictations) | 94.4s (live audio), 108.6s (demo files) |
+
+**Fine-tuning.** Round 1 compared the fine-tuned model against the base MedGemma 27B with a minimal prompt (simply: 'generate a clinic letter'). The fine-tuned version showed a 31% BLEU-1 improvement. Round 2 compared the fine-tuned model against the base model with a carefully engineered prompt consisting of detailed instructions specifying NHS letter structure, required sections, and formatting conventions. The base model with the engineered prompt outperformed the fine-tuned adapter at small data scales (n=5 training examples). The adapter is published at [huggingface.co/yashvshetty/clarke-medgemma-27b-lora](http://huggingface.co/yashvshetty/clarke-medgemma-27b-lora).
+
+**Deployment challenges.**
+
+1. *Clinical safety and regulatory pathway.* AI systems influencing clinical documentation may require MHRA medical device classification, a DCB0129 clinical safety case, and a Data Protection Impact Assessment. Clarke mitigates this by design: it generates drafts only. A clinician reviews, edits, and signs off every letter. This positions it as a decision *support* tool, not an autonomous decision-maker, which is a lower regulatory classification. *Planned pathway:* partner with a trust Clinical Safety Officer for DCB0129 assessment, run a supervised pilot where Clarke-generated letters are double-reviewed against clinician drafts, and use pilot data to build the evidence case for broader rollout.  
+2. *Real-world audio.* Current evaluation used synthetic audio. Real consultations involve background noise, speaker overlap, and diverse accents. MedASR's 13.28% word error rate will likely increase. *Two mitigations:* Clarke already is designed so that a clinician can opt to summarise the consultation afterwards, bypassing ambient audio quality issues entirely. Second, the next step is evaluation on de-identified NHS recordings to quantify degradation, then fine-tune MedASR on NHS-specific audio if needed.   
+3. *FHIR endpoint variability.* NHS England mandates FHIR R4, but adoption is uneven across trusts. Clarke handles this gracefully: without a FHIR connection, it operates in documentation-only mode, generating letters from conversation alone. With one, it enriches letters with structured patient context. The connection is a configuration change (server URL and credentials), not an architectural one. *Planned approach:* begin pilots at trusts with mature FHIR infrastructure, demonstrate value, then expand as adoption grows.

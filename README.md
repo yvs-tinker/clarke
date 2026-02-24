@@ -21,7 +21,8 @@ Built for the [MedGemma Impact Challenge](https://www.kaggle.com/competitions/me
 | Source code | [github.com/yvs-tinker/clarke](https://github.com/yvs-tinker/clarke) |
 | Evaluation report | [evaluation/EVALUATION.md](evaluation/EVALUATION.md) |
 | LoRA adapter | [yashvshetty/clarke-medgemma-27b-lora](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora) |
-| Demo video | *Coming soon* |
+| Demo video | [YouTube](PASTE_YOUTUBE_LINK_HERE) |
+| Competition writeup | [clarke_writeup.md](clarke_writeup.md) |
 
 ---
 
@@ -43,11 +44,11 @@ BLEU measures word overlap between generated and reference letters (1.0 = perfec
 
 ## The Problem
 
-NHS doctors spend 73% of their working time on non-patient-facing tasks, with only 17.9% on direct patient care (Arab et al., QJM 2025; TACT study, 137 doctors, 7 months). Documentation alone consumes approximately 15 minutes per patient encounter. Across a typical 10-12 patient clinic, that is 2.5-3 hours of writing per session (clinician survey, n=47). At the scale of 190,200 FTE doctors in England (NHS Digital, Aug 2025), the impact compounds: 7,248 unfilled medical vacancies, 7.31 million patients on the waiting list (BMA/King's Fund, Nov 2025), and 61% of trainees at moderate-to-high burnout risk (GMC NTS, 2025).
+NHS doctors spend 73% of their working time on non-patient-facing tasks, with only 17.9% on direct patient care (Arab et al., QJM 2025; TACT study, 137 doctors, 7 months). Documentation alone consumes approximately 15 minutes per patient encounter. Across a typical 10-12 patient clinic, that is 2.5-3 hours of writing per session (clinician survey, n=47). At the scale of 190,200 FTE doctors in England (NHS Digital, Aug 2025), the impact compounds: 7,248 unfilled medical vacancies (BMA Medical Staffing Data Analysis, Sep 2025), over 7 million patients on the waiting list (BMA/King's Fund, Dec 2025), and 61% of trainees at moderate-to-high burnout risk (GMC NTS, 2025).
 
-Ambient AI scribes have shown promise, reducing clinician burnout from 51.9% to 38.8% within 30 days (Olson et al., JAMA Netw Open 2025). But every existing solution (Heidi Health, DAX Copilot, Tortus) generates documents from conversation audio alone. None retrieves EHR context, meaning clinicians must still manually add lab values, medication lists, and allergy checks. All are cloud-dependent, closed-source, and costly: Heidi alone would cost an estimated 226M GBP/year at NHS scale.
+Ambient AI scribes have shown promise, reducing clinician burnout from 51.9% to 38.8% within 30 days (Olson et al., JAMA Netw Open 2025). But every existing solution (Heidi Health, DAX Copilot, Tortus) is cloud-dependent, closed-source, and commercially licensed. This means patient data must leave the hospital network, trusts must rely on vendor certifications rather than inspecting code and models directly, and per-clinician subscription rates make NHS-wide adoption prohibitively expensive.
 
-Clarke closes both gaps: ambient documentation fused with intelligent EHR retrieval, fully open-source, designed for local deployment.
+Clarke takes a different approach: ambient documentation fused with EHR retrieval, fully open-source, designed for local deployment, with no licensing fees.
 
 ### Clinician Validation
 
@@ -64,7 +65,7 @@ Clarke orchestrates three HAI-DEF models in a five-stage agentic workflow. Each 
 │                        CLARKE PIPELINE                          │
 │                                                                 │
 │   ┌─────────────┐                                               │
-│   │  Audio Input │  Upload or record consultation audio         │
+│   │  Audio Input │  Record consultation audio                   │
 │   └──────┬──────┘                                               │
 │          │                                                      │
 │          ▼                                                      │
@@ -97,7 +98,7 @@ Clarke orchestrates three HAI-DEF models in a five-stage agentic workflow. Each 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Why three models, not one?** Each HAI-DEF model contributes a distinct capability that no single model can replicate. MedASR provides medical-domain speech recognition optimised for clinical terminology. MedGemma 4B understands FHIR resources natively, retrieving and synthesising relevant patient history. MedGemma 27B generates clinically accurate prose grounded in both the conversation and the medical record. The pipeline produces documents that reference actual lab values, include current medication lists, and cross-check for consistency. No conversation-only scribe can achieve this.
+**Why three models, not one?** Each HAI-DEF model contributes a distinct capability that no single model can replicate. MedASR provides medical-domain speech recognition optimised for clinical terminology. MedGemma 4B understands FHIR resources natively, retrieving and synthesising relevant patient history. MedGemma 27B generates clinically accurate prose grounded in both the conversation and the medical record. The pipeline produces documents that reference actual lab values, include current medication lists, and cross-check for consistency. Open-source, locally deployable, and fully auditable at the code level, Clarke offers a combination no commercial scribe currently provides.
 
 ---
 
@@ -109,7 +110,7 @@ Clarke orchestrates three HAI-DEF models in a five-stage agentic workflow. Each 
 - **Structured NHS clinic letter output** following gold-standard clinical correspondence format.
 - **Live microphone recording** for both real-time consultation capture or post-consultation dictation directly in the browser.
 - **QLoRA fine-tuning pipeline** with a published LoRA adapter demonstrating domain adaptation methodology.
-- **Privacy-preserving architecture** designed for local deployment; no patient data leaves the hospital network.
+- **Privacy-preserving architecture** designed for local deployment; all models are open-weight and can run entirely on-premises.
 - **Deterministic safety architecture** in the EHR agent ensures 100% fact recall by design.
 - **Human-in-the-loop review** with mandatory clinician sign-off before any document is exported.
 - **Mock-safe local development** enabling the full pipeline to run without GPU or gated model access.
@@ -138,7 +139,7 @@ Full methodology, per-patient results, error taxonomy, and limitations are docum
 
 **EHR Agent (100% recall, 98.6% precision)** Every allergy, medication, lab result, and diagnosis was retrieved across all five patients. One borderline hallucination occurred (a clinically correct trend annotation). The deterministic query architecture guarantees no stored fact is missed.
 
-**Document Generation (BLEU-1 0.82, ROUGE-L 0.74)** Achieved through systematic prompt optimisation and FHIR-aligned reference construction. Average generation time was 109 seconds per letter. All generated letters correctly captured diagnoses, medications, lab results, and management plans. Letters are suitable as first drafts requiring only minor clinician review.
+**Document Generation (BLEU-1 0.82, ROUGE-L 0.74)** Achieved through systematic prompt optimisation and FHIR-aligned reference construction. Average generation time was 109 seconds per letter. All generated letters correctly captured diagnoses, medications with doses, lab results with units, and management plans. Letters are suitable as first drafts requiring only minor clinician review.
 
 **Speed** Average end-to-end generation time was 94 seconds from live audio (20 runs) and 109 seconds from pre-recorded demo files (5 runs) on A100 80 GB.
 
@@ -156,7 +157,7 @@ Clarke includes a QLoRA fine-tuning pipeline for adapting MedGemma 27B to NHS le
 | Target modules | q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj |
 | Training data | 5 gold-standard NHS clinic letters |
 | Training time | ~10 minutes on A100 80 GB (HuggingFace Spaces) |
-| Training loss | 2.09 → 1.30 (38% reduction) |
+| Training loss | 2.09 to 1.30 (38% reduction) |
 | Result | Prompt engineering outperformed adapter at n=5; adapter demonstrates pipeline for larger datasets |
 
 The adapter is published at [`yashvshetty/clarke-medgemma-27b-lora`](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora). Training scripts are in [`finetuning/`](finetuning/) and [`scripts/train_lora.py`](scripts/train_lora.py).
