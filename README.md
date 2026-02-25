@@ -21,7 +21,7 @@ Built for the [MedGemma Impact Challenge](https://www.kaggle.com/competitions/me
 | Source code | [github.com/yvs-tinker/clarke](https://github.com/yvs-tinker/clarke) |
 | Evaluation report | [evaluation/EVALUATION.md](evaluation/EVALUATION.md) |
 | LoRA adapter | [yashvshetty/clarke-medgemma-27b-lora](https://huggingface.co/yashvshetty/clarke-medgemma-27b-lora) |
-| Demo video | [YouTube](PASTE_YOUTUBE_LINK_HERE) |
+| Demo video | [Clarke MVP Launch Video](https://youtu.be/EZ1zO6AoTNI) |
 | Competition writeup | [clarke_writeup.md](clarke_writeup.md) |
 
 ---
