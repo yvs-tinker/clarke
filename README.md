@@ -13,8 +13,6 @@ app_port: 7860
 
 Clarke is an ambient clinical documentation system that converts doctor-patient audio consultations into structured NHS clinic letters. It coordinates three [HAI-DEF](https://goo.gle/hai-def) models as autonomous agents in a unified agentic pipeline: medical speech recognition, EHR context retrieval via FHIR, and context-enriched document generation.
 
-Built for the [MedGemma Impact Challenge](https://www.kaggle.com/competitions/med-gemma-impact-challenge) on Kaggle, targeting the **Agentic Workflow Prize**.
-
 | Resource | Link |
 |----------|------|
 | Live demo | [yashvshetty-clarke.hf.space](https://yashvshetty-clarke.hf.space) |
