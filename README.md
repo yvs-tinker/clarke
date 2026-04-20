@@ -237,7 +237,7 @@ clarke/
 
 ## Development
 
-Clarke was built by a 4th-year medical student and a 1st-year electronic and information engineering student over the competition period. Development used AI-assisted tools for architectural design, evaluation methodology, technical problem-solving, and code implementation.
+Clarke was built by a 4th-year medical student. Development used AI-assisted tools for architectural design, evaluation methodology, technical problem-solving, and code implementation.
 
 Key technical decisions documented in the [evaluation report](evaluation/EVALUATION.md):
 - **Deterministic EHR retrieval over agentic tool-calling** after prototyping showed MedGemma 4B's agentic queries were unreliable.
